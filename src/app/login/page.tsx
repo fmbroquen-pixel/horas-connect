@@ -10,8 +10,36 @@ export default function LoginPage() {
   );
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-dc-deep px-4">
-      <div className="w-full max-w-sm rounded-2xl border border-dc-line bg-dc-card p-8 backdrop-blur">
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-dc-deep px-4">
+      <span
+        className="dc-blob -left-32 -top-40 h-[520px] w-[520px] opacity-70"
+        style={{
+          background:
+            "radial-gradient(circle at 40% 40%, var(--dc-purple), transparent 70%)",
+        }}
+        aria-hidden="true"
+      />
+      <span
+        className="dc-blob -right-40 -top-24 h-[560px] w-[560px] opacity-70"
+        style={{
+          background:
+            "radial-gradient(circle at 60% 40%, var(--dc-blue), transparent 70%)",
+          animationDelay: "-8s",
+        }}
+        aria-hidden="true"
+      />
+      <span
+        className="dc-blob -bottom-52 right-1/4 h-[380px] w-[380px] opacity-40"
+        style={{
+          background:
+            "radial-gradient(circle at 50% 50%, var(--dc-pink), transparent 70%)",
+          animationDelay: "-15s",
+        }}
+        aria-hidden="true"
+      />
+      <div className="dc-noise" aria-hidden="true" />
+
+      <div className="relative w-full max-w-sm rounded-2xl border border-dc-line bg-dc-card p-8 backdrop-blur">
         <div className="mb-6 flex gap-2">
           <span className="h-3 w-3 rounded-full border border-white/40 bg-dc-deep" />
           <span className="h-3 w-3 rounded-full bg-dc-pink" />
