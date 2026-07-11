@@ -9,7 +9,10 @@ export default defineConfig({
     path: "prisma/migrations",
     seed: "tsx prisma/seed.ts",
   },
+  // Las migraciones necesitan una conexión directa (sin el pooler de
+  // transacciones) para poder tomar el lock de migración. La app en
+  // ejecución sigue usando DATABASE_URL (con pooler) vía src/lib/prisma.ts.
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: process.env["DIRECT_URL"],
   },
 });
