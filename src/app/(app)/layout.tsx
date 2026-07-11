@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSesionActual } from "@/lib/auth";
 import { logout } from "@/app/actions";
@@ -36,6 +37,14 @@ export default async function AppLayout({
             </p>
           </div>
           <div className="flex items-center gap-3 text-sm">
+            {usuario.rol === "admin" && (
+              <Link
+                href="/admin/clientes"
+                className="rounded-lg border border-dc-line px-3 py-1.5 text-xs text-dc-muted transition hover:text-dc-text"
+              >
+                Administración
+              </Link>
+            )}
             <div className="text-right">
               <p className="text-dc-text">{usuario.nombre}</p>
               <p className="text-xs text-dc-muted">
