@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RolUsuario {
+  admin
+  guest
+}
+
+enum Modalidad {
+  presencial
+  virtual
+  valor_cero
+}
+
+enum RolSesion {
+  titular
+  acompanante
+  valor_cero
+}
+
+model Cliente {
+  id        String   @id @default(cuid())
+  nombre    String   @unique
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  registros RegistroHoras[]
+
+  @@map("clientes")
+}
+
+model Mentor {
+  id        String   @id @default(cuid())
+  nombre    String
+  email     String   @unique
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  usuario   Usuario?
+  tarifas   Tarifa[]
+  registros RegistroHoras[]
+
+  @@map("mentores")
+}
+
+model Usuario {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  nombre    String
+  rol       RolUsuario @default(guest)
+  activo    Boolean    @default(true)
+  mentorId  String?    @unique @map("mentor_id")
+  mentor    Mentor?    @relation(fields: [mentorId], references: [id])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  registrosCreados RegistroHoras[] @relation("CreadoPor")
+
+  @@map("usuarios")
+}
+
+model Tema {
+  id        String   @id @default(cuid())
+  etiqueta  String
+  grupo     String
+  activo    Boolean  @default(true)
+  orden     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  registros RegistroHoras[]
+
+  @@map("temas")
+}
+
+// Historial de tarifas por mentor. Al cambiar una tarifa se cierra la vigente
+// (vigenteHasta) y se crea una fila nueva; los registros ya cargados guardan
+// su propio snapshot en RegistroHoras y no se ven afectados por este cambio.
+model Tarifa {
+  id             String     @id @default(cuid())
+  mentorId       String     @map("mentor_id")
+  mentor         Mentor     @relation(fields: [mentorId], references: [id])
+  modalidad      Modalidad
+  rol            RolSesion
+  valorUsd       Decimal    @map("valor_usd") @db.Decimal(10, 2)
+  vigenteDesde   DateTime   @default(now()) @map("vigente_desde")
+  vigenteHasta   DateTime?  @map("vigente_hasta")
+  createdAt      DateTime   @default(now())
+
+  @@unique([mentorId, modalidad, rol, vigenteDesde])
+  @@index([mentorId, modalidad, rol, vigenteHasta])
+  @@map("tarifas")
+}
+
+model RegistroHoras {
+  id        String    @id @default(cuid())
+  fecha     DateTime  @db.Date
+  clienteId String    @map("cliente_id")
+  cliente   Cliente   @relation(fields: [clienteId], references: [id])
+  mentorId  String    @map("mentor_id")
+  mentor    Mentor    @relation(fields: [mentorId], references: [id])
+  temaId    String?   @map("tema_id")
+  tema      Tema?     @relation(fields: [temaId], references: [id])
+  horas     Decimal   @db.Decimal(5, 2)
+  modalidad Modalidad
+  rol       RolSesion
+  nota      String?
+
+  // Snapshot de la tarifa aplicada al momento de guardar (no se recalcula
+  // retroactivamente si la tarifa del mentor cambia despues).
+  tarifaUsdAplicada Decimal @map("tarifa_usd_aplicada") @db.Decimal(10, 2)
+  montoUsd          Decimal @map("monto_usd") @db.Decimal(10, 2)
+
+  creadoPorId String   @map("creado_por_id")
+  creadoPor   Usuario  @relation("CreadoPor", fields: [creadoPorId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([fecha])
+  @@index([mentorId, fecha])
+  @@index([clienteId, fecha])
+  @@map("registros_horas")
+}
