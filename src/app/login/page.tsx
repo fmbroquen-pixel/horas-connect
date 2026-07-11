@@ -24,11 +24,8 @@ export default function LoginPage() {
           DISTRITO CONNECT
         </p>
         <h1 className="mt-3 font-display text-2xl uppercase text-white">
-          Horas Connect
+          Timetracker Connect
         </h1>
-        <p className="mt-2 text-sm text-dc-muted">
-          Registro de horas y rentabilidad de mentores.
-        </p>
 
         <form action={loginConGoogle} className="mt-8">
           <button

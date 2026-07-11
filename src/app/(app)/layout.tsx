@@ -32,7 +32,7 @@ export default async function AppLayout({
               DISTRITO CONNECT
             </p>
             <p className="font-display text-sm uppercase text-white">
-              Horas Connect
+              Timetracker Connect
             </p>
           </div>
           <div className="flex items-center gap-3 text-sm">

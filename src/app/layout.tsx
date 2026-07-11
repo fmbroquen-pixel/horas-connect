@@ -15,7 +15,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Horas Connect",
+  title: "Timetracker Connect",
   description: "Registro de horas y rentabilidad — Distrito Connect",
 };
 
