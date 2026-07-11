@@ -94,8 +94,12 @@ async function main() {
     });
   }
 
-  // Convenio de David: varía por modalidad y rol.
+  // Convenio de David: tarifa variable (una combinación por modalidad x rol).
   const davidId = mentoresCreados["david@embarca.tech"];
+  await prisma.mentor.update({
+    where: { id: davidId },
+    data: { tipoTarifa: "variable" },
+  });
   const tarifasDavid: { modalidad: Modalidad; rol: RolSesion; valorUsd: number }[] = [
     { modalidad: "presencial", rol: "titular", valorUsd: 45 },
     { modalidad: "presencial", rol: "acompanante", valorUsd: 30 },
@@ -108,8 +112,15 @@ async function main() {
   }
 
   // Convenio de Lucas Flores: tarifa fija de USD 30/hora, sin importar
-  // modalidad ni rol (salvo "valor cero", que siempre es $0).
+  // modalidad ni rol (salvo "valor cero", que siempre es $0). Se guarda
+  // igual como una fila de Tarifa por combinación para que el cálculo de
+  // horas no tenga que distinguir fija/variable, solo cambia cómo lo
+  // carga el formulario del administrador.
   const lucasFloresId = mentoresCreados["lucas.flores@embarca.tech"];
+  await prisma.mentor.update({
+    where: { id: lucasFloresId },
+    data: { tipoTarifa: "fija" },
+  });
   const combinacionesLucasFlores: { modalidad: Modalidad; rol: RolSesion; valorUsd: number }[] = [
     { modalidad: "presencial", rol: "titular", valorUsd: 30 },
     { modalidad: "presencial", rol: "acompanante", valorUsd: 30 },
@@ -121,8 +132,9 @@ async function main() {
     await crearTarifaSiNoExiste(lucasFloresId, t.modalidad, t.rol, t.valorUsd);
   }
 
-  // Maxi, Lucas y Fede quedan creados como mentores pero sin tarifa todavía:
-  // falta que Fede (admin) confirme sus convenios para cargarlos en la Fase 1.
+  // Maxi, Lucas y Fede quedan creados como mentores con tipoTarifa sin
+  // definir (null): no pueden cargar horas facturables hasta que el
+  // administrador les configure "fija" o "variable" desde el ABM.
 
   console.log("Seed completado.");
 }

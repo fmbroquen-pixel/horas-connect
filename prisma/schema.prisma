@@ -27,6 +27,11 @@ enum RolSesion {
   valor_cero
 }
 
+enum TipoTarifa {
+  fija
+  variable
+}
+
 model Cliente {
   id        String   @id @default(cuid())
   nombre    String   @unique
@@ -40,10 +45,18 @@ model Cliente {
 }
 
 model Mentor {
-  id        String   @id @default(cuid())
-  nombre    String
-  email     String   @unique
-  activo    Boolean  @default(true)
+  id     String  @id @default(cuid())
+  nombre String
+  email  String  @unique
+  activo Boolean @default(true)
+
+  // Definido por el administrador al configurar al mentor:
+  // "fija" = un unico valor USD/hora sin importar modalidad ni rol.
+  // "variable" = un valor por cada combinacion de modalidad x rol,
+  // como el convenio de David. Nulo = todavia no configurado (el
+  // mentor no puede cargar horas facturables hasta que se defina).
+  tipoTarifa TipoTarifa? @map("tipo_tarifa")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
