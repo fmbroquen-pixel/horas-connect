@@ -28,7 +28,7 @@ function tabsParaRol(rol: string) {
     return [
       ...TABS_CARGA,
       { href: "/rentabilidad", label: "Rentabilidad" },
-      { href: "/admin/usuarios", label: "Administración" },
+      { href: "/admin/usuarios", label: "Usuarios" },
     ];
   }
   // reader: solo lectura de la rentabilidad de sus proyectos asignados.
