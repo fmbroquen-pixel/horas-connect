@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
-import type { Modalidad, RolSesion } from "@/generated/prisma/client";
+import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
 const UsuarioSchema = z.object({
   email: z.email({ error: "Email inválido." }).trim().toLowerCase(),
@@ -73,11 +73,11 @@ async function bloquearSiEsUltimoAdmin(usuarioId: string, adminActualId: string)
   }
 }
 
-const COMBOS_FACTURABLES: { modalidad: Modalidad; rol: RolSesion }[] = [
-  { modalidad: "presencial", rol: "titular" },
-  { modalidad: "presencial", rol: "acompanante" },
-  { modalidad: "virtual", rol: "titular" },
-  { modalidad: "virtual", rol: "acompanante" },
+const COMBOS_FACTURABLES: { modalidad: Modalidad; ownership: Ownership }[] = [
+  { modalidad: "presencial", ownership: "owner" },
+  { modalidad: "presencial", ownership: "backup" },
+  { modalidad: "virtual", ownership: "owner" },
+  { modalidad: "virtual", ownership: "backup" },
 ];
 
 const TarifaFijaSchema = z.object({
@@ -87,10 +87,10 @@ const TarifaFijaSchema = z.object({
 
 const TarifaVariableSchema = z.object({
   tipoTarifa: z.literal("variable"),
-  presencialTitular: z.coerce.number().min(0),
-  presencialAcompanante: z.coerce.number().min(0),
-  virtualTitular: z.coerce.number().min(0),
-  virtualAcompanante: z.coerce.number().min(0),
+  presencialOwner: z.coerce.number().min(0),
+  presencialBackup: z.coerce.number().min(0),
+  virtualOwner: z.coerce.number().min(0),
+  virtualBackup: z.coerce.number().min(0),
 });
 
 export async function guardarTarifa(
@@ -117,17 +117,17 @@ export async function guardarTarifa(
       await upsertTarifaVigente(
         usuarioId,
         combo.modalidad,
-        combo.rol,
+        combo.ownership,
         parsed.data.valorUsd,
       );
     }
   } else if (tipoTarifa === "variable") {
     const parsed = TarifaVariableSchema.safeParse({
       tipoTarifa,
-      presencialTitular: formData.get("presencialTitular"),
-      presencialAcompanante: formData.get("presencialAcompanante"),
-      virtualTitular: formData.get("virtualTitular"),
-      virtualAcompanante: formData.get("virtualAcompanante"),
+      presencialOwner: formData.get("presencialOwner"),
+      presencialBackup: formData.get("presencialBackup"),
+      virtualOwner: formData.get("virtualOwner"),
+      virtualBackup: formData.get("virtualBackup"),
     });
     if (!parsed.success) return { error: "Alguno de los valores es inválido." };
 
@@ -138,26 +138,26 @@ export async function guardarTarifa(
     await upsertTarifaVigente(
       usuarioId,
       "presencial",
-      "titular",
-      parsed.data.presencialTitular,
+      "owner",
+      parsed.data.presencialOwner,
     );
     await upsertTarifaVigente(
       usuarioId,
       "presencial",
-      "acompanante",
-      parsed.data.presencialAcompanante,
+      "backup",
+      parsed.data.presencialBackup,
     );
     await upsertTarifaVigente(
       usuarioId,
       "virtual",
-      "titular",
-      parsed.data.virtualTitular,
+      "owner",
+      parsed.data.virtualOwner,
     );
     await upsertTarifaVigente(
       usuarioId,
       "virtual",
-      "acompanante",
-      parsed.data.virtualAcompanante,
+      "backup",
+      parsed.data.virtualBackup,
     );
   } else {
     return { error: "Elegí un tipo de tarifa." };
@@ -175,11 +175,11 @@ export async function guardarTarifa(
 async function upsertTarifaVigente(
   usuarioId: string,
   modalidad: Modalidad,
-  rol: RolSesion,
+  ownership: Ownership,
   valorUsd: number,
 ) {
   const vigente = await prisma.tarifa.findFirst({
-    where: { usuarioId, modalidad, rol, vigenteHasta: null },
+    where: { usuarioId, modalidad, ownership, vigenteHasta: null },
   });
 
   if (vigente && Number(vigente.valorUsd) === valorUsd) return;
@@ -192,7 +192,7 @@ async function upsertTarifaVigente(
     });
   }
   await prisma.tarifa.create({
-    data: { usuarioId, modalidad, rol, valorUsd, vigenteDesde: ahora },
+    data: { usuarioId, modalidad, ownership, valorUsd, vigenteDesde: ahora },
   });
 }
 
@@ -201,7 +201,7 @@ async function asegurarTarifaCero(usuarioId: string) {
     where: {
       usuarioId,
       modalidad: "valor_cero",
-      rol: "valor_cero",
+      ownership: "valor_cero",
       vigenteHasta: null,
     },
   });
@@ -210,7 +210,7 @@ async function asegurarTarifaCero(usuarioId: string) {
       data: {
         usuarioId,
         modalidad: "valor_cero",
-        rol: "valor_cero",
+        ownership: "valor_cero",
         valorUsd: 0,
       },
     });

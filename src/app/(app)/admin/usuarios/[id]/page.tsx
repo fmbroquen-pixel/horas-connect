@@ -10,9 +10,9 @@ const ETIQUETA_MODALIDAD: Record<string, string> = {
   virtual: "Virtual",
   valor_cero: "Valor cero",
 };
-const ETIQUETA_ROL_SESION: Record<string, string> = {
-  titular: "Titular",
-  acompanante: "Acompañante",
+const ETIQUETA_OWNERSHIP: Record<string, string> = {
+  owner: "Owner",
+  backup: "Backup",
   valor_cero: "Valor cero",
 };
 
@@ -44,8 +44,8 @@ export default async function UsuarioDetallePage({
   const historial = tarifas.filter((t) => t.vigenteHasta !== null);
   const asignadosIds = new Set(asignados.map((a) => a.clienteId));
 
-  const buscarValor = (modalidad: string, rol: string) => {
-    const t = vigentes.find((v) => v.modalidad === modalidad && v.rol === rol);
+  const buscarValor = (modalidad: string, ownership: string) => {
+    const t = vigentes.find((v) => v.modalidad === modalidad && v.ownership === ownership);
     return t ? Number(t.valorUsd) : undefined;
   };
 
@@ -98,10 +98,10 @@ export default async function UsuarioDetallePage({
               <TarifaForm
                 tipoActual={usuario.tipoTarifa}
                 valores={{
-                  presencialTitular: buscarValor("presencial", "titular"),
-                  presencialAcompanante: buscarValor("presencial", "acompanante"),
-                  virtualTitular: buscarValor("virtual", "titular"),
-                  virtualAcompanante: buscarValor("virtual", "acompanante"),
+                  presencialOwner: buscarValor("presencial", "owner"),
+                  presencialBackup: buscarValor("presencial", "backup"),
+                  virtualOwner: buscarValor("virtual", "owner"),
+                  virtualBackup: buscarValor("virtual", "backup"),
                 }}
                 action={guardarTarifa.bind(null, usuario.id)}
               />
@@ -131,7 +131,7 @@ export default async function UsuarioDetallePage({
                   <thead>
                     <tr className="border-b border-dc-line text-left text-xs text-dc-muted">
                       <th className="px-4 py-2 font-normal">Modalidad</th>
-                      <th className="px-4 py-2 font-normal">Rol</th>
+                      <th className="px-4 py-2 font-normal">Ownership</th>
                       <th className="px-4 py-2 font-normal">Valor USD</th>
                       <th className="px-4 py-2 font-normal">Vigencia</th>
                     </tr>
@@ -145,7 +145,7 @@ export default async function UsuarioDetallePage({
                         <td className="px-4 py-2">
                           {ETIQUETA_MODALIDAD[t.modalidad]}
                         </td>
-                        <td className="px-4 py-2">{ETIQUETA_ROL_SESION[t.rol]}</td>
+                        <td className="px-4 py-2">{ETIQUETA_OWNERSHIP[t.ownership]}</td>
                         <td className="px-4 py-2">{Number(t.valorUsd).toFixed(2)}</td>
                         <td className="px-4 py-2">
                           {t.vigenteDesde.toLocaleDateString("es-AR")} –{" "}

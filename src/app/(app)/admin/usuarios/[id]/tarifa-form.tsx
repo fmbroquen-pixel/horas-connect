@@ -3,10 +3,10 @@
 import { useActionState, useState } from "react";
 
 type ValoresActuales = {
-  presencialTitular?: number;
-  presencialAcompanante?: number;
-  virtualTitular?: number;
-  virtualAcompanante?: number;
+  presencialOwner?: number;
+  presencialBackup?: number;
+  virtualOwner?: number;
+  virtualBackup?: number;
 };
 
 type Accion = (
@@ -27,10 +27,10 @@ export function TarifaForm({
   const [state, formAction, pending] = useActionState(action, undefined);
 
   const valorFijaInicial =
-    valores.presencialTitular ??
-    valores.presencialAcompanante ??
-    valores.virtualTitular ??
-    valores.virtualAcompanante ??
+    valores.presencialOwner ??
+    valores.presencialBackup ??
+    valores.virtualOwner ??
+    valores.virtualBackup ??
     "";
 
   return (
@@ -70,7 +70,7 @@ export function TarifaForm({
               onChange={() => setTipo("variable")}
               className="mr-2"
             />
-            Variable (por modalidad y rol)
+            Variable (por modalidad y ownership)
           </label>
         </div>
       </div>
@@ -94,56 +94,56 @@ export function TarifaForm({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="mb-1 block text-xs text-dc-muted">
-              Presencial · Titular
+              Presencial · Owner
             </label>
             <input
-              name="presencialTitular"
+              name="presencialOwner"
               type="number"
               step="0.01"
               min="0"
-              defaultValue={valores.presencialTitular ?? ""}
+              defaultValue={valores.presencialOwner ?? ""}
               required
               className="w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
             />
           </div>
           <div>
             <label className="mb-1 block text-xs text-dc-muted">
-              Presencial · Acompañante
+              Presencial · Backup
             </label>
             <input
-              name="presencialAcompanante"
+              name="presencialBackup"
               type="number"
               step="0.01"
               min="0"
-              defaultValue={valores.presencialAcompanante ?? ""}
+              defaultValue={valores.presencialBackup ?? ""}
               required
               className="w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
             />
           </div>
           <div>
             <label className="mb-1 block text-xs text-dc-muted">
-              Virtual · Titular
+              Virtual · Owner
             </label>
             <input
-              name="virtualTitular"
+              name="virtualOwner"
               type="number"
               step="0.01"
               min="0"
-              defaultValue={valores.virtualTitular ?? ""}
+              defaultValue={valores.virtualOwner ?? ""}
               required
               className="w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
             />
           </div>
           <div>
             <label className="mb-1 block text-xs text-dc-muted">
-              Virtual · Acompañante
+              Virtual · Backup
             </label>
             <input
-              name="virtualAcompanante"
+              name="virtualBackup"
               type="number"
               step="0.01"
               min="0"
-              defaultValue={valores.virtualAcompanante ?? ""}
+              defaultValue={valores.virtualBackup ?? ""}
               required
               className="w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
             />

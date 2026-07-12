@@ -1,13 +1,13 @@
 "use client";
 
 import { useActionState, useRef } from "react";
-import { crearTema } from "./actions";
+import { crearEtapa } from "./actions";
 
-export function NuevoTemaForm() {
+export function NuevaEtapaForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction, pending] = useActionState(
     async (prev: { error?: string } | undefined, formData: FormData) => {
-      const result = await crearTema(prev, formData);
+      const result = await crearEtapa(prev, formData);
       if (!result.error) formRef.current?.reset();
       return result;
     },

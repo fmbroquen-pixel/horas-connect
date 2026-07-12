@@ -5,7 +5,7 @@ import { getSesionActual } from "@/lib/auth";
 const SECCIONES = [
   { href: "/admin/usuarios", label: "Usuarios" },
   { href: "/admin/clientes", label: "Clientes" },
-  { href: "/admin/temas", label: "Temas" },
+  { href: "/admin/etapas", label: "Etapas" },
 ];
 
 export default async function AdminLayout({

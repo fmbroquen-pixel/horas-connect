@@ -22,15 +22,32 @@ enum Modalidad {
   valor_cero
 }
 
-enum RolSesion {
-  titular
-  acompanante
+// "Ownership" en la UI. Los valores viejos (titular/acompanante) quedan
+// mapeados en la base para no migrar datos: el codigo usa owner/backup.
+enum Ownership {
+  owner      @map("titular")
+  backup     @map("acompanante")
   valor_cero
+
+  @@map("RolSesion")
 }
 
 enum TipoTarifa {
   fija
   variable
+}
+
+enum Moneda {
+  USD
+  ARS
+}
+
+enum ConceptoViatico {
+  combustible
+  alojamiento
+  traslado
+  almuerzo
+  otros
 }
 
 model Cliente {
@@ -40,8 +57,9 @@ model Cliente {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  registros   RegistroHoras[]
+  registros    RegistroHoras[]
   asignaciones ProyectoAsignado[]
+  viaticos     Viatico[]
 
   @@map("clientes")
 }
@@ -57,18 +75,20 @@ model Usuario {
   activo Boolean    @default(true)
 
   // Solo aplica a usuarios "guest". Definido por el administrador:
-  // "fija" = un unico valor USD/hora sin importar modalidad ni rol.
-  // "variable" = un valor por cada combinacion de modalidad x rol.
+  // "fija" = un unico valor USD/hora sin importar modalidad ni ownership.
+  // "variable" = un valor por cada combinacion de modalidad x ownership.
   // Nulo = todavia no configurado (no puede cargar horas facturables).
   tipoTarifa TipoTarifa? @map("tipo_tarifa")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tarifas             Tarifa[]
-  registros           RegistroHoras[]    @relation("Mentor")
-  registrosCreados    RegistroHoras[]    @relation("CreadoPor")
-  proyectosAsignados  ProyectoAsignado[]
+  tarifas            Tarifa[]
+  registros          RegistroHoras[]    @relation("Mentor")
+  registrosCreados   RegistroHoras[]    @relation("CreadoPor")
+  proyectosAsignados ProyectoAsignado[]
+  viaticos           Viatico[]
+  vacaciones         Vacacion[]
 
   @@map("usuarios")
 }
@@ -89,7 +109,9 @@ model ProyectoAsignado {
   @@map("proyectos_asignados")
 }
 
-model Tema {
+// "Etapa" en la UI (antes "Tema/Temática"); la tabla en la base conserva su
+// nombre original para no migrar datos.
+model Etapa {
   id        String   @id @default(cuid())
   etiqueta  String
   grupo     String
@@ -98,6 +120,7 @@ model Tema {
   createdAt DateTime @default(now())
 
   registros RegistroHoras[]
+  viaticos  Viatico[]
 
   @@map("temas")
 }
@@ -111,14 +134,14 @@ model Tarifa {
   usuarioId    String    @map("usuario_id")
   usuario      Usuario   @relation(fields: [usuarioId], references: [id])
   modalidad    Modalidad
-  rol          RolSesion
+  ownership    Ownership @map("rol")
   valorUsd     Decimal   @map("valor_usd") @db.Decimal(10, 2)
   vigenteDesde DateTime  @default(now()) @map("vigente_desde")
   vigenteHasta DateTime? @map("vigente_hasta")
   createdAt    DateTime  @default(now())
 
-  @@unique([usuarioId, modalidad, rol, vigenteDesde])
-  @@index([usuarioId, modalidad, rol, vigenteHasta])
+  @@unique([usuarioId, modalidad, ownership, vigenteDesde])
+  @@index([usuarioId, modalidad, ownership, vigenteHasta])
   @@map("tarifas")
 }
 
@@ -129,11 +152,11 @@ model RegistroHoras {
   cliente   Cliente   @relation(fields: [clienteId], references: [id])
   usuarioId String    @map("usuario_id")
   usuario   Usuario   @relation("Mentor", fields: [usuarioId], references: [id])
-  temaId    String?   @map("tema_id")
-  tema      Tema?     @relation(fields: [temaId], references: [id])
+  etapaId   String?   @map("tema_id")
+  etapa     Etapa?    @relation(fields: [etapaId], references: [id])
   horas     Decimal   @db.Decimal(5, 2)
   modalidad Modalidad
-  rol       RolSesion
+  ownership Ownership @map("rol")
   nota      String?
 
   // Snapshot de la tarifa aplicada al momento de guardar (no se recalcula
@@ -151,4 +174,42 @@ model RegistroHoras {
   @@index([usuarioId, fecha])
   @@index([clienteId, fecha])
   @@map("registros_horas")
+}
+
+model Viatico {
+  id        String          @id @default(cuid())
+  fecha     DateTime        @db.Date
+  usuarioId String          @map("usuario_id")
+  usuario   Usuario         @relation(fields: [usuarioId], references: [id])
+  clienteId String          @map("cliente_id")
+  cliente   Cliente         @relation(fields: [clienteId], references: [id])
+  etapaId   String?         @map("etapa_id")
+  etapa     Etapa?          @relation(fields: [etapaId], references: [id])
+  moneda    Moneda
+  monto     Decimal         @db.Decimal(12, 2)
+  concepto  ConceptoViatico
+  // Ruta del comprobante en Supabase Storage (bucket privado), opcional.
+  archivoPath String?       @map("archivo_path")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([usuarioId, fecha])
+  @@index([clienteId, fecha])
+  @@map("viaticos")
+}
+
+model Vacacion {
+  id          String   @id @default(cuid())
+  usuarioId   String   @map("usuario_id")
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+  fechaInicio DateTime @map("fecha_inicio") @db.Date
+  fechaFin    DateTime @map("fecha_fin") @db.Date
+  dias        Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([usuarioId, fechaInicio])
+  @@map("vacaciones")
 }

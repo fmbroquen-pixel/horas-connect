@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { PrismaClient, Modalidad, RolSesion } from "../src/generated/prisma/client";
+import { PrismaClient, Modalidad, Ownership } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
@@ -24,7 +24,7 @@ const CLIENTES = [
   "Valca",
 ];
 
-const TEMAS: { etiqueta: string; grupo: string }[] = [
+const ETAPAS: { etiqueta: string; grupo: string }[] = [
   { etiqueta: "Kickoff", grupo: "Kickoff / Onboarding" },
   { etiqueta: "Nuevo seteo", grupo: "Kickoff / Onboarding" },
   { etiqueta: "Seteo trimestral", grupo: "Kickoff / Onboarding" },
@@ -66,12 +66,12 @@ async function main() {
     });
   }
 
-  for (const tema of TEMAS) {
-    const existente = await prisma.tema.findFirst({
-      where: { etiqueta: tema.etiqueta },
+  for (const etapa of ETAPAS) {
+    const existente = await prisma.etapa.findFirst({
+      where: { etiqueta: etapa.etiqueta },
     });
     if (!existente) {
-      await prisma.tema.create({ data: tema });
+      await prisma.etapa.create({ data: etapa });
     }
   }
 
@@ -91,15 +91,15 @@ async function main() {
     where: { id: davidId },
     data: { tipoTarifa: "variable" },
   });
-  const tarifasDavid: { modalidad: Modalidad; rol: RolSesion; valorUsd: number }[] = [
-    { modalidad: "presencial", rol: "titular", valorUsd: 45 },
-    { modalidad: "presencial", rol: "acompanante", valorUsd: 30 },
-    { modalidad: "virtual", rol: "titular", valorUsd: 37.5 },
-    { modalidad: "virtual", rol: "acompanante", valorUsd: 25 },
-    { modalidad: "valor_cero", rol: "valor_cero", valorUsd: 0 },
+  const tarifasDavid: { modalidad: Modalidad; ownership: Ownership; valorUsd: number }[] = [
+    { modalidad: "presencial", ownership: "owner", valorUsd: 45 },
+    { modalidad: "presencial", ownership: "backup", valorUsd: 30 },
+    { modalidad: "virtual", ownership: "owner", valorUsd: 37.5 },
+    { modalidad: "virtual", ownership: "backup", valorUsd: 25 },
+    { modalidad: "valor_cero", ownership: "valor_cero", valorUsd: 0 },
   ];
   for (const t of tarifasDavid) {
-    await crearTarifaSiNoExiste(davidId, t.modalidad, t.rol, t.valorUsd);
+    await crearTarifaSiNoExiste(davidId, t.modalidad, t.ownership, t.valorUsd);
   }
 
   // Convenio de Lucas Flores: tarifa fija de USD 30/hora, sin importar
@@ -112,15 +112,15 @@ async function main() {
     where: { id: lucasFloresId },
     data: { tipoTarifa: "fija" },
   });
-  const combinacionesLucasFlores: { modalidad: Modalidad; rol: RolSesion; valorUsd: number }[] = [
-    { modalidad: "presencial", rol: "titular", valorUsd: 30 },
-    { modalidad: "presencial", rol: "acompanante", valorUsd: 30 },
-    { modalidad: "virtual", rol: "titular", valorUsd: 30 },
-    { modalidad: "virtual", rol: "acompanante", valorUsd: 30 },
-    { modalidad: "valor_cero", rol: "valor_cero", valorUsd: 0 },
+  const combinacionesLucasFlores: { modalidad: Modalidad; ownership: Ownership; valorUsd: number }[] = [
+    { modalidad: "presencial", ownership: "owner", valorUsd: 30 },
+    { modalidad: "presencial", ownership: "backup", valorUsd: 30 },
+    { modalidad: "virtual", ownership: "owner", valorUsd: 30 },
+    { modalidad: "virtual", ownership: "backup", valorUsd: 30 },
+    { modalidad: "valor_cero", ownership: "valor_cero", valorUsd: 0 },
   ];
   for (const t of combinacionesLucasFlores) {
-    await crearTarifaSiNoExiste(lucasFloresId, t.modalidad, t.rol, t.valorUsd);
+    await crearTarifaSiNoExiste(lucasFloresId, t.modalidad, t.ownership, t.valorUsd);
   }
 
   // Maxi y Lucas quedan creados con tipoTarifa sin definir (null): no pueden
@@ -133,15 +133,15 @@ async function main() {
 async function crearTarifaSiNoExiste(
   usuarioId: string,
   modalidad: Modalidad,
-  rol: RolSesion,
+  ownership: Ownership,
   valorUsd: number,
 ) {
   const vigente = await prisma.tarifa.findFirst({
-    where: { usuarioId, modalidad, rol, vigenteHasta: null },
+    where: { usuarioId, modalidad, ownership, vigenteHasta: null },
   });
   if (!vigente) {
     await prisma.tarifa.create({
-      data: { usuarioId, modalidad, rol, valorUsd },
+      data: { usuarioId, modalidad, ownership, valorUsd },
     });
   }
 }

@@ -2,12 +2,34 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSesionActual } from "@/lib/auth";
 import { logout } from "@/app/actions";
+import { TabsNav } from "./tabs-nav";
 
 const ETIQUETA_ROL: Record<string, string> = {
   admin: "Administrador",
   guest: "Mentor",
   reader: "Solo lectura",
 };
+
+function tabsParaRol(rol: string) {
+  if (rol === "guest") {
+    return [
+      { href: "/dashboard", label: "Dashboard" },
+      { href: "/timetracker", label: "Timetracker" },
+      { href: "/viaticos", label: "Viáticos" },
+      { href: "/vacaciones", label: "Vacaciones" },
+    ];
+  }
+  if (rol === "admin") {
+    return [
+      { href: "/dashboard", label: "Dashboard" },
+      { href: "/timetracker", label: "Timetracker" },
+      { href: "/viaticos", label: "Viáticos" },
+      { href: "/vacaciones", label: "Vacaciones" },
+      { href: "/admin/usuarios", label: "Administración" },
+    ];
+  }
+  return [{ href: "/dashboard", label: "Dashboard" }];
+}
 
 export default async function AppLayout({
   children,
@@ -29,23 +51,15 @@ export default async function AppLayout({
     <div className="flex min-h-screen flex-col bg-dc-deeper">
       <header className="border-b border-dc-line bg-dc-deep">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
-          <div>
+          <Link href="/dashboard">
             <p className="font-display text-[10px] tracking-[0.3em] text-dc-pink">
               DISTRITO CONNECT
             </p>
             <p className="font-display text-sm uppercase text-white">
               Timetracker Connect
             </p>
-          </div>
+          </Link>
           <div className="flex items-center gap-3 text-sm">
-            {usuario.rol === "admin" && (
-              <Link
-                href="/admin/usuarios"
-                className="rounded-lg border border-dc-line px-3 py-1.5 text-xs text-dc-muted transition hover:text-dc-text"
-              >
-                Administración
-              </Link>
-            )}
             <div className="text-right">
               <p className="text-dc-text">{usuario.nombre}</p>
               <p className="text-xs text-dc-muted">
@@ -62,6 +76,7 @@ export default async function AppLayout({
             </form>
           </div>
         </div>
+        <TabsNav tabs={tabsParaRol(usuario.rol)} />
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
         {children}
