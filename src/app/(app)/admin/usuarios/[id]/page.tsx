@@ -143,7 +143,7 @@ export default async function UsuarioDetallePage({
               <h2 className="font-display text-sm uppercase text-white">
                 Historial de tarifas
               </h2>
-              <div className="mt-3 overflow-hidden rounded-2xl border border-dc-line">
+              <div className="mt-3 overflow-hidden dc-panel">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-dc-line text-left text-xs text-dc-muted">

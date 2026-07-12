@@ -76,8 +76,8 @@ export default async function ViaticosPage() {
         Cargá los gastos asociados a un proyecto. El comprobante es opcional.
       </p>
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-dc-line">
-        <div className={`${GRID_VIATICOS} border-b border-dc-line px-3 py-2 text-xs text-dc-muted`}>
+      <div className="mt-6 overflow-x-auto dc-panel">
+        <div className={`dc-thead ${GRID_VIATICOS} border-b border-dc-line px-3 py-2 text-xs text-dc-muted`}>
           <span>Fecha</span>
           <span>Proyecto</span>
           <span>Etapa</span>

@@ -5,7 +5,7 @@ import { logout } from "@/app/actions";
 import { TabsNav } from "./tabs-nav";
 import { BTN_SECONDARY_SM } from "@/lib/ui";
 
-const CONTENEDOR = "mx-auto w-full max-w-[1600px] px-6 md:px-8";
+const CONTENEDOR = "mx-auto w-full max-w-[1440px] px-6 md:px-10 lg:px-14";
 
 const ETIQUETA_ROL: Record<string, string> = {
   admin: "Administrador",

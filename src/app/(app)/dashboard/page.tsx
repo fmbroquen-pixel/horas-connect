@@ -129,7 +129,7 @@ export default async function DashboardPage({
         <Kpi etiqueta={`Vacaciones ${anioActual}`} valor={`${diasVacaciones} días`} />
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-dc-line">
+      <div className="mt-6 overflow-hidden dc-panel">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-dc-line text-left text-xs text-dc-muted">
@@ -152,11 +152,11 @@ export default async function DashboardPage({
             ))}
             {filas.length > 0 && (
               <tr className="bg-dc-card">
-                <td className="px-4 py-2 font-medium text-white">Total</td>
-                <td className="px-4 py-2 text-right font-medium tabular-nums text-white">
+                <td className="px-4 py-2 font-medium text-dc-text">Total</td>
+                <td className="px-4 py-2 text-right font-medium tabular-nums text-dc-text">
                   {formatHorasHsMin(totalHoras)}
                 </td>
-                <td className="px-4 py-2 text-right font-medium tabular-nums text-white">
+                <td className="px-4 py-2 text-right font-medium tabular-nums text-dc-text">
                   {formatMonto(totalMonto)}
                 </td>
               </tr>

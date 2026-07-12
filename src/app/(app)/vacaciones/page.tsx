@@ -41,8 +41,8 @@ export default async function VacacionesPage() {
         ejemplo, para descontar fines de semana).
       </p>
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-dc-line">
-        <div className={`${GRID_VACACIONES} border-b border-dc-line px-3 py-2 text-xs text-dc-muted`}>
+      <div className="mt-6 overflow-x-auto dc-panel">
+        <div className={`dc-thead ${GRID_VACACIONES} border-b border-dc-line px-3 py-2 text-xs text-dc-muted`}>
           <span>Fecha inicio</span>
           <span>Fecha fin</span>
           <span className="text-right">Días OOO</span>

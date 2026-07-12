@@ -87,8 +87,8 @@ export default async function TimetrackerPage() {
         </p>
       )}
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-dc-line">
-        <div className={`${GRID_TIMETRACKER} border-b border-dc-line px-3 py-2 text-xs text-dc-muted`}>
+      <div className="mt-6 overflow-x-auto dc-panel">
+        <div className={`dc-thead ${GRID_TIMETRACKER} border-b border-dc-line px-3 py-2 text-xs text-dc-muted`}>
           <span>Fecha</span>
           <span>Proyecto</span>
           <span>Etapa</span>

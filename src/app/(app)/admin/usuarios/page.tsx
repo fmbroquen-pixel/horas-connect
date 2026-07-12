@@ -31,7 +31,7 @@ export default async function UsuariosPage() {
 
       <NuevoUsuarioForm />
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-dc-line">
+      <div className="mt-6 overflow-hidden dc-panel">
         <table className="w-full text-sm">
           <tbody>
             {usuarios.map((u) => (

@@ -44,7 +44,7 @@ function TabLink({
 
 export function TabsNav({
   tabs,
-  containerClass = "mx-auto w-full max-w-[1600px] px-6 md:px-8",
+  containerClass = "mx-auto w-full max-w-[1440px] px-6 md:px-10 lg:px-14",
 }: {
   tabs: { href: string; label: string }[];
   containerClass?: string;

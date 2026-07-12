@@ -23,7 +23,7 @@ export default async function ClientesPage() {
 
       <NuevoClienteForm action={crearCliente} />
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-dc-line">
+      <div className="mt-6 overflow-hidden dc-panel">
         <table className="w-full text-sm">
           <tbody>
             {clientes.map((c) => (

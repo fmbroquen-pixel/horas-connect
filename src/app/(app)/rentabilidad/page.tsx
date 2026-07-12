@@ -39,7 +39,7 @@ export default async function RentabilidadPage() {
             : "Todavía no hay proyectos cargados."}
         </div>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-2xl border border-dc-line">
+        <div className="mt-6 overflow-hidden dc-panel">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-dc-line text-left text-xs text-dc-muted">
