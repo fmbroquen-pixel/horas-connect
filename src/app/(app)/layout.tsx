@@ -6,6 +6,7 @@ import { logout } from "@/app/actions";
 const ETIQUETA_ROL: Record<string, string> = {
   admin: "Administrador",
   guest: "Mentor",
+  reader: "Solo lectura",
 };
 
 export default async function AppLayout({
@@ -39,7 +40,7 @@ export default async function AppLayout({
           <div className="flex items-center gap-3 text-sm">
             {usuario.rol === "admin" && (
               <Link
-                href="/admin/clientes"
+                href="/admin/usuarios"
                 className="rounded-lg border border-dc-line px-3 py-1.5 text-xs text-dc-muted transition hover:text-dc-text"
               >
                 Administración

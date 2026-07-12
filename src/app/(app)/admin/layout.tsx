@@ -3,10 +3,9 @@ import { redirect } from "next/navigation";
 import { getSesionActual } from "@/lib/auth";
 
 const SECCIONES = [
-  { href: "/admin/clientes", label: "Clientes" },
-  { href: "/admin/mentores", label: "Mentores" },
-  { href: "/admin/temas", label: "Temas" },
   { href: "/admin/usuarios", label: "Usuarios" },
+  { href: "/admin/clientes", label: "Clientes" },
+  { href: "/admin/temas", label: "Temas" },
 ];
 
 export default async function AdminLayout({

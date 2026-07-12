@@ -43,7 +43,9 @@ const TEMAS: { etiqueta: string; grupo: string }[] = [
   { etiqueta: "Otro", grupo: "Otro" },
 ];
 
-const MENTORES = [
+// El "mentor" es, en el modelo de datos, un Usuario con rol "guest": no hay
+// una tabla aparte para lo mismo.
+const USUARIOS = [
   { nombre: "David", email: "david@embarca.tech", rol: "guest" as const },
   {
     nombre: "Lucas Flores",
@@ -73,30 +75,19 @@ async function main() {
     }
   }
 
-  const mentoresCreados: Record<string, string> = {};
-  for (const m of MENTORES) {
-    const mentor = await prisma.mentor.upsert({
-      where: { email: m.email },
+  const usuariosCreados: Record<string, string> = {};
+  for (const u of USUARIOS) {
+    const usuario = await prisma.usuario.upsert({
+      where: { email: u.email },
       update: {},
-      create: { nombre: m.nombre, email: m.email },
+      create: { nombre: u.nombre, email: u.email, rol: u.rol },
     });
-    mentoresCreados[m.email] = mentor.id;
-
-    await prisma.usuario.upsert({
-      where: { email: m.email },
-      update: {},
-      create: {
-        email: m.email,
-        nombre: m.nombre,
-        rol: m.rol,
-        mentorId: mentor.id,
-      },
-    });
+    usuariosCreados[u.email] = usuario.id;
   }
 
   // Convenio de David: tarifa variable (una combinación por modalidad x rol).
-  const davidId = mentoresCreados["david@embarca.tech"];
-  await prisma.mentor.update({
+  const davidId = usuariosCreados["david@embarca.tech"];
+  await prisma.usuario.update({
     where: { id: davidId },
     data: { tipoTarifa: "variable" },
   });
@@ -114,10 +105,10 @@ async function main() {
   // Convenio de Lucas Flores: tarifa fija de USD 30/hora, sin importar
   // modalidad ni rol (salvo "valor cero", que siempre es $0). Se guarda
   // igual como una fila de Tarifa por combinación para que el cálculo de
-  // horas no tenga que distinguir fija/variable, solo cambia cómo lo
-  // carga el formulario del administrador.
-  const lucasFloresId = mentoresCreados["lucas.flores@embarca.tech"];
-  await prisma.mentor.update({
+  // horas no tenga que distinguir fija/variable, solo cambia qué formulario
+  // ve el administrador.
+  const lucasFloresId = usuariosCreados["lucas.flores@embarca.tech"];
+  await prisma.usuario.update({
     where: { id: lucasFloresId },
     data: { tipoTarifa: "fija" },
   });
@@ -132,25 +123,25 @@ async function main() {
     await crearTarifaSiNoExiste(lucasFloresId, t.modalidad, t.rol, t.valorUsd);
   }
 
-  // Maxi, Lucas y Fede quedan creados como mentores con tipoTarifa sin
-  // definir (null): no pueden cargar horas facturables hasta que el
-  // administrador les configure "fija" o "variable" desde el ABM.
+  // Maxi y Lucas quedan creados con tipoTarifa sin definir (null): no pueden
+  // cargar horas facturables hasta que el administrador les configure
+  // "fija" o "variable" desde el ABM de Usuarios.
 
   console.log("Seed completado.");
 }
 
 async function crearTarifaSiNoExiste(
-  mentorId: string,
+  usuarioId: string,
   modalidad: Modalidad,
   rol: RolSesion,
   valorUsd: number,
 ) {
   const vigente = await prisma.tarifa.findFirst({
-    where: { mentorId, modalidad, rol, vigenteHasta: null },
+    where: { usuarioId, modalidad, rol, vigenteHasta: null },
   });
   if (!vigente) {
     await prisma.tarifa.create({
-      data: { mentorId, modalidad, rol, valorUsd },
+      data: { usuarioId, modalidad, rol, valorUsd },
     });
   }
 }

@@ -4,47 +4,36 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
+import type { Modalidad, RolSesion } from "@/generated/prisma/client";
 
 const UsuarioSchema = z.object({
   email: z.email({ error: "Email inválido." }).trim().toLowerCase(),
   nombre: z.string().trim().min(1, { error: "El nombre es obligatorio." }),
-  rol: z.enum(["admin", "guest"], { error: "Elegí un rol." }),
-  mentorId: z.string().trim().optional(),
+  rol: z.enum(["admin", "guest", "reader"], { error: "Elegí un rol." }),
 });
 
 export async function crearUsuario(_prevState: unknown, formData: FormData) {
   await requireAdmin();
-  const mentorId = formData.get("mentorId");
   const parsed = UsuarioSchema.safeParse({
     email: formData.get("email"),
     nombre: formData.get("nombre"),
     rol: formData.get("rol"),
-    mentorId: mentorId ? String(mentorId) : undefined,
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
 
-  await prisma.usuario.create({
-    data: {
-      email: parsed.data.email,
-      nombre: parsed.data.nombre,
-      rol: parsed.data.rol,
-      mentorId: parsed.data.mentorId || null,
-    },
-  });
+  await prisma.usuario.create({ data: parsed.data });
   revalidatePath("/admin/usuarios");
   return { error: undefined };
 }
 
 export async function actualizarUsuario(id: string, formData: FormData) {
   const admin = await requireAdmin();
-  const mentorId = formData.get("mentorId");
   const parsed = UsuarioSchema.safeParse({
     email: formData.get("email"),
     nombre: formData.get("nombre"),
     rol: formData.get("rol"),
-    mentorId: mentorId ? String(mentorId) : undefined,
   });
   if (!parsed.success) return;
 
@@ -52,16 +41,9 @@ export async function actualizarUsuario(id: string, formData: FormData) {
     await bloquearSiEsUltimoAdmin(id, admin.id);
   }
 
-  await prisma.usuario.update({
-    where: { id },
-    data: {
-      email: parsed.data.email,
-      nombre: parsed.data.nombre,
-      rol: parsed.data.rol,
-      mentorId: parsed.data.mentorId || null,
-    },
-  });
+  await prisma.usuario.update({ where: { id }, data: parsed.data });
   revalidatePath("/admin/usuarios");
+  revalidatePath(`/admin/usuarios/${id}`);
 }
 
 export async function alternarActivoUsuario(id: string, activo: boolean) {
@@ -89,4 +71,165 @@ async function bloquearSiEsUltimoAdmin(usuarioId: string, adminActualId: string)
         : "No se puede desactivar al único administrador activo.",
     );
   }
+}
+
+const COMBOS_FACTURABLES: { modalidad: Modalidad; rol: RolSesion }[] = [
+  { modalidad: "presencial", rol: "titular" },
+  { modalidad: "presencial", rol: "acompanante" },
+  { modalidad: "virtual", rol: "titular" },
+  { modalidad: "virtual", rol: "acompanante" },
+];
+
+const TarifaFijaSchema = z.object({
+  tipoTarifa: z.literal("fija"),
+  valorUsd: z.coerce.number().min(0, { error: "El valor no puede ser negativo." }),
+});
+
+const TarifaVariableSchema = z.object({
+  tipoTarifa: z.literal("variable"),
+  presencialTitular: z.coerce.number().min(0),
+  presencialAcompanante: z.coerce.number().min(0),
+  virtualTitular: z.coerce.number().min(0),
+  virtualAcompanante: z.coerce.number().min(0),
+});
+
+export async function guardarTarifa(
+  usuarioId: string,
+  _prevState: unknown,
+  formData: FormData,
+) {
+  await requireAdmin();
+
+  const tipoTarifa = formData.get("tipoTarifa");
+
+  if (tipoTarifa === "fija") {
+    const parsed = TarifaFijaSchema.safeParse({
+      tipoTarifa,
+      valorUsd: formData.get("valorUsd"),
+    });
+    if (!parsed.success) return { error: "Valor inválido." };
+
+    await prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { tipoTarifa: "fija" },
+    });
+    for (const combo of COMBOS_FACTURABLES) {
+      await upsertTarifaVigente(
+        usuarioId,
+        combo.modalidad,
+        combo.rol,
+        parsed.data.valorUsd,
+      );
+    }
+  } else if (tipoTarifa === "variable") {
+    const parsed = TarifaVariableSchema.safeParse({
+      tipoTarifa,
+      presencialTitular: formData.get("presencialTitular"),
+      presencialAcompanante: formData.get("presencialAcompanante"),
+      virtualTitular: formData.get("virtualTitular"),
+      virtualAcompanante: formData.get("virtualAcompanante"),
+    });
+    if (!parsed.success) return { error: "Alguno de los valores es inválido." };
+
+    await prisma.usuario.update({
+      where: { id: usuarioId },
+      data: { tipoTarifa: "variable" },
+    });
+    await upsertTarifaVigente(
+      usuarioId,
+      "presencial",
+      "titular",
+      parsed.data.presencialTitular,
+    );
+    await upsertTarifaVigente(
+      usuarioId,
+      "presencial",
+      "acompanante",
+      parsed.data.presencialAcompanante,
+    );
+    await upsertTarifaVigente(
+      usuarioId,
+      "virtual",
+      "titular",
+      parsed.data.virtualTitular,
+    );
+    await upsertTarifaVigente(
+      usuarioId,
+      "virtual",
+      "acompanante",
+      parsed.data.virtualAcompanante,
+    );
+  } else {
+    return { error: "Elegí un tipo de tarifa." };
+  }
+
+  await asegurarTarifaCero(usuarioId);
+  revalidatePath(`/admin/usuarios/${usuarioId}`);
+  revalidatePath("/admin/usuarios");
+  return { error: undefined };
+}
+
+// Cierra la tarifa vigente para esa combinación (si el valor cambió) y crea
+// una nueva. Si el valor es igual al vigente, no toca nada (evita ensuciar
+// el historial con filas idénticas).
+async function upsertTarifaVigente(
+  usuarioId: string,
+  modalidad: Modalidad,
+  rol: RolSesion,
+  valorUsd: number,
+) {
+  const vigente = await prisma.tarifa.findFirst({
+    where: { usuarioId, modalidad, rol, vigenteHasta: null },
+  });
+
+  if (vigente && Number(vigente.valorUsd) === valorUsd) return;
+
+  const ahora = new Date();
+  if (vigente) {
+    await prisma.tarifa.update({
+      where: { id: vigente.id },
+      data: { vigenteHasta: ahora },
+    });
+  }
+  await prisma.tarifa.create({
+    data: { usuarioId, modalidad, rol, valorUsd, vigenteDesde: ahora },
+  });
+}
+
+async function asegurarTarifaCero(usuarioId: string) {
+  const existente = await prisma.tarifa.findFirst({
+    where: {
+      usuarioId,
+      modalidad: "valor_cero",
+      rol: "valor_cero",
+      vigenteHasta: null,
+    },
+  });
+  if (!existente) {
+    await prisma.tarifa.create({
+      data: {
+        usuarioId,
+        modalidad: "valor_cero",
+        rol: "valor_cero",
+        valorUsd: 0,
+      },
+    });
+  }
+}
+
+export async function guardarProyectosAsignados(
+  usuarioId: string,
+  formData: FormData,
+) {
+  await requireAdmin();
+  const clienteIds = formData.getAll("clienteId").map(String);
+
+  await prisma.$transaction([
+    prisma.proyectoAsignado.deleteMany({ where: { usuarioId } }),
+    prisma.proyectoAsignado.createMany({
+      data: clienteIds.map((clienteId) => ({ usuarioId, clienteId })),
+    }),
+  ]);
+
+  revalidatePath(`/admin/usuarios/${usuarioId}`);
 }

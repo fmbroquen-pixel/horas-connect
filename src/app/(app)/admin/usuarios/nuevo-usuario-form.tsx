@@ -3,9 +3,7 @@
 import { useActionState, useRef } from "react";
 import { crearUsuario } from "./actions";
 
-type Mentor = { id: string; nombre: string };
-
-export function NuevoUsuarioForm({ mentores }: { mentores: Mentor[] }) {
+export function NuevoUsuarioForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const [state, formAction, pending] = useActionState(
     async (prev: { error?: string } | undefined, formData: FormData) => {
@@ -37,19 +35,8 @@ export function NuevoUsuarioForm({ mentores }: { mentores: Mentor[] }) {
         className="rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
       >
         <option value="guest">Mentor (guest)</option>
+        <option value="reader">Solo lectura (reader)</option>
         <option value="admin">Administrador</option>
-      </select>
-      <select
-        name="mentorId"
-        defaultValue=""
-        className="rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
-      >
-        <option value="">Sin vincular a mentor</option>
-        {mentores.map((m) => (
-          <option key={m.id} value={m.id}>
-            {m.nombre}
-          </option>
-        ))}
       </select>
       <button
         type="submit"
