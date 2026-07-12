@@ -8,7 +8,7 @@ export default async function VacacionesPage() {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
   const { usuario } = sesion;
-  if (usuario.rol === "reader") redirect("/dashboard");
+  if (usuario.rol === "reader") redirect("/rentabilidad");
 
   const vacaciones = await prisma.vacacion.findMany({
     where: { usuarioId: usuario.id },

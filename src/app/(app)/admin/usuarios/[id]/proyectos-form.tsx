@@ -14,12 +14,7 @@ export function ProyectosForm({
 }) {
   return (
     <form action={guardarProyectosAsignados.bind(null, usuarioId)}>
-      <p className="text-xs text-dc-muted">
-        Si no marcás ningún proyecto, el mentor puede cargar horas en
-        cualquier cliente activo. En cuanto marqués al menos uno, el
-        formulario de carga se limita a los que elijas acá.
-      </p>
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {clientes.map((c) => (
           <label
             key={c.id}

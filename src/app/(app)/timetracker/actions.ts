@@ -18,7 +18,17 @@ const RegistroSchema = z.object({
   horas: z.string().min(1, { error: "Cargá las horas." }),
 });
 
-type Resultado = { error?: string };
+// El "campo" indica qué input tiene el error, para que el formulario resetee
+// solo ése y conserve el resto de lo que el usuario ya cargó bien.
+export type CampoRegistro =
+  | "fecha"
+  | "clienteId"
+  | "etapaId"
+  | "ownership"
+  | "modalidad"
+  | "horas";
+
+type Resultado = { error?: string; campo?: CampoRegistro };
 
 function limiteVentana(): Date {
   const limite = new Date();
@@ -64,20 +74,27 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
     horas: formData.get("horas"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+    const issue = parsed.error.issues[0];
+    return {
+      error: issue?.message ?? "Datos inválidos.",
+      campo: issue?.path[0] as CampoRegistro | undefined,
+    };
   }
 
   const { fecha, error: errorFecha } = validarFecha(parsed.data.fecha);
-  if (errorFecha || !fecha) return { error: errorFecha };
+  if (errorFecha || !fecha) return { error: errorFecha, campo: "fecha" as const };
 
   const horas = parseHorasHsMin(parsed.data.horas);
   if (horas === null || horas <= 0 || horas > 24) {
-    return { error: "Horas inválidas: usá el formato hs:min, por ejemplo 1:30." };
+    return {
+      error: "Horas inválidas: cargá un número como 1,5 o el formato 1:30.",
+      campo: "horas" as const,
+    };
   }
 
   const permitidos = await getProyectosPermitidos(usuarioId);
   if (!permitidos.some((c) => c.id === parsed.data.clienteId)) {
-    return { error: "No tenés asignado ese proyecto." };
+    return { error: "No tenés asignado ese proyecto.", campo: "clienteId" as const };
   }
 
   const tarifa = await resolverTarifa(
@@ -89,6 +106,7 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
     return {
       error:
         "No tenés una tarifa configurada para esa combinación. Contactá al administrador.",
+      campo: "modalidad" as const,
     };
   }
 
@@ -102,7 +120,7 @@ export async function crearRegistro(
   const usuario = await requireGuest();
 
   const r = await validarEntrada(usuario.id, formData);
-  if (r.error || !r.datos) return { error: r.error };
+  if (r.error || !r.datos) return { error: r.error, campo: r.campo };
   const d = r.datos;
 
   await prisma.registroHoras.create({
@@ -153,7 +171,7 @@ export async function actualizarRegistro(
   if (check.error || !check.registro) return { error: check.error };
 
   const r = await validarEntrada(check.registro.usuarioId, formData);
-  if (r.error || !r.datos) return { error: r.error };
+  if (r.error || !r.datos) return { error: r.error, campo: r.campo };
   const d = r.datos;
 
   await prisma.registroHoras.update({

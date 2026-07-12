@@ -15,7 +15,7 @@ export default async function TimetrackerPage() {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
   const { usuario } = sesion;
-  if (usuario.rol === "reader") redirect("/dashboard");
+  if (usuario.rol === "reader") redirect("/rentabilidad");
 
   const [proyectos, etapas, tarifasVigentes, registros] = await Promise.all([
     getProyectosPermitidos(usuario.id),
@@ -73,8 +73,11 @@ export default async function TimetrackerPage() {
         </p>
       </div>
       <p className="mt-1 text-sm text-dc-muted">
-        Cargá tus horas por proyecto. Se pueden cargar y corregir registros de
-        los últimos {DIAS_VENTANA_EDICION} días; no se admiten fechas futuras.
+        Cargá las horas como número decimal (por ejemplo <strong className="text-dc-text">1,5</strong> o
+        <strong className="text-dc-text"> 1.5</strong>) y se muestran como
+        <strong className="text-dc-text"> 1:30</strong>. Se pueden cargar y
+        corregir registros de los últimos {DIAS_VENTANA_EDICION} días; no se
+        admiten fechas futuras.
       </p>
 
       {sinTarifa && (

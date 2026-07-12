@@ -29,6 +29,9 @@ export default async function UsuarioDetallePage({
   if (!usuario) notFound();
 
   const esGuest = usuario.rol === "guest";
+  // El reader también recibe proyectos asignados (definen qué rentabilidad
+  // puede ver), pero no tiene tarifa (no reporta horas).
+  const asignaProyectos = usuario.rol === "guest" || usuario.rol === "reader";
 
   const [tarifas, clientes, asignados] = await Promise.all([
     esGuest
@@ -37,8 +40,12 @@ export default async function UsuarioDetallePage({
           orderBy: { vigenteDesde: "desc" },
         })
       : Promise.resolve([]),
-    esGuest ? prisma.cliente.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }) : Promise.resolve([]),
-    esGuest ? prisma.proyectoAsignado.findMany({ where: { usuarioId: id } }) : Promise.resolve([]),
+    asignaProyectos
+      ? prisma.cliente.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } })
+      : Promise.resolve([]),
+    asignaProyectos
+      ? prisma.proyectoAsignado.findMany({ where: { usuarioId: id } })
+      : Promise.resolve([]),
   ]);
 
   const vigentes = tarifas.filter((t) => t.vigenteHasta === null);
@@ -90,38 +97,47 @@ export default async function UsuarioDetallePage({
       </div>
 
       {esGuest && (
+        <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
+          <h2 className="font-display text-sm uppercase text-white">
+            Convenio de tarifa
+          </h2>
+          <div className="mt-4">
+            <TarifaForm
+              tipoActual={usuario.tipoTarifa}
+              valores={{
+                presencialOwner: buscarValor("presencial", "owner"),
+                presencialBackup: buscarValor("presencial", "backup"),
+                virtualOwner: buscarValor("virtual", "owner"),
+                virtualBackup: buscarValor("virtual", "backup"),
+              }}
+              action={guardarTarifa.bind(null, usuario.id)}
+            />
+          </div>
+        </div>
+      )}
+
+      {asignaProyectos && (
+        <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
+          <h2 className="font-display text-sm uppercase text-white">
+            Proyectos asignados
+          </h2>
+          <p className="mt-1 text-xs text-dc-muted">
+            {esGuest
+              ? "Limitan en qué proyectos puede cargar horas."
+              : "Limitan qué proyectos puede ver en el informe de rentabilidad."}
+          </p>
+          <div className="mt-4">
+            <ProyectosForm
+              usuarioId={usuario.id}
+              clientes={clientes}
+              asignadosIds={asignadosIds}
+            />
+          </div>
+        </div>
+      )}
+
+      {esGuest && (
         <>
-          <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
-            <h2 className="font-display text-sm uppercase text-white">
-              Convenio de tarifa
-            </h2>
-            <div className="mt-4">
-              <TarifaForm
-                tipoActual={usuario.tipoTarifa}
-                valores={{
-                  presencialOwner: buscarValor("presencial", "owner"),
-                  presencialBackup: buscarValor("presencial", "backup"),
-                  virtualOwner: buscarValor("virtual", "owner"),
-                  virtualBackup: buscarValor("virtual", "backup"),
-                }}
-                action={guardarTarifa.bind(null, usuario.id)}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
-            <h2 className="font-display text-sm uppercase text-white">
-              Proyectos asignados
-            </h2>
-            <div className="mt-4">
-              <ProyectosForm
-                usuarioId={usuario.id}
-                clientes={clientes}
-                asignadosIds={asignadosIds}
-              />
-            </div>
-          </div>
-
           {historial.length > 0 && (
             <div>
               <h2 className="font-display text-sm uppercase text-white">

@@ -15,7 +15,7 @@ export default async function ViaticosPage() {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
   const { usuario } = sesion;
-  if (usuario.rol === "reader") redirect("/dashboard");
+  if (usuario.rol === "reader") redirect("/rentabilidad");
 
   const [proyectos, etapas, viaticos] = await Promise.all([
     getProyectosPermitidos(usuario.id),

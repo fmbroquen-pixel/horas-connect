@@ -20,22 +20,12 @@ export default async function DashboardPage({
   if (sesion.estado !== "autorizado") redirect("/login");
   const { usuario } = sesion;
 
-  if (usuario.rol !== "guest") {
-    return (
-      <div>
-        <h1 className="font-display text-xl uppercase text-white">
-          Hola, {usuario.nombre.split(" ")[0]}
-        </h1>
-        <p className="mt-2 text-sm text-dc-muted">
-          El informe de rentabilidad general se agrega en la próxima fase.
-        </p>
-        <div className="mt-8 rounded-2xl border border-dc-line bg-dc-card p-8 text-center text-dc-muted">
-          Todavía no hay reportes disponibles para tu rol.
-        </div>
-      </div>
-    );
-  }
+  // El reader no reporta horas propias: su vista es el dashboard de
+  // rentabilidad de sus proyectos asignados.
+  if (usuario.rol === "reader") redirect("/rentabilidad");
 
+  // Guest y admin ven su dashboard personal (horas y honorarios propios).
+  // El admin, además, tiene la solapa "Rentabilidad" con todos los proyectos.
   const params = await searchParams;
 
   // Rango por defecto: últimos 30 días; máximo permitido: 90 días.

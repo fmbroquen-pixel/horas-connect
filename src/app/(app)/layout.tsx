@@ -13,25 +13,26 @@ const ETIQUETA_ROL: Record<string, string> = {
   reader: "Solo lectura",
 };
 
+const TABS_CARGA = [
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/timetracker", label: "Timetracker" },
+  { href: "/viaticos", label: "Viáticos" },
+  { href: "/vacaciones", label: "Vacaciones" },
+];
+
 function tabsParaRol(rol: string) {
-  if (rol === "guest") {
-    return [
-      { href: "/dashboard", label: "Dashboard" },
-      { href: "/timetracker", label: "Timetracker" },
-      { href: "/viaticos", label: "Viáticos" },
-      { href: "/vacaciones", label: "Vacaciones" },
-    ];
-  }
+  if (rol === "guest") return TABS_CARGA;
   if (rol === "admin") {
+    // El admin también actúa como mentor (carga sus horas) y además ve la
+    // rentabilidad de todos los proyectos y la administración.
     return [
-      { href: "/dashboard", label: "Dashboard" },
-      { href: "/timetracker", label: "Timetracker" },
-      { href: "/viaticos", label: "Viáticos" },
-      { href: "/vacaciones", label: "Vacaciones" },
+      ...TABS_CARGA,
+      { href: "/rentabilidad", label: "Rentabilidad" },
       { href: "/admin/usuarios", label: "Administración" },
     ];
   }
-  return [{ href: "/dashboard", label: "Dashboard" }];
+  // reader: solo lectura de la rentabilidad de sus proyectos asignados.
+  return [{ href: "/rentabilidad", label: "Rentabilidad" }];
 }
 
 export default async function AppLayout({

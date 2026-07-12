@@ -18,7 +18,17 @@ export function parseHorasHsMin(valor: string): number | null {
 }
 
 export function formatHorasHsMin(decimal: number): string {
-  const horas = Math.floor(decimal);
-  const minutos = Math.round((decimal - horas) * 60);
+  const totalMinutos = Math.round(decimal * 60);
+  const horas = Math.floor(totalMinutos / 60);
+  const minutos = totalMinutos % 60;
   return `${horas}:${String(minutos).padStart(2, "0")}`;
+}
+
+// Reformatea lo que el usuario escribió (decimal con coma o punto, o ya un
+// hs:min) a "hora:minuto" para mostrarlo en el mismo campo. Devuelve null si
+// no es un valor de horas válido.
+export function reformatEntradaHoras(valor: string): string | null {
+  const decimal = parseHorasHsMin(valor);
+  if (decimal === null || decimal <= 0 || decimal > 24) return null;
+  return formatHorasHsMin(decimal);
 }

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { actualizarRegistro, eliminarRegistro } from "./actions";
-import { parseHorasHsMin } from "@/lib/horas";
+import { parseHorasHsMin, reformatEntradaHoras } from "@/lib/horas";
 import { formatMonto, hoyISO } from "@/lib/formato";
 import { GRID_TIMETRACKER } from "./grid";
 import {
@@ -165,6 +165,10 @@ function FormEdicion({
           name="horas"
           value={horas}
           onChange={(e) => setHoras(e.target.value)}
+          onBlur={() => {
+            const f = reformatEntradaHoras(horas);
+            if (f) setHoras(f);
+          }}
           required
           className={INPUT}
         />
