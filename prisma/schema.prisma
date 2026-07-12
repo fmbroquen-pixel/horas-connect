@@ -57,11 +57,44 @@ model Cliente {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  registros    RegistroHoras[]
-  asignaciones ProyectoAsignado[]
-  viaticos     Viatico[]
+  registros     RegistroHoras[]
+  asignaciones  ProyectoAsignado[]
+  viaticos      Viatico[]
+  facturaciones Facturacion[]
 
   @@map("clientes")
+}
+
+// Facturación (lo que se le cobra al cliente) por proyecto y por mes. La
+// carga el administrador; el margen del informe de rentabilidad es esta
+// facturación menos el costo de mentores (suma de montoUsd de las horas).
+model Facturacion {
+  id        String   @id @default(cuid())
+  clienteId String   @map("cliente_id")
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+  anio      Int
+  mes       Int // 1-12
+  montoUsd  Decimal  @map("monto_usd") @db.Decimal(12, 2)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([clienteId, anio, mes])
+  @@index([anio, mes])
+  @@map("facturaciones")
+}
+
+// Texto libre de "lecturas del mes" que redacta el administrador y que ve
+// todo el que accede al informe de ese mes.
+model NotaMes {
+  id        String   @id @default(cuid())
+  anio      Int
+  mes       Int
+  texto     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([anio, mes])
+  @@map("notas_mes")
 }
 
 // Una sola entidad para todas las personas que usan la app. El "mentor" de
