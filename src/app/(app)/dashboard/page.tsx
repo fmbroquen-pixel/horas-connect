@@ -4,6 +4,7 @@ import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
 import { formatHorasHsMin } from "@/lib/horas";
 import { formatMonto, hoyISO } from "@/lib/formato";
+import { BTN_PRIMARY } from "@/lib/ui";
 
 const MAX_DIAS_FILTRO = 90;
 
@@ -122,7 +123,7 @@ export default async function DashboardPage({
         </div>
         <button
           type="submit"
-          className="rounded-lg bg-dc-purple px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+          className={BTN_PRIMARY}
         >
           Filtrar
         </button>

@@ -1,6 +1,7 @@
 import { getSesionActual } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { logout } from "@/app/actions";
+import { BTN_SECONDARY } from "@/lib/ui";
 
 export default async function SinAccesoPage() {
   const sesion = await getSesionActual();
@@ -27,10 +28,7 @@ export default async function SinAccesoPage() {
           que te agregue.
         </p>
         <form action={logout} className="mt-6">
-          <button
-            type="submit"
-            className="w-full rounded-xl border border-dc-line px-4 py-2.5 text-sm font-medium text-dc-text transition hover:bg-dc-line/40"
-          >
+          <button type="submit" className={`${BTN_SECONDARY} w-full py-2.5`}>
             Volver a intentar con otra cuenta
           </button>
         </form>

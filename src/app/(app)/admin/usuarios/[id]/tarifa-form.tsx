@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { BTN_PRIMARY } from "@/lib/ui";
 
 type ValoresActuales = {
   presencialOwner?: number;
@@ -161,7 +162,7 @@ export function TarifaForm({
       <button
         type="submit"
         disabled={pending}
-        className="rounded-xl bg-dc-purple px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+        className={BTN_PRIMARY}
       >
         {pending ? "Guardando…" : "Guardar tarifa"}
       </button>

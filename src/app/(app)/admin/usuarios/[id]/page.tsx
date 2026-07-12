@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/require-admin";
 import { actualizarUsuario, guardarTarifa } from "../actions";
 import { TarifaForm } from "./tarifa-form";
 import { ProyectosForm } from "./proyectos-form";
+import { BTN_SECONDARY } from "@/lib/ui";
 
 const ETIQUETA_MODALIDAD: Record<string, string> = {
   presencial: "Presencial",
@@ -81,7 +82,7 @@ export default async function UsuarioDetallePage({
           </select>
           <button
             type="submit"
-            className="rounded-lg border border-dc-line px-4 py-2 text-sm text-dc-muted hover:text-dc-text"
+            className={BTN_SECONDARY}
           >
             Guardar datos
           </button>

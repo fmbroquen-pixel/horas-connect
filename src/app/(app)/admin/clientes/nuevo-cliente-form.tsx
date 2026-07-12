@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useRef } from "react";
+import { BTN_PRIMARY } from "@/lib/ui";
 
 type Accion = (
   prevState: { error?: string } | undefined,
@@ -26,11 +27,7 @@ export function NuevoClienteForm({ action }: { action: Accion }) {
         required
         className="w-full max-w-xs rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
       />
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded-lg bg-dc-purple px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
-      >
+      <button type="submit" disabled={pending} className={BTN_PRIMARY}>
         {pending ? "Agregando…" : "Agregar"}
       </button>
       {state?.error && <p className="self-center text-xs text-dc-pink">{state.error}</p>}

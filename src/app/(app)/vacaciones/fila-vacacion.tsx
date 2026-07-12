@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { actualizarVacacion, eliminarVacacion } from "./actions";
 import { GRID_VACACIONES } from "./fila-nueva";
+import { BTN_PRIMARY_SM, BTN_SECONDARY_SM, BTN_DANGER_SM, BTN_DANGER_CONFIRM_SM } from "@/lib/ui";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -30,7 +31,7 @@ export function FilaVacacion({ vacacion }: { vacacion: VacacionFila }) {
             <button
               type="button"
               onClick={() => setEditando(true)}
-              className="rounded-lg border border-dc-line px-2 py-1 text-xs text-dc-muted hover:text-dc-text"
+              className={BTN_SECONDARY_SM}
             >
               Editar
             </button>
@@ -94,14 +95,14 @@ function FormEdicion({
           <button
             type="submit"
             disabled={pending}
-            className="rounded-lg bg-dc-purple px-2 py-1 text-xs font-medium text-white disabled:opacity-60"
+            className={BTN_PRIMARY_SM}
           >
             {pending ? "…" : "Guardar"}
           </button>
           <button
             type="button"
             onClick={onCerrar}
-            className="rounded-lg border border-dc-line px-2 py-1 text-xs text-dc-muted hover:text-dc-text"
+            className={BTN_SECONDARY_SM}
           >
             ✕
           </button>
@@ -120,7 +121,7 @@ function BotonEliminar({ id }: { id: string }) {
       <button
         type="button"
         onClick={() => setConfirmando(true)}
-        className="rounded-lg border border-dc-line px-2 py-1 text-xs text-dc-muted hover:text-dc-pink"
+        className={BTN_DANGER_SM}
       >
         Borrar
       </button>
@@ -130,7 +131,7 @@ function BotonEliminar({ id }: { id: string }) {
     <button
       type="button"
       onClick={() => eliminarVacacion(id)}
-      className="rounded-lg bg-dc-pink/20 px-2 py-1 text-xs text-dc-pink"
+      className={BTN_DANGER_CONFIRM_SM}
     >
       ¿Seguro?
     </button>

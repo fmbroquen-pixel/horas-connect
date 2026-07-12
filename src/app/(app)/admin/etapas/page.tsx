@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { actualizarEtapa, alternarActivoEtapa } from "./actions";
 import { NuevaEtapaForm } from "./nueva-etapa-form";
+import { BTN_SECONDARY_SM, BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
 
 export default async function EtapasPage() {
   await requireAdmin();
@@ -41,7 +42,7 @@ export default async function EtapasPage() {
                     />
                     <button
                       type="submit"
-                      className="rounded-lg border border-dc-line px-2 py-1 text-xs text-dc-muted hover:text-dc-text"
+                      className={BTN_SECONDARY_SM}
                     >
                       Guardar
                     </button>
@@ -53,8 +54,8 @@ export default async function EtapasPage() {
                       type="submit"
                       className={
                         e.activo
-                          ? "rounded-full bg-dc-peri/20 px-3 py-1 text-xs text-dc-peri"
-                          : "rounded-full bg-dc-line px-3 py-1 text-xs text-dc-muted"
+                          ? BTN_PILL_ON
+                          : BTN_PILL_OFF
                       }
                     >
                       {e.activo ? "Activa" : "Inactiva"}

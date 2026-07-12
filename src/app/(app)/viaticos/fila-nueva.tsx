@@ -2,6 +2,7 @@
 
 import { useActionState, useRef } from "react";
 import { crearViatico } from "./actions";
+import { BTN_PRIMARY_SM } from "@/lib/ui";
 import { hoyISO } from "@/lib/formato";
 import { GRID_VIATICOS, type OpcionSelect, ETIQUETA_CONCEPTO } from "./tipos";
 
@@ -85,7 +86,7 @@ export function FilaNuevaViatico({
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-dc-purple px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+          className={BTN_PRIMARY_SM}
         >
           {pending ? "Guardando…" : "Agregar"}
         </button>

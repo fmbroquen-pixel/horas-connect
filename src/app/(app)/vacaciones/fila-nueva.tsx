@@ -2,6 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import { crearVacacion } from "./actions";
+import { BTN_PRIMARY_SM } from "@/lib/ui";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -89,7 +90,7 @@ export function FilaNuevaVacacion() {
         <button
           type="submit"
           disabled={pending}
-          className="rounded-lg bg-dc-purple px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+          className={BTN_PRIMARY_SM}
         >
           {pending ? "Guardando…" : "Agregar"}
         </button>

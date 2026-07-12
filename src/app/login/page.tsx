@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { loginConPassword, loginConGoogle } from "./actions";
+import { BTN_PRIMARY, BTN_LIGHT } from "@/lib/ui";
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(
@@ -56,10 +57,7 @@ export default function LoginPage() {
         </h1>
 
         <form action={loginConGoogle} className="mt-8">
-          <button
-            type="submit"
-            className="w-full rounded-xl border border-dc-line bg-white/95 px-4 py-2.5 text-sm font-medium text-dc-deep transition hover:bg-white"
-          >
+          <button type="submit" className={`${BTN_LIGHT} w-full`}>
             Continuar con Google
           </button>
         </form>
@@ -106,7 +104,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-xl bg-dc-purple px-4 py-2.5 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+            className={`${BTN_PRIMARY} w-full py-2.5`}
           >
             {pending ? "Ingresando…" : "Ingresar"}
           </button>

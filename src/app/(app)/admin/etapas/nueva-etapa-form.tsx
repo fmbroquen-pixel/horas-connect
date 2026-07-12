@@ -2,6 +2,7 @@
 
 import { useActionState, useRef } from "react";
 import { crearEtapa } from "./actions";
+import { BTN_PRIMARY } from "@/lib/ui";
 
 export function NuevaEtapaForm() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -31,7 +32,7 @@ export function NuevaEtapaForm() {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-lg bg-dc-purple px-4 py-2 text-sm font-medium text-white transition hover:opacity-90 disabled:opacity-60"
+        className={BTN_PRIMARY}
       >
         {pending ? "Agregando…" : "Agregar"}
       </button>

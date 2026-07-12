@@ -1,4 +1,5 @@
 import { guardarProyectosAsignados } from "../actions";
+import { BTN_SECONDARY } from "@/lib/ui";
 
 type Cliente = { id: string; nombre: string };
 
@@ -36,7 +37,7 @@ export function ProyectosForm({
       </div>
       <button
         type="submit"
-        className="mt-4 rounded-xl border border-dc-line px-4 py-2 text-sm text-dc-muted transition hover:text-dc-text"
+        className={`${BTN_SECONDARY} mt-4`}
       >
         Guardar proyectos asignados
       </button>

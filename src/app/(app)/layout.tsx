@@ -3,6 +3,9 @@ import { redirect } from "next/navigation";
 import { getSesionActual } from "@/lib/auth";
 import { logout } from "@/app/actions";
 import { TabsNav } from "./tabs-nav";
+import { BTN_SECONDARY_SM } from "@/lib/ui";
+
+const CONTENEDOR = "mx-auto w-full max-w-[1600px] px-6 md:px-8";
 
 const ETIQUETA_ROL: Record<string, string> = {
   admin: "Administrador",
@@ -50,7 +53,7 @@ export default async function AppLayout({
   return (
     <div className="flex min-h-screen flex-col bg-dc-deeper">
       <header className="border-b border-dc-line bg-dc-deep">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
+        <div className={`${CONTENEDOR} flex items-center justify-between py-4`}>
           <Link href="/dashboard">
             <p className="font-display text-[10px] tracking-[0.3em] text-dc-pink">
               DISTRITO CONNECT
@@ -67,20 +70,15 @@ export default async function AppLayout({
               </p>
             </div>
             <form action={logout}>
-              <button
-                type="submit"
-                className="rounded-lg border border-dc-line px-3 py-1.5 text-xs text-dc-muted transition hover:text-dc-text"
-              >
+              <button type="submit" className={BTN_SECONDARY_SM}>
                 Salir
               </button>
             </form>
           </div>
         </div>
-        <TabsNav tabs={tabsParaRol(usuario.rol)} />
+        <TabsNav tabs={tabsParaRol(usuario.rol)} containerClass={CONTENEDOR} />
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-        {children}
-      </main>
+      <main className={`${CONTENEDOR} flex-1 py-8`}>{children}</main>
     </div>
   );
 }

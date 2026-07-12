@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { alternarActivoUsuario } from "./actions";
 import { NuevoUsuarioForm } from "./nuevo-usuario-form";
+import { BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
 
 const ETIQUETA_ROL: Record<string, string> = {
   admin: "Administrador",
@@ -54,7 +55,7 @@ export default async function UsuariosPage() {
                     <span
                       className={
                         u.tipoTarifa
-                          ? "rounded-full bg-dc-peri/20 px-3 py-1 text-xs text-dc-peri"
+                          ? BTN_PILL_ON
                           : "rounded-full bg-dc-pink/15 px-3 py-1 text-xs text-dc-pink"
                       }
                     >
@@ -70,8 +71,8 @@ export default async function UsuariosPage() {
                       type="submit"
                       className={
                         u.activo
-                          ? "rounded-full bg-dc-peri/20 px-3 py-1 text-xs text-dc-peri"
-                          : "rounded-full bg-dc-line px-3 py-1 text-xs text-dc-muted"
+                          ? BTN_PILL_ON
+                          : BTN_PILL_OFF
                       }
                     >
                       {u.activo ? "Activo" : "Bloqueado"}

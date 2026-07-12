@@ -1,29 +1,66 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 
-export function TabsNav({ tabs }: { tabs: { href: string; label: string }[] }) {
+function PendingBar() {
+  // Barra animada bajo la solapa mientras la navegación está en curso, para
+  // que el click se sienta inmediato aunque la página tarde en cargar.
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      aria-hidden
+      className={`pointer-events-none absolute inset-x-0 bottom-0 h-0.5 origin-left bg-dc-pink transition-transform duration-300 ${
+        pending ? "scale-x-100" : "scale-x-0"
+      }`}
+    />
+  );
+}
+
+function TabLink({
+  href,
+  label,
+  activa,
+}: {
+  href: string;
+  label: string;
+  activa: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      prefetch
+      className={`relative whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors ${
+        activa
+          ? "border-dc-pink text-white"
+          : "border-transparent text-dc-muted hover:text-dc-text"
+      }`}
+    >
+      {label}
+      {!activa && <PendingBar />}
+    </Link>
+  );
+}
+
+export function TabsNav({
+  tabs,
+  containerClass = "mx-auto w-full max-w-[1600px] px-6 md:px-8",
+}: {
+  tabs: { href: string; label: string }[];
+  containerClass?: string;
+}) {
   const pathname = usePathname();
 
   return (
-    <nav className="mx-auto flex w-full max-w-5xl gap-1 overflow-x-auto px-4">
-      {tabs.map((t) => {
-        const activa = pathname === t.href || pathname.startsWith(t.href + "/");
-        return (
-          <Link
-            key={t.href}
-            href={t.href}
-            className={
-              activa
-                ? "whitespace-nowrap border-b-2 border-dc-pink px-3 py-2 text-sm text-white"
-                : "whitespace-nowrap border-b-2 border-transparent px-3 py-2 text-sm text-dc-muted transition hover:text-dc-text"
-            }
-          >
-            {t.label}
-          </Link>
-        );
-      })}
+    <nav className={`${containerClass} flex gap-1 overflow-x-auto`}>
+      {tabs.map((t) => (
+        <TabLink
+          key={t.href}
+          href={t.href}
+          label={t.label}
+          activa={pathname === t.href || pathname.startsWith(t.href + "/")}
+        />
+      ))}
     </nav>
   );
 }

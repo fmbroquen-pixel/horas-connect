@@ -6,6 +6,7 @@ import {
   alternarActivoCliente,
 } from "./actions";
 import { NuevoClienteForm } from "./nuevo-cliente-form";
+import { BTN_SECONDARY_SM, BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
 
 export default async function ClientesPage() {
   await requireAdmin();
@@ -39,7 +40,7 @@ export default async function ClientesPage() {
                     />
                     <button
                       type="submit"
-                      className="rounded-lg border border-dc-line px-2 py-1 text-xs text-dc-muted hover:text-dc-text"
+                      className={BTN_SECONDARY_SM}
                     >
                       Guardar
                     </button>
@@ -53,8 +54,8 @@ export default async function ClientesPage() {
                       type="submit"
                       className={
                         c.activo
-                          ? "rounded-full bg-dc-peri/20 px-3 py-1 text-xs text-dc-peri"
-                          : "rounded-full bg-dc-line px-3 py-1 text-xs text-dc-muted"
+                          ? BTN_PILL_ON
+                          : BTN_PILL_OFF
                       }
                     >
                       {c.activo ? "Activo" : "Inactivo"}
