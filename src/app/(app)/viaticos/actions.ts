@@ -22,7 +22,15 @@ const ViaticoSchema = z.object({
   }),
 });
 
-type Resultado = { error?: string };
+export type CampoViatico =
+  | "fecha"
+  | "clienteId"
+  | "etapaId"
+  | "moneda"
+  | "monto"
+  | "concepto";
+
+type Resultado = { error?: string; campo?: CampoViatico };
 
 async function validarEntrada(usuarioId: string, formData: FormData) {
   const parsed = ViaticoSchema.safeParse({
@@ -34,17 +42,23 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
     concepto: formData.get("concepto"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+    const issue = parsed.error.issues[0];
+    return {
+      error: issue?.message ?? "Datos inválidos.",
+      campo: issue?.path[0] as CampoViatico | undefined,
+    };
   }
 
   const fecha = new Date(parsed.data.fecha + "T00:00:00");
   const hoy = new Date();
   hoy.setHours(23, 59, 59, 999);
-  if (fecha > hoy) return { error: "No se pueden cargar viáticos futuros." };
+  if (fecha > hoy) {
+    return { error: "No se pueden cargar viáticos futuros.", campo: "fecha" as const };
+  }
 
   const permitidos = await getProyectosPermitidos(usuarioId);
   if (!permitidos.some((c) => c.id === parsed.data.clienteId)) {
-    return { error: "No tenés asignado ese proyecto." };
+    return { error: "No tenés asignado ese proyecto.", campo: "clienteId" as const };
   }
 
   return { datos: { ...parsed.data, fecha } };
@@ -77,7 +91,7 @@ export async function crearViatico(
   const usuario = await requireGuest();
 
   const r = await validarEntrada(usuario.id, formData);
-  if (r.error || !r.datos) return { error: r.error };
+  if (r.error || !r.datos) return { error: r.error, campo: r.campo };
 
   let archivoPath: string | undefined;
   const archivo = formData.get("archivo");

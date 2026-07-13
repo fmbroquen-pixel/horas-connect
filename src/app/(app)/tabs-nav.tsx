@@ -17,14 +17,75 @@ function PendingBar() {
   );
 }
 
+const ICONOS: Record<string, React.ReactNode> = {
+  // Dashboard: paneles.
+  dashboard: (
+    <path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 15h7v6H3z" />
+  ),
+  // Timetracker: reloj.
+  reloj: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </>
+  ),
+  // Viáticos: auto en movimiento.
+  auto: (
+    <>
+      <path d="M5 11l1.5-4h8L16 11" />
+      <path d="M3 11h16v5H3z" />
+      <circle cx="7" cy="17" r="1.6" />
+      <circle cx="15" cy="17" r="1.6" />
+      <path d="M20 9h3M20 12h3" />
+    </>
+  ),
+  // Vacaciones: sombrilla.
+  sombrilla: (
+    <>
+      <path d="M12 3C7 3 3 7 3 11h18c0-4-4-8-9-8z" />
+      <path d="M12 11v9" />
+      <path d="M12 20a2 2 0 0 0 3 0" />
+    </>
+  ),
+  // Project Management: tablero/gestión.
+  pm: (
+    <>
+      <path d="M4 4h16v16H4z" />
+      <path d="M8 4v16M14 8h4M14 12h4" />
+      <path d="M8 8l1.5 1.5L12 7" />
+    </>
+  ),
+};
+
+function TabIcono({ id }: { id: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="16"
+      height="16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="shrink-0"
+    >
+      {ICONOS[id]}
+    </svg>
+  );
+}
+
 function TabLink({
   href,
   label,
+  icono,
   activa,
   size = "md",
 }: {
   href: string;
   label: string;
+  icono?: string;
   activa: boolean;
   size?: "md" | "sm";
 }) {
@@ -33,12 +94,13 @@ function TabLink({
     <Link
       href={href}
       prefetch
-      className={`relative whitespace-nowrap rounded-t-lg transition-colors ${base} ${
+      className={`relative flex items-center gap-1.5 whitespace-nowrap rounded-t-lg transition-colors ${base} ${
         activa
           ? "text-white [text-shadow:0_0_14px_rgba(255,145,255,0.6)]"
           : "text-dc-muted hover:text-dc-text"
       }`}
     >
+      {icono && <TabIcono id={icono} />}
       {label}
       {activa ? (
         <span
@@ -52,7 +114,7 @@ function TabLink({
   );
 }
 
-export type Tab = { href: string; label: string; match?: string };
+export type Tab = { href: string; label: string; match?: string; icono?: string };
 
 export function TabsNav({
   tabs,
@@ -72,6 +134,7 @@ export function TabsNav({
           key={t.href}
           href={t.href}
           label={t.label}
+          icono={t.icono}
           size={size}
           activa={
             pathname === t.href ||

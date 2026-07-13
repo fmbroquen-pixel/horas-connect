@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState, useTransition } from "react";
 import { crearRegistro, type CampoRegistro } from "./actions";
 import { BTN_PRIMARY_SM } from "@/lib/ui";
 import { parseHorasHsMin, reformatEntradaHoras } from "@/lib/horas";
@@ -10,7 +10,7 @@ import type { MapaTarifas, OpcionSelect } from "./tipos";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
-const INPUT_ERROR = "border-dc-pink";
+const INPUT_ERROR = "border-dc-pink ring-1 ring-dc-pink";
 
 const VALORES_INICIALES = {
   fecha: "",
@@ -30,32 +30,35 @@ export function FilaNueva({
   etapas: OpcionSelect[];
   tarifas: MapaTarifas;
 }) {
-  // Todos los campos son controlados para poder, ante un error, conservar lo
-  // que está bien y limpiar solo el campo que falló.
+  // Campos controlados por estado. El submit se maneja manualmente (con
+  // preventDefault) para que React no resetee el formulario: ante un error
+  // se conserva TODO lo cargado y solo se resalta el campo a corregir.
   const [valores, setValores] = useState(VALORES_INICIALES);
-  const set = (campo: keyof typeof valores, valor: string) =>
+  const [estado, setEstado] = useState<{ error?: string; campo?: CampoRegistro }>();
+  const [pending, start] = useTransition();
+
+  const set = (campo: keyof typeof valores, valor: string) => {
     setValores((v) => ({ ...v, [campo]: valor }));
+    // Al tocar el campo con error, se quita el resaltado.
+    setEstado((e) => (e?.campo === campo ? { error: e.error } : e));
+  };
 
-  const [state, formAction, pending] = useActionState(
-    async (
-      _prev: { error?: string; campo?: CampoRegistro } | undefined,
-      formData: FormData,
-    ) => {
-      const result = await crearRegistro(_prev, formData);
-      if (!result.error) {
+  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    start(async () => {
+      const r = await crearRegistro(undefined, fd);
+      if (!r.error) {
         setValores(VALORES_INICIALES);
-      } else if (result.campo) {
-        // Limpiar solo el campo con error; el resto queda como estaba.
-        set(result.campo, result.campo === "ownership" ? "owner" : result.campo === "modalidad" ? "presencial" : "");
+        setEstado(undefined);
+      } else {
+        setEstado(r); // conserva `valores` intacto
       }
-      return result;
-    },
-    undefined,
-  );
+    });
+  };
 
-  const campoError = state?.campo;
   const cls = (campo: keyof typeof valores) =>
-    `${INPUT} ${campoError === campo ? INPUT_ERROR : ""}`;
+    `${INPUT} ${estado?.campo === campo ? INPUT_ERROR : ""}`;
 
   const tarifa = tarifas[`${valores.modalidad}-${valores.ownership}`];
   const horasDecimal = parseHorasHsMin(valores.horas);
@@ -70,13 +73,12 @@ export function FilaNueva({
   };
 
   return (
-    <form action={formAction} className="border-b border-dc-line bg-dc-card px-3 py-2">
+    <form onSubmit={onSubmit} className="border-b border-dc-line bg-dc-card px-3 py-2">
       <div className={GRID_TIMETRACKER}>
         <span />
         <input
           name="fecha"
           type="date"
-          required
           max={hoyISO()}
           value={valores.fecha}
           onChange={(e) => set("fecha", e.target.value)}
@@ -84,14 +86,11 @@ export function FilaNueva({
         />
         <select
           name="clienteId"
-          required
           value={valores.clienteId}
           onChange={(e) => set("clienteId", e.target.value)}
           className={cls("clienteId")}
         >
-          <option value="" disabled>
-            Proyecto
-          </option>
+          <option value="">Proyecto</option>
           {proyectos.map((p) => (
             <option key={p.id} value={p.id}>
               {p.nombre}
@@ -100,14 +99,11 @@ export function FilaNueva({
         </select>
         <select
           name="etapaId"
-          required
           value={valores.etapaId}
           onChange={(e) => set("etapaId", e.target.value)}
           className={cls("etapaId")}
         >
-          <option value="" disabled>
-            Etapa
-          </option>
+          <option value="">Etapa</option>
           {etapas.map((e) => (
             <option key={e.id} value={e.id}>
               {e.nombre}
@@ -130,7 +126,6 @@ export function FilaNueva({
           value={valores.horas}
           onChange={(e) => set("horas", e.target.value)}
           onBlur={reformatearHoras}
-          required
           className={cls("horas")}
         />
         <select
@@ -152,7 +147,7 @@ export function FilaNueva({
           {pending ? "Guardando…" : "Agregar"}
         </button>
       </div>
-      {state?.error && <p className="mt-2 text-xs text-dc-pink">{state.error}</p>}
+      {estado?.error && <p className="mt-2 text-xs text-dc-pink">{estado.error}</p>}
     </form>
   );
 }

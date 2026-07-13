@@ -33,10 +33,12 @@ export default async function RentabilidadPage({
             DISTRITO CONNECT · INFORME MENSUAL
           </p>
           <h1 className="mt-1 font-display text-xl uppercase text-white">
-            Rentabilidad
+            Project Management
           </h1>
           <p className="text-sm text-dc-muted">
-            {r.esAdmin ? "Todos los proyectos" : "Tus proyectos asignados"}
+            {r.esAdmin
+              ? "Rentabilidad de todos los proyectos y usuarios"
+              : "Tus proyectos asignados"}
           </p>
         </div>
         <SelectorMes anio={anio} mes={mes} />
