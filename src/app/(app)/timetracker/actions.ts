@@ -227,3 +227,77 @@ export async function eliminarRegistros(ids: string[]): Promise<void> {
   revalidatePath("/timetracker");
   revalidatePath("/dashboard");
 }
+
+export type CampoMasivo = "clienteId" | "etapaId" | "ownership" | "modalidad";
+
+// Edición masiva: aplica un mismo valor a un campo en las filas
+// seleccionadas. Si el campo cambia la tarifa (modalidad/ownership), se
+// recalcula el monto de cada fila con su cantidad de horas. Las filas fuera
+// de la ventana de edición o sin tarifa para la nueva combinación se saltean.
+export async function editarRegistros(
+  ids: string[],
+  campo: CampoMasivo,
+  valor: string,
+): Promise<{ error?: string; actualizados?: number }> {
+  const usuario = await requireGuest();
+  const esAdmin = usuario.rol === "admin";
+  if (ids.length === 0) return { actualizados: 0 };
+
+  const filas = await prisma.registroHoras.findMany({
+    where: {
+      id: { in: ids },
+      eliminadoEn: null,
+      ...(esAdmin ? {} : { usuarioId: usuario.id }),
+    },
+  });
+
+  // Validaciones del valor según el campo.
+  if (campo === "clienteId") {
+    const permitidos = await getProyectosPermitidos(usuario.id);
+    if (!permitidos.some((c) => c.id === valor)) {
+      return { error: "No tenés asignado ese proyecto." };
+    }
+  }
+  if (campo === "ownership" && valor !== "owner" && valor !== "backup") {
+    return { error: "Ownership inválido." };
+  }
+  if (campo === "modalidad" && valor !== "presencial" && valor !== "virtual") {
+    return { error: "Modalidad inválida." };
+  }
+  if (campo === "etapaId") {
+    const etapa = await prisma.etapa.findUnique({ where: { id: valor } });
+    if (!etapa) return { error: "Etapa inválida." };
+  }
+
+  const limite = limiteVentana();
+  let actualizados = 0;
+
+  for (const fila of filas) {
+    if (!esAdmin && fila.fecha < limite) continue;
+
+    if (campo === "clienteId") {
+      await prisma.registroHoras.update({ where: { id: fila.id }, data: { clienteId: valor } });
+    } else if (campo === "etapaId") {
+      await prisma.registroHoras.update({ where: { id: fila.id }, data: { etapaId: valor } });
+    } else {
+      const modalidad = (campo === "modalidad" ? valor : fila.modalidad) as Modalidad;
+      const ownership = (campo === "ownership" ? valor : fila.ownership) as Ownership;
+      const tarifa = await resolverTarifa(fila.usuarioId, modalidad, ownership);
+      if (tarifa === null) continue; // sin tarifa para esa combinación
+      await prisma.registroHoras.update({
+        where: { id: fila.id },
+        data: {
+          modalidad,
+          ownership,
+          tarifaUsdAplicada: tarifa,
+          montoUsd: Math.round(Number(fila.horas) * tarifa * 100) / 100,
+        },
+      });
+    }
+    actualizados += 1;
+  }
+
+  revalidatePath("/timetracker");
+  revalidatePath("/dashboard");
+  return { actualizados };
+}

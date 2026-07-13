@@ -28,19 +28,26 @@ function TabLink({
   activa: boolean;
   size?: "md" | "sm";
 }) {
-  const base = size === "sm" ? "px-3 py-1.5 text-xs" : "px-3 py-2 text-sm";
+  const base = size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm";
   return (
     <Link
       href={href}
       prefetch
-      className={`relative whitespace-nowrap border-b-2 transition-colors ${base} ${
+      className={`relative whitespace-nowrap rounded-t-lg transition-colors ${base} ${
         activa
-          ? "border-dc-pink text-white"
-          : "border-transparent text-dc-muted hover:text-dc-text"
+          ? "text-white [text-shadow:0_0_14px_rgba(255,145,255,0.6)]"
+          : "text-dc-muted hover:text-dc-text"
       }`}
     >
       {label}
-      {!activa && <PendingBar />}
+      {activa ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-1 bottom-0 h-[3px] rounded-full bg-dc-pink shadow-[0_0_10px_2px_rgba(255,145,255,0.7)]"
+        />
+      ) : (
+        <PendingBar />
+      )}
     </Link>
   );
 }
