@@ -22,12 +22,12 @@ export function FilaVacacion({ vacacion }: { vacacion: VacacionFila }) {
     return (
       <div className="border-b border-dc-line px-3 py-2 last:border-0">
         <div className={GRID_VACACIONES}>
-          <span className="text-sm text-dc-text">{mostrarFecha(vacacion.fechaInicio)}</span>
-          <span className="text-sm text-dc-text">{mostrarFecha(vacacion.fechaFin)}</span>
-          <span className="text-right text-sm tabular-nums text-dc-text">
+          <span className="text-center text-sm text-dc-text">{mostrarFecha(vacacion.fechaInicio)}</span>
+          <span className="text-center text-sm text-dc-text">{mostrarFecha(vacacion.fechaFin)}</span>
+          <span className="text-center text-sm tabular-nums text-dc-text">
             {vacacion.dias}
           </span>
-          <span className="flex justify-end gap-1">
+          <span className="flex justify-center gap-1">
             <button
               type="button"
               onClick={() => setEditando(true)}

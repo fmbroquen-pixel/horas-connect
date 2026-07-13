@@ -2,32 +2,52 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
-import { formatMonto } from "@/lib/formato";
+import { hoyISO, rangoDefault30 } from "@/lib/formato";
 import {
   createAdminClient,
   BUCKET_COMPROBANTES,
 } from "@/lib/supabase/admin";
+import { FiltroPopover } from "@/components/filtro-popover";
 import { InfoButton } from "@/components/info-button";
 import { GRID_VIATICOS, type ViaticoFila } from "./tipos";
 import { FilaNuevaViatico } from "./fila-nueva";
 import { FilaViatico } from "./fila-viatico";
 
-export default async function ViaticosPage() {
+export default async function ViaticosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ desde?: string; hasta?: string; proyecto?: string }>;
+}) {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
   const { usuario } = sesion;
   if (usuario.rol === "reader") redirect("/rentabilidad");
 
-  const [proyectos, etapas, viaticos] = await Promise.all([
-    getProyectosPermitidos(usuario.id),
+  const params = await searchParams;
+  const { desde, hasta } = rangoDefault30(params.desde, params.hasta);
+
+  const proyectos = await getProyectosPermitidos(usuario.id);
+  const proyectoId = proyectos.some((p) => p.id === params.proyecto)
+    ? params.proyecto
+    : undefined;
+
+  const [etapas, viaticos] = await Promise.all([
     prisma.etapa.findMany({
       where: { activo: true },
       orderBy: [{ grupo: "asc" }, { orden: "asc" }],
     }),
     prisma.viatico.findMany({
-      where: { usuarioId: usuario.id, eliminadoEn: null },
+      where: {
+        usuarioId: usuario.id,
+        eliminadoEn: null,
+        fecha: {
+          gte: new Date(desde + "T00:00:00Z"),
+          lte: new Date(hasta + "T00:00:00Z"),
+        },
+        ...(proyectoId ? { clienteId: proyectoId } : {}),
+      },
       orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
-      take: 200,
+      take: 300,
     }),
   ]);
 
@@ -55,13 +75,6 @@ export default async function ViaticosPage() {
     }),
   );
 
-  const totalArs = filas
-    .filter((f) => f.moneda === "ARS")
-    .reduce((acc, f) => acc + f.monto, 0);
-  const totalUsd = filas
-    .filter((f) => f.moneda === "USD")
-    .reduce((acc, f) => acc + f.monto, 0);
-
   const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
   const opcionesEtapa = etapas.map((e) => ({ id: e.id, nombre: e.etiqueta }));
 
@@ -74,9 +87,14 @@ export default async function ViaticosPage() {
             Cargá los gastos asociados a un proyecto. El comprobante es opcional.
           </InfoButton>
         </div>
-        <p className="text-sm text-dc-muted">
-          ARS {formatMonto(totalArs)} · USD {formatMonto(totalUsd)}
-        </p>
+        <FiltroPopover
+          basePath="/viaticos"
+          desde={desde}
+          hasta={hasta}
+          proyectoId={proyectoId ?? ""}
+          proyectos={opcionesProyecto}
+          maxHoy={hoyISO()}
+        />
       </div>
 
       <div className="mt-6 overflow-x-auto dc-panel">

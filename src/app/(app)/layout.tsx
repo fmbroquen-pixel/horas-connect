@@ -7,7 +7,6 @@ import { Papelera } from "./papelera/papelera";
 import { PageTransition } from "./page-transition";
 import { PerfilBoton } from "./perfil/perfil-boton";
 import { urlAvatar } from "@/lib/supabase/admin";
-import { BTN_SECONDARY_SM } from "@/lib/ui";
 
 const CONTENEDOR = "mx-auto w-full max-w-[1440px] px-6 md:px-10 lg:px-14";
 
@@ -78,7 +77,7 @@ export default async function AppLayout({
         </div>
         <div className={`${CONTENEDOR} flex items-center justify-between gap-3`}>
           <TabsNav tabs={tabsParaRol(usuario.rol)} containerClass="flex-1 min-w-0" />
-          <div className="flex shrink-0 items-center gap-2 pb-1">
+          <div className="flex shrink-0 items-center gap-1.5 pb-1">
             {usuario.rol === "admin" && (
               <Link
                 href="/admin/usuarios"
@@ -90,8 +89,19 @@ export default async function AppLayout({
               </Link>
             )}
             {usuario.rol !== "reader" && <Papelera />}
+            {/* Separador: Salir es cierre de sesión, no una herramienta. */}
+            <span className="mx-1 h-6 w-px bg-dc-line" aria-hidden="true" />
             <form action={logout}>
-              <button type="submit" className={BTN_SECONDARY_SM}>
+              <button
+                type="submit"
+                title="Cerrar sesión"
+                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-dc-muted transition hover:bg-dc-pink/10 hover:text-dc-pink"
+              >
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <path d="M16 17l5-5-5-5" />
+                  <path d="M21 12H9" />
+                </svg>
                 Salir
               </button>
             </form>

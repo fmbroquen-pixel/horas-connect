@@ -3,17 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
 import { formatHorasHsMin } from "@/lib/horas";
-import { formatMonto, hoyISO } from "@/lib/formato";
+import { hoyISO, rangoDefault30 } from "@/lib/formato";
 import { FiltroPopover } from "@/components/filtro-popover";
 import { InfoButton } from "@/components/info-button";
 import { TablaRegistros } from "./tabla-registros";
+import { ExportarBoton } from "./exportar-boton";
 import type { MapaTarifas, RegistroFila } from "./tipos";
 
 const DIAS_VENTANA_EDICION = 30;
-
-function validarISO(v?: string) {
-  return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined;
-}
 
 export default async function TimetrackerPage({
   searchParams,
@@ -26,8 +23,8 @@ export default async function TimetrackerPage({
   if (usuario.rol === "reader") redirect("/rentabilidad");
 
   const params = await searchParams;
-  const desde = validarISO(params.desde);
-  const hasta = validarISO(params.hasta);
+  // Por defecto, últimos 30 días.
+  const { desde, hasta } = rangoDefault30(params.desde, params.hasta);
 
   const proyectos = await getProyectosPermitidos(usuario.id);
   const proyectoId = proyectos.some((p) => p.id === params.proyecto)
@@ -46,18 +43,14 @@ export default async function TimetrackerPage({
       where: {
         usuarioId: usuario.id,
         eliminadoEn: null,
-        ...(desde || hasta
-          ? {
-              fecha: {
-                ...(desde ? { gte: new Date(desde + "T00:00:00Z") } : {}),
-                ...(hasta ? { lte: new Date(hasta + "T00:00:00Z") } : {}),
-              },
-            }
-          : {}),
+        fecha: {
+          gte: new Date(desde + "T00:00:00Z"),
+          lte: new Date(hasta + "T00:00:00Z"),
+        },
         ...(proyectoId ? { clienteId: proyectoId } : {}),
       },
       orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
-      take: 300,
+      take: 500,
     }),
   ]);
 
@@ -85,8 +78,6 @@ export default async function TimetrackerPage({
       editable: r.fecha >= limite,
     }));
 
-  const totalHoras = registros.reduce((acc, r) => acc + Number(r.horas), 0);
-  const totalUsd = registros.reduce((acc, r) => acc + Number(r.montoUsd), 0);
   const sinTarifa = Object.keys(tarifas).length === 0;
 
   const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
@@ -103,14 +94,16 @@ export default async function TimetrackerPage({
             últimos {DIAS_VENTANA_EDICION} días; no se admiten fechas futuras.
           </InfoButton>
         </div>
-        <div className="flex items-center gap-3">
-          <p className="text-sm text-dc-muted">
-            {formatHorasHsMin(totalHoras)} hs · USD {formatMonto(totalUsd)}
-          </p>
+        <div className="flex items-center gap-2">
+          <ExportarBoton
+            desde={desde}
+            hasta={hasta}
+            proyecto={proyectoId ?? ""}
+          />
           <FiltroPopover
             basePath="/timetracker"
-            desde={desde ?? ""}
-            hasta={hasta ?? ""}
+            desde={desde}
+            hasta={hasta}
             proyectoId={proyectoId ?? ""}
             proyectos={opcionesProyecto}
             maxHoy={hoyISO()}

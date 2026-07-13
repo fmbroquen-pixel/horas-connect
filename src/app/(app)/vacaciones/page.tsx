@@ -1,25 +1,35 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
+import { rangoDefault30 } from "@/lib/formato";
+import { FiltroPopover } from "@/components/filtro-popover";
 import { InfoButton } from "@/components/info-button";
 import { FilaNuevaVacacion, GRID_VACACIONES } from "./fila-nueva";
 import { FilaVacacion, type VacacionFila } from "./fila-vacacion";
 
-export default async function VacacionesPage() {
+export default async function VacacionesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ desde?: string; hasta?: string }>;
+}) {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
   const { usuario } = sesion;
   if (usuario.rol === "reader") redirect("/rentabilidad");
 
+  const params = await searchParams;
+  const { desde, hasta } = rangoDefault30(params.desde, params.hasta);
+
+  // Se muestran las vacaciones que se solapan con el rango elegido.
   const vacaciones = await prisma.vacacion.findMany({
-    where: { usuarioId: usuario.id, eliminadoEn: null },
+    where: {
+      usuarioId: usuario.id,
+      eliminadoEn: null,
+      fechaFin: { gte: new Date(desde + "T00:00:00Z") },
+      fechaInicio: { lte: new Date(hasta + "T00:00:00Z") },
+    },
     orderBy: { fechaInicio: "desc" },
   });
-
-  const anioActual = new Date().getFullYear();
-  const diasEsteAnio = vacaciones
-    .filter((v) => v.fechaInicio.getUTCFullYear() === anioActual)
-    .reduce((acc, v) => acc + v.dias, 0);
 
   const filas: VacacionFila[] = vacaciones.map((v) => ({
     id: v.id,
@@ -39,9 +49,15 @@ export default async function VacacionesPage() {
             ejemplo, para descontar fines de semana).
           </InfoButton>
         </div>
-        <p className="text-sm text-dc-muted">
-          {diasEsteAnio} días OOO en {anioActual}
-        </p>
+        <FiltroPopover
+          basePath="/vacaciones"
+          desde={desde}
+          hasta={hasta}
+          proyectoId=""
+          proyectos={[]}
+          maxHoy=""
+          soloFechas
+        />
       </div>
 
       <div className="mt-6 overflow-x-auto dc-panel">

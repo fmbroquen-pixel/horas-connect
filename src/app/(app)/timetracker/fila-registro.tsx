@@ -52,27 +52,27 @@ export function FilaRegistro({
           ) : (
             <span />
           )}
-          <span className="text-sm text-dc-text">{mostrarFecha(registro.fecha)}</span>
-          <span className="truncate text-sm text-dc-text">
+          <span className="text-center text-sm text-dc-text">{mostrarFecha(registro.fecha)}</span>
+          <span className="truncate text-center text-sm text-dc-text">
             {proyecto?.nombre ?? "—"}
           </span>
-          <span className="truncate text-sm text-dc-muted">
+          <span className="truncate text-center text-sm text-dc-muted">
             {etapa?.nombre ?? "—"}
           </span>
-          <span className="text-sm text-dc-muted">
+          <span className="text-center text-sm text-dc-muted">
             {ETIQUETA_OWNERSHIP[registro.ownership]}
           </span>
-          <span className="text-sm tabular-nums text-dc-text">{registro.horas}</span>
-          <span className="text-sm text-dc-muted">
+          <span className="text-center text-sm tabular-nums text-dc-text">{registro.horas}</span>
+          <span className="text-center text-sm text-dc-muted">
             {ETIQUETA_MODALIDAD[registro.modalidad]}
           </span>
-          <span className="text-right text-sm tabular-nums text-dc-muted">
+          <span className="text-center text-sm tabular-nums text-dc-muted">
             {formatMonto(registro.tarifaUsd)}
           </span>
-          <span className="text-right text-sm tabular-nums text-dc-text">
+          <span className="text-center text-sm tabular-nums text-dc-text">
             {formatMonto(registro.montoUsd)}
           </span>
-          <span className="flex justify-end gap-1">
+          <span className="flex justify-center gap-1">
             {registro.editable ? (
               <>
                 <button

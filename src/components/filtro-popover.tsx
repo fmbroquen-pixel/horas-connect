@@ -22,6 +22,7 @@ export function FiltroPopover({
   proyectoId,
   proyectos,
   maxHoy,
+  soloFechas = false,
 }: {
   basePath: string;
   desde: string;
@@ -29,6 +30,7 @@ export function FiltroPopover({
   proyectoId: string;
   proyectos: Proyecto[];
   maxHoy: string;
+  soloFechas?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [proyectoSel, setProyectoSel] = useState(proyectoId);
@@ -88,20 +90,22 @@ export function FiltroPopover({
                   <input type="date" name="hasta" defaultValue={hasta} max={maxHoy} className={INPUT} />
                 </div>
               </div>
-              <div>
-                <label className="mb-1 block text-xs text-dc-muted">Proyecto</label>
-                <Dropdown
-                  name="proyecto"
-                  value={proyectoSel}
-                  onChange={setProyectoSel}
-                  options={[
-                    { value: "", label: "Todos" },
-                    ...proyectos.map((p) => ({ value: p.id, label: p.nombre })),
-                  ]}
-                  placeholder="Todos"
-                  ariaLabel="Proyecto"
-                />
-              </div>
+              {!soloFechas && (
+                <div>
+                  <label className="mb-1 block text-xs text-dc-muted">Proyecto</label>
+                  <Dropdown
+                    name="proyecto"
+                    value={proyectoSel}
+                    onChange={setProyectoSel}
+                    options={[
+                      { value: "", label: "Todos" },
+                      ...proyectos.map((p) => ({ value: p.id, label: p.nombre })),
+                    ]}
+                    placeholder="Todos"
+                    ariaLabel="Proyecto"
+                  />
+                </div>
+              )}
               <div className="flex items-center gap-2 pt-1">
                 <button type="submit" className={BTN_PRIMARY_SM}>
                   Aplicar

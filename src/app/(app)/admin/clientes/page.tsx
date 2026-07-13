@@ -24,51 +24,45 @@ export default async function ClientesPage() {
 
       <NuevoClienteForm action={crearCliente} />
 
-      <div className="mt-6 overflow-hidden dc-panel">
-        <table className="w-full text-sm">
+      <div className="mt-6 overflow-x-auto dc-panel">
+        <table className="w-full min-w-[640px] text-sm">
+          <thead>
+            <tr className="border-b border-dc-line">
+              <th className="px-4 py-2">Nombre del proyecto</th>
+              <th className="px-4 py-2">Estado</th>
+              <th className="px-4 py-2">Acciones</th>
+            </tr>
+          </thead>
           <tbody>
             {clientes.map((c) => (
               <tr key={c.id} className="border-b border-dc-line last:border-0">
                 <td className="px-4 py-3">
-                  <form
-                    action={actualizarCliente.bind(null, c.id)}
-                    className="flex items-center gap-2"
-                  >
+                  <form id={`cliente-${c.id}`} action={actualizarCliente.bind(null, c.id)}>
                     <input
                       name="nombre"
                       defaultValue={c.nombre}
-                      className="w-full max-w-xs rounded-lg border border-dc-line bg-dc-deeper px-2 py-1 text-dc-text outline-none focus:border-dc-peri"
+                      className="w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1 text-dc-text outline-none focus:border-dc-peri"
                     />
-                    <button
-                      type="submit"
-                      className={BTN_SECONDARY_SM}
-                    >
-                      Guardar
-                    </button>
                   </form>
                 </td>
-                <td className="px-4 py-3 text-right">
-                  <form
-                    action={alternarActivoCliente.bind(null, c.id, !c.activo)}
-                  >
-                    <button
-                      type="submit"
-                      className={
-                        c.activo
-                          ? BTN_PILL_ON
-                          : BTN_PILL_OFF
-                      }
-                    >
+                <td className="px-4 py-3 text-center">
+                  <form action={alternarActivoCliente.bind(null, c.id, !c.activo)}>
+                    <button type="submit" className={c.activo ? BTN_PILL_ON : BTN_PILL_OFF}>
                       {c.activo ? "Activo" : "Inactivo"}
                     </button>
                   </form>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <button type="submit" form={`cliente-${c.id}`} className={BTN_SECONDARY_SM}>
+                    Guardar
+                  </button>
                 </td>
               </tr>
             ))}
             {clientes.length === 0 && (
               <tr>
-                <td className="px-4 py-6 text-center text-dc-muted" colSpan={2}>
-                  Todavía no hay clientes cargados.
+                <td className="px-4 py-6 text-center text-dc-muted" colSpan={3}>
+                  Todavía no hay proyectos cargados.
                 </td>
               </tr>
             )}

@@ -32,21 +32,21 @@ export function FilaViatico({
     return (
       <div className="border-b border-dc-line px-3 py-2 last:border-0">
         <div className={GRID_VIATICOS}>
-          <span className="text-sm text-dc-text">{mostrarFecha(viatico.fecha)}</span>
-          <span className="truncate text-sm text-dc-text">
+          <span className="text-center text-sm text-dc-text">{mostrarFecha(viatico.fecha)}</span>
+          <span className="truncate text-center text-sm text-dc-text">
             {proyecto?.nombre ?? "—"}
           </span>
-          <span className="truncate text-sm text-dc-muted">
+          <span className="truncate text-center text-sm text-dc-muted">
             {etapa?.nombre ?? "—"}
           </span>
-          <span className="text-sm text-dc-muted">{viatico.moneda}</span>
-          <span className="text-right text-sm tabular-nums text-dc-text">
+          <span className="text-center text-sm text-dc-muted">{viatico.moneda}</span>
+          <span className="text-center text-sm tabular-nums text-dc-text">
             {formatMonto(viatico.monto)}
           </span>
-          <span className="text-sm text-dc-muted">
+          <span className="text-center text-sm text-dc-muted">
             {ETIQUETA_CONCEPTO[viatico.concepto] ?? viatico.concepto}
           </span>
-          <span className="text-sm">
+          <span className="text-center text-sm">
             {viatico.archivoUrl ? (
               <a
                 href={viatico.archivoUrl}
@@ -60,7 +60,7 @@ export function FilaViatico({
               <span className="text-dc-muted">—</span>
             )}
           </span>
-          <span className="flex justify-end gap-1">
+          <span className="flex justify-center gap-1">
             <button
               type="button"
               onClick={() => setEditando(true)}

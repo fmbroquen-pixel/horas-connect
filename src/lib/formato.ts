@@ -22,3 +22,25 @@ export function hoyISO(): string {
   const local = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 10);
 }
+
+export function esISO(v?: string): boolean {
+  return Boolean(v && /^\d{4}-\d{2}-\d{2}$/.test(v));
+}
+
+export function restarDiasISO(iso: string, dias: number): string {
+  const fecha = new Date(iso + "T00:00:00Z");
+  fecha.setUTCDate(fecha.getUTCDate() - dias);
+  return fecha.toISOString().slice(0, 10);
+}
+
+// Rango por defecto de los últimos 30 días (o el rango pasado por parámetros
+// si es válido). Devuelve strings YYYY-MM-DD listos para el filtro.
+export function rangoDefault30(
+  desdeParam?: string,
+  hastaParam?: string,
+): { desde: string; hasta: string } {
+  const hoy = hoyISO();
+  const desde = esISO(desdeParam) ? desdeParam! : restarDiasISO(hoy, 30);
+  const hasta = esISO(hastaParam) ? hastaParam! : hoy;
+  return desde > hasta ? { desde: hasta, hasta: desde } : { desde, hasta };
+}
