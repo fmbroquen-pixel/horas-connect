@@ -20,14 +20,14 @@ export default async function AdminLayout({
   }
 
   return (
-    <div>
-      <p className="font-display text-xs tracking-[0.3em] text-dc-pink">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <p className="shrink-0 font-display text-xs tracking-[0.3em] text-dc-pink">
         SETTINGS
       </p>
-      <div className="mt-2 border-b border-dc-line">
+      <div className="mt-2 shrink-0 border-b border-dc-line">
         <TabsNav tabs={SECCIONES} containerClass="" size="sm" />
       </div>
-      <div className="mt-6">{children}</div>
+      <div className="mt-6 flex min-h-0 flex-1 flex-col">{children}</div>
     </div>
   );
 }

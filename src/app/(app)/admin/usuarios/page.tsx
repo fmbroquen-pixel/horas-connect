@@ -22,8 +22,8 @@ export default async function UsuariosPage() {
   const usuarios = await prisma.usuario.findMany({ orderBy: { nombre: "asc" } });
 
   return (
-    <div>
-      <div className="flex items-center gap-2">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 items-center gap-2">
         <h1 className="font-display text-lg uppercase text-white">Usuarios</h1>
         <InfoButton>
           Lista blanca de personas autorizadas a entrar con Google o email.
@@ -33,11 +33,13 @@ export default async function UsuariosPage() {
         </InfoButton>
       </div>
 
-      <NuevoUsuarioForm />
+      <div className="shrink-0">
+        <NuevoUsuarioForm />
+      </div>
 
-      <div className="mt-6 overflow-x-auto dc-panel">
+      <div className="mt-6 min-h-0 flex-1 overflow-auto dc-panel">
         <table className="w-full min-w-[720px] text-sm">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr className="border-b border-dc-line">
               <th className="px-4 py-2 text-left">Nombre de usuario</th>
               <th className="px-4 py-2">Tipo de usuario</th>

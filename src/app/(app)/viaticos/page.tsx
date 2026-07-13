@@ -79,8 +79,8 @@ export default async function ViaticosPage({
   const opcionesEtapa = etapas.map((e) => ({ id: e.id, nombre: e.etiqueta }));
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <h1 className="font-display text-lg uppercase text-white">Viáticos</h1>
           <InfoButton>
@@ -97,34 +97,40 @@ export default async function ViaticosPage({
         />
       </div>
 
-      <div className="mt-6 overflow-x-auto dc-panel">
-        <div className={`dc-thead ${GRID_VIATICOS} border-b border-dc-line px-3 py-2 text-xs text-dc-muted`}>
-          <span>Fecha</span>
-          <span>Proyecto</span>
-          <span>Etapa</span>
-          <span>Moneda</span>
-          <span className="text-right">Monto</span>
-          <span>Concepto</span>
-          <span>Archivo</span>
-          <span />
+      <div className="mt-6 flex min-h-0 flex-1 overflow-x-auto dc-panel">
+        <div className="flex min-h-0 min-w-[860px] flex-1 flex-col">
+          <div className={`dc-thead ${GRID_VIATICOS} shrink-0 border-b border-dc-line px-3`}>
+            <span>Fecha</span>
+            <span>Proyecto</span>
+            <span>Etapa</span>
+            <span>Moneda</span>
+            <span>Monto</span>
+            <span>Concepto</span>
+            <span>Archivo</span>
+            <span />
+          </div>
+
+          <div className="shrink-0">
+            <FilaNuevaViatico proyectos={opcionesProyecto} etapas={opcionesEtapa} />
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {filas.map((f) => (
+              <FilaViatico
+                key={f.id}
+                viatico={f}
+                proyectos={opcionesProyecto}
+                etapas={opcionesEtapa}
+              />
+            ))}
+
+            {filas.length === 0 && (
+              <p className="px-4 py-6 text-center text-sm text-dc-muted">
+                Todavía no cargaste viáticos.
+              </p>
+            )}
+          </div>
         </div>
-
-        <FilaNuevaViatico proyectos={opcionesProyecto} etapas={opcionesEtapa} />
-
-        {filas.map((f) => (
-          <FilaViatico
-            key={f.id}
-            viatico={f}
-            proyectos={opcionesProyecto}
-            etapas={opcionesEtapa}
-          />
-        ))}
-
-        {filas.length === 0 && (
-          <p className="px-4 py-6 text-center text-sm text-dc-muted">
-            Todavía no cargaste viáticos.
-          </p>
-        )}
       </div>
     </div>
   );

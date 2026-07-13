@@ -16,17 +16,19 @@ export default async function ClientesPage() {
   });
 
   return (
-    <div>
-      <div className="flex items-center gap-2">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 items-center gap-2">
         <h1 className="font-display text-lg uppercase text-white">Proyectos</h1>
         <InfoButton>Proyectos disponibles al cargar horas y viáticos.</InfoButton>
       </div>
 
-      <NuevoClienteForm action={crearCliente} />
+      <div className="shrink-0">
+        <NuevoClienteForm action={crearCliente} />
+      </div>
 
-      <div className="mt-6 overflow-x-auto dc-panel">
+      <div className="mt-6 min-h-0 flex-1 overflow-auto dc-panel">
         <table className="w-full min-w-[640px] text-sm">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr className="border-b border-dc-line">
               <th className="px-4 py-2">Nombre del proyecto</th>
               <th className="px-4 py-2">Estado</th>

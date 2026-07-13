@@ -39,8 +39,8 @@ export default async function VacacionesPage({
   }));
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <h1 className="font-display text-lg uppercase text-white">Vacaciones</h1>
           <InfoButton>
@@ -60,25 +60,31 @@ export default async function VacacionesPage({
         />
       </div>
 
-      <div className="mt-6 overflow-x-auto dc-panel">
-        <div className={`dc-thead ${GRID_VACACIONES} border-b border-dc-line px-3 py-2 text-xs text-dc-muted`}>
-          <span>Fecha inicio</span>
-          <span>Fecha fin</span>
-          <span className="text-right">Días OOO</span>
-          <span />
+      <div className="mt-6 flex min-h-0 flex-1 overflow-x-auto dc-panel">
+        <div className="flex min-h-0 min-w-[560px] flex-1 flex-col">
+          <div className={`dc-thead ${GRID_VACACIONES} shrink-0 border-b border-dc-line px-3`}>
+            <span>Fecha inicio</span>
+            <span>Fecha fin</span>
+            <span>Días OOO</span>
+            <span />
+          </div>
+
+          <div className="shrink-0">
+            <FilaNuevaVacacion />
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {filas.map((f) => (
+              <FilaVacacion key={f.id} vacacion={f} />
+            ))}
+
+            {filas.length === 0 && (
+              <p className="px-4 py-6 text-center text-sm text-dc-muted">
+                Todavía no registraste vacaciones.
+              </p>
+            )}
+          </div>
         </div>
-
-        <FilaNuevaVacacion />
-
-        {filas.map((f) => (
-          <FilaVacacion key={f.id} vacacion={f} />
-        ))}
-
-        {filas.length === 0 && (
-          <p className="px-4 py-6 text-center text-sm text-dc-muted">
-            Todavía no registraste vacaciones.
-          </p>
-        )}
       </div>
     </div>
   );

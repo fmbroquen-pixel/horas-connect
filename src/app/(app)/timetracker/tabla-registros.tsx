@@ -73,9 +73,9 @@ export function TablaRegistros({
     });
 
   return (
-    <div>
+    <div className="flex min-h-0 flex-1 flex-col">
       {sel.size > 0 && (
-        <div className="mb-3 space-y-2 rounded-xl border border-dc-peri/40 bg-dc-peri/10 px-4 py-2 text-sm">
+        <div className="mb-3 shrink-0 space-y-2 rounded-xl border border-dc-peri/40 bg-dc-peri/10 px-4 py-2 text-sm">
           <div className="flex flex-wrap items-center gap-3">
             <span className="text-dc-text">{sel.size} seleccionado(s)</span>
             {confirmar ? (
@@ -168,48 +168,55 @@ export function TablaRegistros({
         </div>
       )}
 
-      <div className="overflow-x-auto dc-panel">
-        <div className={`dc-thead ${GRID_TIMETRACKER} border-b border-dc-line px-3`}>
-          <input
-            type="checkbox"
-            checked={todasSel}
-            onChange={toggleTodas}
-            disabled={editables.length === 0}
-            className="h-4 w-4 accent-dc-purple"
-            aria-label="Seleccionar todo"
-          />
-          <span>Fecha</span>
-          <span>Proyecto</span>
-          <span>Etapa</span>
-          <span>Ownership</span>
-          <span>Horas</span>
-          <span>Modalidad</span>
-          <span>USD/hora</span>
-          <span>USD total</span>
-          <span />
+      <div className="flex min-h-0 flex-1 overflow-x-auto dc-panel">
+        <div className="flex min-h-0 min-w-[940px] flex-1 flex-col">
+          {/* Encabezado y fila de carga fijos; solo el cuerpo scrollea. */}
+          <div className={`dc-thead ${GRID_TIMETRACKER} shrink-0 border-b border-dc-line px-3`}>
+            <input
+              type="checkbox"
+              checked={todasSel}
+              onChange={toggleTodas}
+              disabled={editables.length === 0}
+              className="h-4 w-4 accent-dc-purple"
+              aria-label="Seleccionar todo"
+            />
+            <span>Fecha</span>
+            <span>Proyecto</span>
+            <span>Etapa</span>
+            <span>Ownership</span>
+            <span>Horas</span>
+            <span>Modalidad</span>
+            <span>USD/hora</span>
+            <span>USD total</span>
+            <span />
+          </div>
+
+          {!sinTarifa && (
+            <div className="shrink-0">
+              <FilaNueva proyectos={proyectos} etapas={etapas} tarifas={tarifas} />
+            </div>
+          )}
+
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {filas.map((f) => (
+              <FilaRegistro
+                key={f.id}
+                registro={f}
+                proyectos={proyectos}
+                etapas={etapas}
+                tarifas={tarifas}
+                seleccionado={sel.has(f.id)}
+                onToggle={toggle}
+              />
+            ))}
+
+            {filas.length === 0 && (
+              <p className="px-4 py-6 text-center text-sm text-dc-muted">
+                No hay horas cargadas para el filtro elegido.
+              </p>
+            )}
+          </div>
         </div>
-
-        {!sinTarifa && (
-          <FilaNueva proyectos={proyectos} etapas={etapas} tarifas={tarifas} />
-        )}
-
-        {filas.map((f) => (
-          <FilaRegistro
-            key={f.id}
-            registro={f}
-            proyectos={proyectos}
-            etapas={etapas}
-            tarifas={tarifas}
-            seleccionado={sel.has(f.id)}
-            onToggle={toggle}
-          />
-        ))}
-
-        {filas.length === 0 && (
-          <p className="px-4 py-6 text-center text-sm text-dc-muted">
-            No hay horas cargadas para el filtro elegido.
-          </p>
-        )}
       </div>
     </div>
   );

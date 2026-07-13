@@ -12,8 +12,8 @@ export default async function EtapasPage() {
   });
 
   return (
-    <div>
-      <div className="flex items-center gap-2">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 items-center gap-2">
         <h1 className="font-display text-lg uppercase text-white">Etapas</h1>
         <InfoButton>
           Opciones del desplegable de Etapa al cargar horas y viáticos,
@@ -21,11 +21,13 @@ export default async function EtapasPage() {
         </InfoButton>
       </div>
 
-      <NuevaEtapaForm />
+      <div className="shrink-0">
+        <NuevaEtapaForm />
+      </div>
 
-      <div className="mt-6 overflow-x-auto dc-panel">
+      <div className="mt-6 min-h-0 flex-1 overflow-auto dc-panel">
         <table className="w-full min-w-[720px] text-sm">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr className="border-b border-dc-line">
               <th className="px-4 py-2">Etiqueta</th>
               <th className="px-4 py-2">Grupo</th>

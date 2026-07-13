@@ -56,8 +56,8 @@ export default async function AppLayout({
   const avatarUrl = urlAvatar(usuario.avatarPath);
 
   return (
-    <div className="flex min-h-screen flex-col bg-dc-deeper">
-      <header className="border-b border-dc-line bg-dc-deep">
+    <div className="flex h-dvh flex-col overflow-hidden bg-dc-deeper">
+      <header className="shrink-0 border-b border-dc-line bg-dc-deep">
         <div className={`${CONTENEDOR} flex items-center justify-between py-4`}>
           <Link href="/dashboard">
             <p className="font-display text-[10px] tracking-[0.3em] text-dc-pink">
@@ -108,7 +108,7 @@ export default async function AppLayout({
           </div>
         </div>
       </header>
-      <main className={`${CONTENEDOR} flex-1 py-8`}>
+      <main className={`${CONTENEDOR} flex min-h-0 flex-1 flex-col overflow-y-auto py-8`}>
         <PageTransition>{children}</PageTransition>
       </main>
     </div>
