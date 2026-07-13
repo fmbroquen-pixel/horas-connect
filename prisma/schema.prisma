@@ -113,6 +113,9 @@ model Usuario {
   // Nulo = todavia no configurado (no puede cargar horas facturables).
   tipoTarifa TipoTarifa? @map("tipo_tarifa")
 
+  // Ruta de la foto de perfil en Supabase Storage (bucket público avatares).
+  avatarPath String? @map("avatar_path")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

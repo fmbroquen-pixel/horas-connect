@@ -101,6 +101,39 @@ button:not(:disabled):active {
   padding-bottom: 0.6rem;
 }
 
+/* Menú flotante (dropdowns, popovers, tooltips): superficie oscura elegante.
+   Re-declara las variables de la paleta para que, aunque el menú esté dentro
+   de una .dc-panel clara, sus textos y acentos vuelvan al tema oscuro. */
+.dc-menu {
+  --dc-text: #eceafd;
+  --dc-muted: #a5a3d6;
+  --dc-line: rgba(139, 140, 255, 0.18);
+  --dc-peri: #8b8cff;
+  --dc-pink: #ff91ff;
+  color: #eceafd;
+}
+
+/* Apertura de dropdowns/popovers: fade + slide. */
+@keyframes dc-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.dc-pop-in {
+  animation: dc-pop-in 0.14s ease-out both;
+  transform-origin: top;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dc-pop-in {
+    animation: none;
+  }
+}
+
 /* Transición de entrada al cambiar de solapa. */
 @keyframes dc-page-in {
   from {

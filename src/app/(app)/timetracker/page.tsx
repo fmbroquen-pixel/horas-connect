@@ -5,6 +5,7 @@ import { getProyectosPermitidos } from "@/lib/require-guest";
 import { formatHorasHsMin } from "@/lib/horas";
 import { formatMonto, hoyISO } from "@/lib/formato";
 import { FiltroPopover } from "@/components/filtro-popover";
+import { InfoButton } from "@/components/info-button";
 import { TablaRegistros } from "./tabla-registros";
 import type { MapaTarifas, RegistroFila } from "./tipos";
 
@@ -94,7 +95,14 @@ export default async function TimetrackerPage({
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-lg uppercase text-white">Timetracker</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="font-display text-lg uppercase text-white">Timetracker</h1>
+          <InfoButton>
+            Cargá las horas como número decimal (por ejemplo 1,5 o 1.5) y se
+            muestran como 1:30. Se pueden cargar y corregir registros de los
+            últimos {DIAS_VENTANA_EDICION} días; no se admiten fechas futuras.
+          </InfoButton>
+        </div>
         <div className="flex items-center gap-3">
           <p className="text-sm text-dc-muted">
             {formatHorasHsMin(totalHoras)} hs · USD {formatMonto(totalUsd)}
@@ -109,13 +117,6 @@ export default async function TimetrackerPage({
           />
         </div>
       </div>
-      <p className="mt-1 text-sm text-dc-muted">
-        Cargá las horas como número decimal (por ejemplo <strong className="text-dc-text">1,5</strong> o
-        <strong className="text-dc-text"> 1.5</strong>) y se muestran como
-        <strong className="text-dc-text"> 1:30</strong>. Se pueden cargar y
-        corregir registros de los últimos {DIAS_VENTANA_EDICION} días; no se
-        admiten fechas futuras.
-      </p>
 
       {sinTarifa && (
         <p className="mt-4 rounded-xl border border-dc-pink/40 bg-dc-pink/10 px-4 py-3 text-sm text-dc-pink">

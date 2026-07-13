@@ -7,6 +7,7 @@ import {
 } from "./actions";
 import { NuevoClienteForm } from "./nuevo-cliente-form";
 import { BTN_SECONDARY_SM, BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
+import { InfoButton } from "@/components/info-button";
 
 export default async function ClientesPage() {
   await requireAdmin();
@@ -16,10 +17,10 @@ export default async function ClientesPage() {
 
   return (
     <div>
-      <h1 className="font-display text-lg uppercase text-white">Proyectos</h1>
-      <p className="mt-1 text-sm text-dc-muted">
-        Proyectos disponibles al cargar horas y viáticos.
-      </p>
+      <div className="flex items-center gap-2">
+        <h1 className="font-display text-lg uppercase text-white">Proyectos</h1>
+        <InfoButton>Proyectos disponibles al cargar horas y viáticos.</InfoButton>
+      </div>
 
       <NuevoClienteForm action={crearCliente} />
 

@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/require-admin";
 import { actualizarUsuario, guardarTarifa } from "../actions";
 import { TarifaForm } from "./tarifa-form";
 import { ProyectosForm } from "./proyectos-form";
+import { RolDropdown } from "../rol-dropdown";
 import { BTN_SECONDARY } from "@/lib/ui";
 
 const ETIQUETA_MODALIDAD: Record<string, string> = {
@@ -80,19 +81,8 @@ export default async function UsuarioDetallePage({
             defaultValue={usuario.email}
             className="rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
           />
-          <select
-            name="rol"
-            defaultValue={usuario.rol}
-            className="rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
-          >
-            <option value="guest">Mentor (guest)</option>
-            <option value="reader">Solo lectura (reader)</option>
-            <option value="admin">Administrador</option>
-          </select>
-          <button
-            type="submit"
-            className={BTN_SECONDARY}
-          >
+          <RolDropdown defaultValue={usuario.rol} className="w-52" />
+          <button type="submit" className={BTN_SECONDARY}>
             Guardar datos
           </button>
         </form>

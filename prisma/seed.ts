@@ -22,6 +22,7 @@ const CLIENTES = [
   "Rule Retali",
   "Oftar",
   "Valca",
+  "Sandbox-Test",
 ];
 
 const ETAPAS: { etiqueta: string; grupo: string }[] = [

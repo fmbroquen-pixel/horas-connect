@@ -5,6 +5,7 @@ import { actualizarRegistro, eliminarRegistro } from "./actions";
 import { parseHorasHsMin, reformatEntradaHoras } from "@/lib/horas";
 import { formatMonto, hoyISO } from "@/lib/formato";
 import { GRID_TIMETRACKER } from "./grid";
+import { Dropdown } from "@/components/dropdown";
 import {
   ETIQUETA_MODALIDAD,
   ETIQUETA_OWNERSHIP,
@@ -118,6 +119,8 @@ function FormEdicion({
   tarifas: MapaTarifas;
   onCerrar: () => void;
 }) {
+  const [clienteId, setClienteId] = useState(registro.clienteId);
+  const [etapaId, setEtapaId] = useState(registro.etapaId);
   const [modalidad, setModalidad] = useState<string>(registro.modalidad);
   const [ownership, setOwnership] = useState<string>(registro.ownership);
   const [horas, setHoras] = useState(registro.horas);
@@ -154,29 +157,30 @@ function FormEdicion({
           max={hoyISO()}
           className={INPUT}
         />
-        <select name="clienteId" defaultValue={registro.clienteId} className={INPUT}>
-          {proyectos.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nombre}
-            </option>
-          ))}
-        </select>
-        <select name="etapaId" defaultValue={registro.etapaId} className={INPUT}>
-          {etapas.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nombre}
-            </option>
-          ))}
-        </select>
-        <select
+        <Dropdown
+          name="clienteId"
+          value={clienteId}
+          onChange={setClienteId}
+          options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
+          ariaLabel="Proyecto"
+        />
+        <Dropdown
+          name="etapaId"
+          value={etapaId}
+          onChange={setEtapaId}
+          options={etapas.map((e) => ({ value: e.id, label: e.nombre }))}
+          ariaLabel="Etapa"
+        />
+        <Dropdown
           name="ownership"
           value={ownership}
-          onChange={(e) => setOwnership(e.target.value)}
-          className={INPUT}
-        >
-          <option value="owner">Owner</option>
-          <option value="backup">Backup</option>
-        </select>
+          onChange={setOwnership}
+          options={[
+            { value: "owner", label: "Owner" },
+            { value: "backup", label: "Backup" },
+          ]}
+          ariaLabel="Ownership"
+        />
         <input
           name="horas"
           value={horas}
@@ -188,15 +192,16 @@ function FormEdicion({
           required
           className={INPUT}
         />
-        <select
+        <Dropdown
           name="modalidad"
           value={modalidad}
-          onChange={(e) => setModalidad(e.target.value)}
-          className={INPUT}
-        >
-          <option value="presencial">Presencial</option>
-          <option value="virtual">Virtual</option>
-        </select>
+          onChange={setModalidad}
+          options={[
+            { value: "presencial", label: "Presencial" },
+            { value: "virtual", label: "Virtual" },
+          ]}
+          ariaLabel="Modalidad"
+        />
         <span className="text-right text-sm tabular-nums text-dc-muted">
           {tarifa !== undefined ? formatMonto(tarifa) : "—"}
         </span>

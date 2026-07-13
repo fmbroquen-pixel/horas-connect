@@ -5,6 +5,8 @@ import { logout } from "@/app/actions";
 import { TabsNav } from "./tabs-nav";
 import { Papelera } from "./papelera/papelera";
 import { PageTransition } from "./page-transition";
+import { PerfilBoton } from "./perfil/perfil-boton";
+import { urlAvatar } from "@/lib/supabase/admin";
 import { BTN_SECONDARY_SM } from "@/lib/ui";
 
 const CONTENEDOR = "mx-auto w-full max-w-[1440px] px-6 md:px-10 lg:px-14";
@@ -52,6 +54,7 @@ export default async function AppLayout({
   }
 
   const { usuario } = sesion;
+  const avatarUrl = urlAvatar(usuario.avatarPath);
 
   return (
     <div className="flex min-h-screen flex-col bg-dc-deeper">
@@ -66,36 +69,33 @@ export default async function AppLayout({
             </p>
           </Link>
           <div className="flex items-center gap-3 text-sm">
-            <div className="text-right">
-              <p className="text-dc-text">{usuario.nombre}</p>
-              <p className="text-xs text-dc-muted">
-                {ETIQUETA_ROL[usuario.rol] ?? usuario.rol}
-              </p>
-            </div>
+            <PerfilBoton
+              nombre={usuario.nombre}
+              rol={ETIQUETA_ROL[usuario.rol] ?? usuario.rol}
+              avatarUrl={avatarUrl}
+            />
+          </div>
+        </div>
+        <div className={`${CONTENEDOR} flex items-center justify-between gap-3`}>
+          <TabsNav tabs={tabsParaRol(usuario.rol)} containerClass="flex-1 min-w-0" />
+          <div className="flex shrink-0 items-center gap-2 pb-1">
+            {usuario.rol === "admin" && (
+              <Link
+                href="/admin/usuarios"
+                title="Settings"
+                aria-label="Settings"
+                className="flex items-center rounded-lg border border-dc-line px-2.5 py-1.5 text-base leading-none text-dc-muted transition hover:border-dc-peri hover:text-dc-text"
+              >
+                ⚙️
+              </Link>
+            )}
+            {usuario.rol !== "reader" && <Papelera />}
             <form action={logout}>
               <button type="submit" className={BTN_SECONDARY_SM}>
                 Salir
               </button>
             </form>
           </div>
-        </div>
-        <div className={`${CONTENEDOR} flex items-center justify-between gap-3`}>
-          <TabsNav tabs={tabsParaRol(usuario.rol)} containerClass="flex-1 min-w-0" />
-          {usuario.rol !== "reader" && (
-            <div className="flex shrink-0 items-center gap-2 pb-1">
-              {usuario.rol === "admin" && (
-                <Link
-                  href="/admin/usuarios"
-                  title="Settings"
-                  aria-label="Settings"
-                  className="flex items-center rounded-lg border border-dc-line px-2.5 py-1.5 text-base leading-none text-dc-muted transition hover:border-dc-peri hover:text-dc-text"
-                >
-                  ⚙️
-                </Link>
-              )}
-              <Papelera />
-            </div>
-          )}
         </div>
       </header>
       <main className={`${CONTENEDOR} flex-1 py-8`}>

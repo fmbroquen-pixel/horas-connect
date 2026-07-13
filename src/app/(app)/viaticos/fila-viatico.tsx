@@ -10,6 +10,7 @@ import {
   type ViaticoFila,
 } from "./tipos";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM, BTN_DANGER_SM, BTN_DANGER_CONFIRM_SM } from "@/lib/ui";
+import { Dropdown } from "@/components/dropdown";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -95,6 +96,11 @@ function FormEdicion({
   etapas: OpcionSelect[];
   onCerrar: () => void;
 }) {
+  const [clienteId, setClienteId] = useState(viatico.clienteId);
+  const [etapaId, setEtapaId] = useState(viatico.etapaId);
+  const [moneda, setMoneda] = useState<string>(viatico.moneda);
+  const [concepto, setConcepto] = useState(viatico.concepto);
+
   const accion = actualizarViatico.bind(null, viatico.id);
   const [state, formAction, pending] = useActionState(
     async (prev: { error?: string } | undefined, formData: FormData) => {
@@ -119,24 +125,30 @@ function FormEdicion({
           max={hoyISO()}
           className={INPUT}
         />
-        <select name="clienteId" defaultValue={viatico.clienteId} className={INPUT}>
-          {proyectos.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nombre}
-            </option>
-          ))}
-        </select>
-        <select name="etapaId" defaultValue={viatico.etapaId} className={INPUT}>
-          {etapas.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nombre}
-            </option>
-          ))}
-        </select>
-        <select name="moneda" defaultValue={viatico.moneda} className={INPUT}>
-          <option value="ARS">ARS</option>
-          <option value="USD">USD</option>
-        </select>
+        <Dropdown
+          name="clienteId"
+          value={clienteId}
+          onChange={setClienteId}
+          options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
+          ariaLabel="Proyecto"
+        />
+        <Dropdown
+          name="etapaId"
+          value={etapaId}
+          onChange={setEtapaId}
+          options={etapas.map((e) => ({ value: e.id, label: e.nombre }))}
+          ariaLabel="Etapa"
+        />
+        <Dropdown
+          name="moneda"
+          value={moneda}
+          onChange={setMoneda}
+          options={[
+            { value: "ARS", label: "ARS" },
+            { value: "USD", label: "USD" },
+          ]}
+          ariaLabel="Moneda"
+        />
         <input
           name="monto"
           type="number"
@@ -146,13 +158,16 @@ function FormEdicion({
           required
           className={`${INPUT} text-right`}
         />
-        <select name="concepto" defaultValue={viatico.concepto} className={INPUT}>
-          {Object.entries(ETIQUETA_CONCEPTO).map(([valor, etiqueta]) => (
-            <option key={valor} value={valor}>
-              {etiqueta}
-            </option>
-          ))}
-        </select>
+        <Dropdown
+          name="concepto"
+          value={concepto}
+          onChange={setConcepto}
+          options={Object.entries(ETIQUETA_CONCEPTO).map(([valor, etiqueta]) => ({
+            value: valor,
+            label: etiqueta,
+          }))}
+          ariaLabel="Concepto"
+        />
         <input
           name="archivo"
           type="file"

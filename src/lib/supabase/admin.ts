@@ -12,6 +12,7 @@ export function createAdminClient() {
 }
 
 export const BUCKET_COMPROBANTES = "comprobantes";
+export const BUCKET_AVATARES = "avatares";
 
 // Crea el bucket privado la primera vez que se necesita.
 export async function asegurarBucketComprobantes() {
@@ -23,4 +24,22 @@ export async function asegurarBucketComprobantes() {
       fileSizeLimit: "10MB",
     });
   }
+}
+
+// Bucket público para las fotos de perfil (avatares).
+export async function asegurarBucketAvatares() {
+  const supabase = createAdminClient();
+  const { data } = await supabase.storage.getBucket(BUCKET_AVATARES);
+  if (!data) {
+    await supabase.storage.createBucket(BUCKET_AVATARES, {
+      public: true,
+      fileSizeLimit: "5MB",
+    });
+  }
+}
+
+// URL pública de un avatar a partir de su ruta en el bucket.
+export function urlAvatar(path: string | null): string | null {
+  if (!path) return null;
+  return `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET_AVATARES}/${path}`;
 }

@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { alternarActivoUsuario } from "./actions";
 import { NuevoUsuarioForm } from "./nuevo-usuario-form";
-import { BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
+import { BTN_PILL_ON, BTN_PILL_OFF, BTN_SECONDARY_SM } from "@/lib/ui";
+import { InfoButton } from "@/components/info-button";
 
 const ETIQUETA_ROL: Record<string, string> = {
   admin: "Administrador",
@@ -22,35 +23,42 @@ export default async function UsuariosPage() {
 
   return (
     <div>
-      <h1 className="font-display text-lg uppercase text-white">Usuarios</h1>
-      <p className="mt-1 text-sm text-dc-muted">
-        Lista blanca de personas autorizadas a entrar con Google o email.
-        Los mentores (guest) necesitan una tarifa configurada antes de poder
-        cargar horas facturables.
-      </p>
+      <div className="flex items-center gap-2">
+        <h1 className="font-display text-lg uppercase text-white">Usuarios</h1>
+        <InfoButton>
+          Lista blanca de personas autorizadas a entrar con Google o email.
+          Los usuarios solo los crea el administrador; nadie puede ingresar si
+          no tiene un usuario creado. Los mentores (guest) necesitan una tarifa
+          configurada antes de poder cargar horas facturables.
+        </InfoButton>
+      </div>
 
       <NuevoUsuarioForm />
 
-      <div className="mt-6 overflow-hidden dc-panel">
-        <table className="w-full text-sm">
+      <div className="mt-6 overflow-x-auto dc-panel">
+        <table className="w-full min-w-[720px] text-sm">
+          <thead>
+            <tr className="border-b border-dc-line">
+              <th className="px-4 py-2 text-left">Nombre de usuario</th>
+              <th className="px-4 py-2">Tipo de usuario</th>
+              <th className="px-4 py-2">Tarifa</th>
+              <th className="px-4 py-2">Activo</th>
+              <th className="px-4 py-2" />
+            </tr>
+          </thead>
           <tbody>
             {usuarios.map((u) => (
               <tr key={u.id} className="border-b border-dc-line last:border-0">
                 <td className="px-4 py-3">
-                  <Link
-                    href={`/admin/usuarios/${u.id}`}
-                    className="text-dc-text hover:text-dc-peri"
-                  >
-                    {u.nombre}
-                  </Link>
+                  <p className="text-dc-text">{u.nombre}</p>
                   <p className="text-xs text-dc-muted">{u.email}</p>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 text-center">
                   <span className="rounded-full bg-dc-line px-3 py-1 text-xs text-dc-text">
                     {ETIQUETA_ROL[u.rol] ?? u.rol}
                   </span>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 text-center">
                   {(u.rol === "guest" || u.rol === "admin") && (
                     <span
                       className={
@@ -65,25 +73,23 @@ export default async function UsuariosPage() {
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-center">
                   <form action={alternarActivoUsuario.bind(null, u.id, !u.activo)}>
-                    <button
-                      type="submit"
-                      className={
-                        u.activo
-                          ? BTN_PILL_ON
-                          : BTN_PILL_OFF
-                      }
-                    >
+                    <button type="submit" className={u.activo ? BTN_PILL_ON : BTN_PILL_OFF}>
                       {u.activo ? "Activo" : "Bloqueado"}
                     </button>
                   </form>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <Link href={`/admin/usuarios/${u.id}`} className={BTN_SECONDARY_SM}>
+                    Editar
+                  </Link>
                 </td>
               </tr>
             ))}
             {usuarios.length === 0 && (
               <tr>
-                <td className="px-4 py-6 text-center text-dc-muted" colSpan={4}>
+                <td className="px-4 py-6 text-center text-dc-muted" colSpan={5}>
                   Todavía no hay usuarios cargados.
                 </td>
               </tr>

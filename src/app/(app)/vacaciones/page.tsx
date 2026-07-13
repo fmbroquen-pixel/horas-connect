@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
+import { InfoButton } from "@/components/info-button";
 import { FilaNuevaVacacion, GRID_VACACIONES } from "./fila-nueva";
 import { FilaVacacion, type VacacionFila } from "./fila-vacacion";
 
@@ -29,17 +30,19 @@ export default async function VacacionesPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="font-display text-lg uppercase text-white">Vacaciones</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h1 className="font-display text-lg uppercase text-white">Vacaciones</h1>
+          <InfoButton>
+            Registrá tus días fuera de la oficina (pasados o futuros). Los días
+            se calculan solos a partir del rango, pero podés corregirlos (por
+            ejemplo, para descontar fines de semana).
+          </InfoButton>
+        </div>
         <p className="text-sm text-dc-muted">
           {diasEsteAnio} días OOO en {anioActual}
         </p>
       </div>
-      <p className="mt-1 text-sm text-dc-muted">
-        Registrá tus días fuera de la oficina (pasados o futuros). Los días se
-        calculan solos a partir del rango, pero podés corregirlos (por
-        ejemplo, para descontar fines de semana).
-      </p>
 
       <div className="mt-6 overflow-x-auto dc-panel">
         <div className={`dc-thead ${GRID_VACACIONES} border-b border-dc-line px-3 py-2 text-xs text-dc-muted`}>

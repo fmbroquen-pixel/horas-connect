@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/require-admin";
 import { actualizarEtapa, alternarActivoEtapa } from "./actions";
 import { NuevaEtapaForm } from "./nueva-etapa-form";
 import { BTN_SECONDARY_SM, BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
+import { InfoButton } from "@/components/info-button";
 
 export default async function EtapasPage() {
   await requireAdmin();
@@ -12,11 +13,13 @@ export default async function EtapasPage() {
 
   return (
     <div>
-      <h1 className="font-display text-lg uppercase text-white">Etapas</h1>
-      <p className="mt-1 text-sm text-dc-muted">
-        Opciones del desplegable de Etapa al cargar horas y viáticos,
-        agrupadas.
-      </p>
+      <div className="flex items-center gap-2">
+        <h1 className="font-display text-lg uppercase text-white">Etapas</h1>
+        <InfoButton>
+          Opciones del desplegable de Etapa al cargar horas y viáticos,
+          agrupadas.
+        </InfoButton>
+      </div>
 
       <NuevaEtapaForm />
 

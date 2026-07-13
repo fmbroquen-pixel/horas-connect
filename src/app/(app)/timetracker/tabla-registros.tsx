@@ -6,10 +6,8 @@ import { FilaNueva } from "./fila-nueva";
 import { FilaRegistro } from "./fila-registro";
 import { GRID_TIMETRACKER } from "./grid";
 import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
+import { Dropdown } from "@/components/dropdown";
 import type { MapaTarifas, OpcionSelect, RegistroFila } from "./tipos";
-
-const INPUT =
-  "rounded-lg border border-dc-line bg-dc-deeper px-2 py-1 text-sm text-dc-text outline-none focus:border-dc-peri";
 
 export function TablaRegistros({
   filas,
@@ -107,42 +105,60 @@ export function TablaRegistros({
           {editando && (
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <span className="text-xs text-dc-muted">Cambiar</span>
-              <select
+              <Dropdown
                 value={campo}
-                onChange={(e) => cambiarCampo(e.target.value as CampoMasivo)}
-                className={INPUT}
-              >
-                <option value="clienteId">Proyecto</option>
-                <option value="etapaId">Etapa</option>
-                <option value="ownership">Ownership</option>
-                <option value="modalidad">Modalidad</option>
-              </select>
+                onChange={(v) => cambiarCampo(v as CampoMasivo)}
+                options={[
+                  { value: "clienteId", label: "Proyecto" },
+                  { value: "etapaId", label: "Etapa" },
+                  { value: "ownership", label: "Ownership" },
+                  { value: "modalidad", label: "Modalidad" },
+                ]}
+                className="w-40"
+                ariaLabel="Campo a cambiar"
+              />
               <span className="text-xs text-dc-muted">a</span>
               {campo === "clienteId" && (
-                <select value={valor} onChange={(e) => setValor(e.target.value)} className={INPUT}>
-                  {proyectos.map((p) => (
-                    <option key={p.id} value={p.id}>{p.nombre}</option>
-                  ))}
-                </select>
+                <Dropdown
+                  value={valor}
+                  onChange={setValor}
+                  options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
+                  className="w-44"
+                  ariaLabel="Proyecto"
+                />
               )}
               {campo === "etapaId" && (
-                <select value={valor} onChange={(e) => setValor(e.target.value)} className={INPUT}>
-                  {etapas.map((e) => (
-                    <option key={e.id} value={e.id}>{e.nombre}</option>
-                  ))}
-                </select>
+                <Dropdown
+                  value={valor}
+                  onChange={setValor}
+                  options={etapas.map((e) => ({ value: e.id, label: e.nombre }))}
+                  className="w-44"
+                  ariaLabel="Etapa"
+                />
               )}
               {campo === "ownership" && (
-                <select value={valor} onChange={(e) => setValor(e.target.value)} className={INPUT}>
-                  <option value="owner">Owner</option>
-                  <option value="backup">Backup</option>
-                </select>
+                <Dropdown
+                  value={valor}
+                  onChange={setValor}
+                  options={[
+                    { value: "owner", label: "Owner" },
+                    { value: "backup", label: "Backup" },
+                  ]}
+                  className="w-40"
+                  ariaLabel="Ownership"
+                />
               )}
               {campo === "modalidad" && (
-                <select value={valor} onChange={(e) => setValor(e.target.value)} className={INPUT}>
-                  <option value="presencial">Presencial</option>
-                  <option value="virtual">Virtual</option>
-                </select>
+                <Dropdown
+                  value={valor}
+                  onChange={setValor}
+                  options={[
+                    { value: "presencial", label: "Presencial" },
+                    { value: "virtual", label: "Virtual" },
+                  ]}
+                  className="w-40"
+                  ariaLabel="Modalidad"
+                />
               )}
               <button type="button" onClick={aplicarEdicion} disabled={pending || !valor} className={BTN_PRIMARY_SM}>
                 {pending ? "Aplicando…" : "Aplicar a seleccionadas"}

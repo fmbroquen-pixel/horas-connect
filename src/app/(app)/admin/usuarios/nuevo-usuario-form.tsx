@@ -3,6 +3,7 @@
 import { useActionState, useRef } from "react";
 import { crearUsuario } from "./actions";
 import { BTN_PRIMARY } from "@/lib/ui";
+import { RolDropdown } from "./rol-dropdown";
 
 export function NuevoUsuarioForm() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -30,15 +31,7 @@ export function NuevoUsuarioForm() {
         required
         className="rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
       />
-      <select
-        name="rol"
-        defaultValue="guest"
-        className="rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
-      >
-        <option value="guest">Mentor (guest)</option>
-        <option value="reader">Solo lectura (reader)</option>
-        <option value="admin">Administrador</option>
-      </select>
+      <RolDropdown className="w-52 py-0.5" />
       <button
         type="submit"
         disabled={pending}

@@ -6,6 +6,7 @@ import { BTN_PRIMARY_SM } from "@/lib/ui";
 import { parseHorasHsMin, reformatEntradaHoras } from "@/lib/horas";
 import { formatMonto, hoyISO } from "@/lib/formato";
 import { GRID_TIMETRACKER } from "./grid";
+import { Dropdown } from "@/components/dropdown";
 import type { MapaTarifas, OpcionSelect } from "./tipos";
 
 const INPUT =
@@ -84,41 +85,34 @@ export function FilaNueva({
           onChange={(e) => set("fecha", e.target.value)}
           className={cls("fecha")}
         />
-        <select
+        <Dropdown
           name="clienteId"
           value={valores.clienteId}
-          onChange={(e) => set("clienteId", e.target.value)}
-          className={cls("clienteId")}
-        >
-          <option value="">Proyecto</option>
-          {proyectos.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nombre}
-            </option>
-          ))}
-        </select>
-        <select
+          onChange={(v) => set("clienteId", v)}
+          options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
+          placeholder="Proyecto"
+          invalido={estado?.campo === "clienteId"}
+          ariaLabel="Proyecto"
+        />
+        <Dropdown
           name="etapaId"
           value={valores.etapaId}
-          onChange={(e) => set("etapaId", e.target.value)}
-          className={cls("etapaId")}
-        >
-          <option value="">Etapa</option>
-          {etapas.map((e) => (
-            <option key={e.id} value={e.id}>
-              {e.nombre}
-            </option>
-          ))}
-        </select>
-        <select
+          onChange={(v) => set("etapaId", v)}
+          options={etapas.map((e) => ({ value: e.id, label: e.nombre }))}
+          placeholder="Etapa"
+          invalido={estado?.campo === "etapaId"}
+          ariaLabel="Etapa"
+        />
+        <Dropdown
           name="ownership"
           value={valores.ownership}
-          onChange={(e) => set("ownership", e.target.value)}
-          className={cls("ownership")}
-        >
-          <option value="owner">Owner</option>
-          <option value="backup">Backup</option>
-        </select>
+          onChange={(v) => set("ownership", v)}
+          options={[
+            { value: "owner", label: "Owner" },
+            { value: "backup", label: "Backup" },
+          ]}
+          ariaLabel="Ownership"
+        />
         <input
           name="horas"
           placeholder="1,5"
@@ -128,15 +122,16 @@ export function FilaNueva({
           onBlur={reformatearHoras}
           className={cls("horas")}
         />
-        <select
+        <Dropdown
           name="modalidad"
           value={valores.modalidad}
-          onChange={(e) => set("modalidad", e.target.value)}
-          className={cls("modalidad")}
-        >
-          <option value="presencial">Presencial</option>
-          <option value="virtual">Virtual</option>
-        </select>
+          onChange={(v) => set("modalidad", v)}
+          options={[
+            { value: "presencial", label: "Presencial" },
+            { value: "virtual", label: "Virtual" },
+          ]}
+          ariaLabel="Modalidad"
+        />
         <span className="text-right text-sm tabular-nums text-dc-muted">
           {tarifa !== undefined ? formatMonto(tarifa) : "—"}
         </span>

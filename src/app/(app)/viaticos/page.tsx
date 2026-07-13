@@ -7,6 +7,7 @@ import {
   createAdminClient,
   BUCKET_COMPROBANTES,
 } from "@/lib/supabase/admin";
+import { InfoButton } from "@/components/info-button";
 import { GRID_VIATICOS, type ViaticoFila } from "./tipos";
 import { FilaNuevaViatico } from "./fila-nueva";
 import { FilaViatico } from "./fila-viatico";
@@ -66,15 +67,17 @@ export default async function ViaticosPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h1 className="font-display text-lg uppercase text-white">Viáticos</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h1 className="font-display text-lg uppercase text-white">Viáticos</h1>
+          <InfoButton>
+            Cargá los gastos asociados a un proyecto. El comprobante es opcional.
+          </InfoButton>
+        </div>
         <p className="text-sm text-dc-muted">
           ARS {formatMonto(totalArs)} · USD {formatMonto(totalUsd)}
         </p>
       </div>
-      <p className="mt-1 text-sm text-dc-muted">
-        Cargá los gastos asociados a un proyecto. El comprobante es opcional.
-      </p>
 
       <div className="mt-6 overflow-x-auto dc-panel">
         <div className={`dc-thead ${GRID_VIATICOS} border-b border-dc-line px-3 py-2 text-xs text-dc-muted`}>

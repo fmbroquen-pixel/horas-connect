@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
+import { Dropdown } from "@/components/dropdown";
 
 type Proyecto = { id: string; nombre: string };
 
@@ -30,6 +31,7 @@ export function FiltroPopover({
   maxHoy: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [proyectoSel, setProyectoSel] = useState(proyectoId);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -88,14 +90,17 @@ export function FiltroPopover({
               </div>
               <div>
                 <label className="mb-1 block text-xs text-dc-muted">Proyecto</label>
-                <select name="proyecto" defaultValue={proyectoId} className={INPUT}>
-                  <option value="">Todos</option>
-                  {proyectos.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.nombre}
-                    </option>
-                  ))}
-                </select>
+                <Dropdown
+                  name="proyecto"
+                  value={proyectoSel}
+                  onChange={setProyectoSel}
+                  options={[
+                    { value: "", label: "Todos" },
+                    ...proyectos.map((p) => ({ value: p.id, label: p.nombre })),
+                  ]}
+                  placeholder="Todos"
+                  ariaLabel="Proyecto"
+                />
               </div>
               <div className="flex items-center gap-2 pt-1">
                 <button type="submit" className={BTN_PRIMARY_SM}>
