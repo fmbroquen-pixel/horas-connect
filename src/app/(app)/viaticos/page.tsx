@@ -24,7 +24,7 @@ export default async function ViaticosPage() {
       orderBy: [{ grupo: "asc" }, { orden: "asc" }],
     }),
     prisma.viatico.findMany({
-      where: { usuarioId: usuario.id },
+      where: { usuarioId: usuario.id, eliminadoEn: null },
       orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
       take: 200,
     }),

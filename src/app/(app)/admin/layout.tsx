@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSesionActual } from "@/lib/auth";
+import { TabsNav } from "../tabs-nav";
 
 const SECCIONES = [
   { href: "/admin/usuarios", label: "Usuarios" },
-  { href: "/admin/clientes", label: "Clientes" },
+  { href: "/admin/clientes", label: "Proyectos" },
   { href: "/admin/etapas", label: "Etapas" },
 ];
 
@@ -22,19 +22,11 @@ export default async function AdminLayout({
   return (
     <div>
       <p className="font-display text-xs tracking-[0.3em] text-dc-pink">
-        ADMINISTRACIÓN
+        SETTINGS
       </p>
-      <nav className="mt-3 flex flex-wrap gap-2">
-        {SECCIONES.map((s) => (
-          <Link
-            key={s.href}
-            href={s.href}
-            className="rounded-lg border border-dc-line px-3 py-1.5 text-sm text-dc-muted transition hover:border-dc-peri hover:text-dc-text"
-          >
-            {s.label}
-          </Link>
-        ))}
-      </nav>
+      <div className="mt-2 border-b border-dc-line">
+        <TabsNav tabs={SECCIONES} containerClass="" size="sm" />
+      </div>
       <div className="mt-6">{children}</div>
     </div>
   );

@@ -11,7 +11,7 @@ export default async function VacacionesPage() {
   if (usuario.rol === "reader") redirect("/rentabilidad");
 
   const vacaciones = await prisma.vacacion.findMany({
-    where: { usuarioId: usuario.id },
+    where: { usuarioId: usuario.id, eliminadoEn: null },
     orderBy: { fechaInicio: "desc" },
   });
 

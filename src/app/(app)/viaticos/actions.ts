@@ -156,14 +156,13 @@ export async function eliminarViatico(id: string): Promise<void> {
     throw new Error("No podés borrar viáticos de otra persona.");
   }
 
-  await prisma.viatico.delete({ where: { id } });
-
-  if (existente.archivoPath) {
-    const supabase = createAdminClient();
-    await supabase.storage
-      .from(BUCKET_COMPROBANTES)
-      .remove([existente.archivoPath]);
-  }
+  // Borrado lógico: va a la papelera. El comprobante se conserva para poder
+  // restaurar; solo se borra del storage si el viático se elimina para
+  // siempre desde la papelera.
+  await prisma.viatico.update({
+    where: { id },
+    data: { eliminadoEn: new Date() },
+  });
 
   revalidatePath("/viaticos");
 }

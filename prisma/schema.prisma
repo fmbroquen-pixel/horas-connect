@@ -200,12 +200,16 @@ model RegistroHoras {
   creadoPorId String  @map("creado_por_id")
   creadoPor   Usuario @relation("CreadoPor", fields: [creadoPorId], references: [id])
 
+  // Borrado logico: si tiene fecha, el registro esta en la papelera.
+  eliminadoEn DateTime? @map("eliminado_en")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([fecha])
   @@index([usuarioId, fecha])
   @@index([clienteId, fecha])
+  @@index([eliminadoEn])
   @@map("registros_horas")
 }
 
@@ -224,11 +228,14 @@ model Viatico {
   // Ruta del comprobante en Supabase Storage (bucket privado), opcional.
   archivoPath String?       @map("archivo_path")
 
+  eliminadoEn DateTime? @map("eliminado_en")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([usuarioId, fecha])
   @@index([clienteId, fecha])
+  @@index([eliminadoEn])
   @@map("viaticos")
 }
 
@@ -240,9 +247,12 @@ model Vacacion {
   fechaFin    DateTime @map("fecha_fin") @db.Date
   dias        Int
 
+  eliminadoEn DateTime? @map("eliminado_en")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([usuarioId, fechaInicio])
+  @@index([eliminadoEn])
   @@map("vacaciones")
 }

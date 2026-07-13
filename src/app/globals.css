@@ -76,12 +76,29 @@ button:not(:disabled):active {
   border-radius: 16px;
   color: #211d52;
 }
-/* Encabezados de columna: centrados y en negrita, tanto en <table> como en
-   las grillas basadas en <div> (marcadas con .dc-thead). */
-.dc-panel th,
+/* Encabezados de columna: centrados, en negrita, versalita con leve
+   espaciado y una franja de encabezado tenue, tanto en <table> como en las
+   grillas basadas en <div> (marcadas con .dc-thead). */
+.dc-panel thead th,
 .dc-panel .dc-thead > * {
   text-align: center;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  font-size: 11px;
+  color: #4b477a;
+}
+.dc-panel thead tr,
+.dc-panel .dc-thead {
+  background: #ece9f8;
+}
+.dc-panel thead th {
+  padding-top: 0.7rem;
+  padding-bottom: 0.7rem;
+}
+.dc-panel .dc-thead {
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
 }
 
 .dc-blob {

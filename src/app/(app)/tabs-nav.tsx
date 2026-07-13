@@ -21,16 +21,19 @@ function TabLink({
   href,
   label,
   activa,
+  size = "md",
 }: {
   href: string;
   label: string;
   activa: boolean;
+  size?: "md" | "sm";
 }) {
+  const base = size === "sm" ? "px-3 py-1.5 text-xs" : "px-3 py-2 text-sm";
   return (
     <Link
       href={href}
       prefetch
-      className={`relative whitespace-nowrap border-b-2 px-3 py-2 text-sm transition-colors ${
+      className={`relative whitespace-nowrap border-b-2 transition-colors ${base} ${
         activa
           ? "border-dc-pink text-white"
           : "border-transparent text-dc-muted hover:text-dc-text"
@@ -42,12 +45,16 @@ function TabLink({
   );
 }
 
+export type Tab = { href: string; label: string; match?: string };
+
 export function TabsNav({
   tabs,
   containerClass = "mx-auto w-full max-w-[1440px] px-6 md:px-10 lg:px-14",
+  size = "md",
 }: {
-  tabs: { href: string; label: string }[];
+  tabs: Tab[];
   containerClass?: string;
+  size?: "md" | "sm";
 }) {
   const pathname = usePathname();
 
@@ -58,7 +65,12 @@ export function TabsNav({
           key={t.href}
           href={t.href}
           label={t.label}
-          activa={pathname === t.href || pathname.startsWith(t.href + "/")}
+          size={size}
+          activa={
+            pathname === t.href ||
+            pathname.startsWith(t.href + "/") ||
+            (t.match ? pathname.startsWith(t.match) : false)
+          }
         />
       ))}
     </nav>

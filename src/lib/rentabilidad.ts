@@ -71,6 +71,7 @@ export async function calcularReporte(
       where: {
         clienteId: { in: proyectoIds },
         fecha: { gte: desde, lt: hasta },
+        eliminadoEn: null,
       },
       include: { usuario: true },
     }),

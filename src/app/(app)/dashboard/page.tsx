@@ -4,12 +4,10 @@ import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
 import { formatHorasHsMin } from "@/lib/horas";
 import { formatMonto, hoyISO } from "@/lib/formato";
-import { BTN_PRIMARY } from "@/lib/ui";
+import { FiltroPopover } from "@/components/filtro-popover";
+import { BarrasHoras } from "./charts";
 
 const MAX_DIAS_FILTRO = 90;
-
-const INPUT =
-  "rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
 
 export default async function DashboardPage({
   searchParams,
@@ -20,12 +18,8 @@ export default async function DashboardPage({
   if (sesion.estado !== "autorizado") redirect("/login");
   const { usuario } = sesion;
 
-  // El reader no reporta horas propias: su vista es el dashboard de
-  // rentabilidad de sus proyectos asignados.
   if (usuario.rol === "reader") redirect("/rentabilidad");
 
-  // Guest y admin ven su dashboard personal (horas y honorarios propios).
-  // El admin, además, tiene la solapa "Rentabilidad" con todos los proyectos.
   const params = await searchParams;
 
   // Rango por defecto: últimos 30 días; máximo permitido: 90 días.
@@ -47,129 +41,89 @@ export default async function DashboardPage({
     prisma.registroHoras.findMany({
       where: {
         usuarioId: usuario.id,
+        eliminadoEn: null,
         fecha: {
           gte: new Date(desde + "T00:00:00Z"),
           lte: new Date(hasta + "T00:00:00Z"),
         },
         ...(proyectoId ? { clienteId: proyectoId } : {}),
       },
-      include: { cliente: true },
+      include: { cliente: true, etapa: true },
     }),
-    prisma.vacacion.findMany({ where: { usuarioId: usuario.id } }),
+    prisma.vacacion.findMany({
+      where: { usuarioId: usuario.id, eliminadoEn: null },
+    }),
   ]);
 
-  // Agregación por proyecto.
+  // Horas y monto por proyecto.
   const porProyecto = new Map<string, { nombre: string; horas: number; monto: number }>();
+  // Horas por etapa.
+  const porEtapa = new Map<string, number>();
   for (const r of registros) {
-    const actual = porProyecto.get(r.clienteId) ?? {
-      nombre: r.cliente.nombre,
-      horas: 0,
-      monto: 0,
-    };
-    actual.horas += Number(r.horas);
-    actual.monto += Number(r.montoUsd);
-    porProyecto.set(r.clienteId, actual);
+    const p = porProyecto.get(r.clienteId) ?? { nombre: r.cliente.nombre, horas: 0, monto: 0 };
+    p.horas += Number(r.horas);
+    p.monto += Number(r.montoUsd);
+    porProyecto.set(r.clienteId, p);
+
+    const etapa = r.etapa?.etiqueta ?? "Sin etapa";
+    porEtapa.set(etapa, (porEtapa.get(etapa) ?? 0) + Number(r.horas));
   }
-  const filas = [...porProyecto.values()].sort((a, b) => b.monto - a.monto);
-  const totalHoras = filas.reduce((acc, f) => acc + f.horas, 0);
-  const totalMonto = filas.reduce((acc, f) => acc + f.monto, 0);
+
+  const proyectosOrden = [...porProyecto.values()].sort((a, b) => b.horas - a.horas);
+  const totalHoras = proyectosOrden.reduce((a, f) => a + f.horas, 0);
+  const totalMonto = proyectosOrden.reduce((a, f) => a + f.monto, 0);
+
+  const etapasTop5 = [...porEtapa.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
 
   const anioActual = new Date().getFullYear();
   const diasVacaciones = vacaciones
     .filter((v) => v.fechaInicio.getUTCFullYear() === anioActual)
     .reduce((acc, v) => acc + v.dias, 0);
 
+  const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
+
   return (
     <div>
-      <h1 className="font-display text-xl uppercase text-white">
-        Hola, {usuario.nombre.split(" ")[0]}
-      </h1>
-
-      <form method="GET" className="mt-6 flex flex-wrap items-end gap-2">
-        <div>
-          <label htmlFor="desde" className="mb-1 block text-xs text-dc-muted">
-            Desde
-          </label>
-          <input id="desde" name="desde" type="date" defaultValue={desde} max={hoy} className={INPUT} />
-        </div>
-        <div>
-          <label htmlFor="hasta" className="mb-1 block text-xs text-dc-muted">
-            Hasta
-          </label>
-          <input id="hasta" name="hasta" type="date" defaultValue={hasta} max={hoy} className={INPUT} />
-        </div>
-        <div>
-          <label htmlFor="proyecto" className="mb-1 block text-xs text-dc-muted">
-            Proyecto
-          </label>
-          <select id="proyecto" name="proyecto" defaultValue={proyectoId ?? ""} className={INPUT}>
-            <option value="">Todos</option>
-            {proyectos.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
-          </select>
-        </div>
-        <button
-          type="submit"
-          className={BTN_PRIMARY}
-        >
-          Filtrar
-        </button>
-        <p className="w-full text-xs text-dc-muted">
-          Rango máximo: {MAX_DIAS_FILTRO} días.
-        </p>
-      </form>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-display text-xl uppercase text-white">
+          Hola, {usuario.nombre.split(" ")[0]}
+        </h1>
+        <FiltroPopover
+          basePath="/dashboard"
+          desde={desde}
+          hasta={hasta}
+          proyectoId={proyectoId ?? ""}
+          proyectos={opcionesProyecto}
+          maxHoy={hoy}
+        />
+      </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi etiqueta="Horas" valor={`${formatHorasHsMin(totalHoras)} hs`} />
         <Kpi etiqueta="A cobrar (USD)" valor={formatMonto(totalMonto)} destacado />
-        <Kpi etiqueta="Proyectos" valor={String(filas.length)} />
+        <Kpi etiqueta="Proyectos" valor={String(proyectosOrden.length)} />
         <Kpi etiqueta={`Vacaciones ${anioActual}`} valor={`${diasVacaciones} días`} />
       </div>
 
-      <div className="mt-6 overflow-hidden dc-panel">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-dc-line text-left text-xs text-dc-muted">
-              <th className="px-4 py-2 font-normal">Proyecto</th>
-              <th className="px-4 py-2 text-right font-normal">Horas</th>
-              <th className="px-4 py-2 text-right font-normal">A cobrar (USD)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filas.map((f) => (
-              <tr key={f.nombre} className="border-b border-dc-line last:border-0">
-                <td className="px-4 py-2 text-dc-text">{f.nombre}</td>
-                <td className="px-4 py-2 text-right tabular-nums text-dc-text">
-                  {formatHorasHsMin(f.horas)}
-                </td>
-                <td className="px-4 py-2 text-right tabular-nums text-dc-text">
-                  {formatMonto(f.monto)}
-                </td>
-              </tr>
-            ))}
-            {filas.length > 0 && (
-              <tr className="bg-dc-card">
-                <td className="px-4 py-2 font-medium text-dc-text">Total</td>
-                <td className="px-4 py-2 text-right font-medium tabular-nums text-dc-text">
-                  {formatHorasHsMin(totalHoras)}
-                </td>
-                <td className="px-4 py-2 text-right font-medium tabular-nums text-dc-text">
-                  {formatMonto(totalMonto)}
-                </td>
-              </tr>
-            )}
-            {filas.length === 0 && (
-              <tr>
-                <td className="px-4 py-6 text-center text-dc-muted" colSpan={3}>
-                  No hay horas cargadas en el rango elegido.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-2xl border border-dc-line bg-dc-card p-5">
+          <h2 className="mb-3 text-sm text-white">Horas por proyecto</h2>
+          <BarrasHoras
+            labels={proyectosOrden.map((p) => p.nombre)}
+            horas={proyectosOrden.map((p) => p.horas)}
+            color="#8b8cff"
+          />
+        </div>
+        <div className="rounded-2xl border border-dc-line bg-dc-card p-5">
+          <h2 className="mb-3 text-sm text-white">Top 5 etapas por horas</h2>
+          <BarrasHoras
+            labels={etapasTop5.map(([nombre]) => nombre)}
+            horas={etapasTop5.map(([, horas]) => horas)}
+            color="#ff91ff"
+          />
+        </div>
       </div>
     </div>
   );
@@ -187,9 +141,7 @@ function Kpi({
   return (
     <div className="rounded-2xl border border-dc-line bg-dc-card px-4 py-3">
       <p className="text-[11px] uppercase tracking-wider text-dc-muted">{etiqueta}</p>
-      <p
-        className={`mt-1 font-display text-lg ${destacado ? "text-dc-pink" : "text-white"}`}
-      >
+      <p className={`mt-1 font-display text-lg ${destacado ? "text-dc-pink" : "text-white"}`}>
         {valor}
       </p>
     </div>

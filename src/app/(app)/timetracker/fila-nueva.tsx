@@ -72,6 +72,7 @@ export function FilaNueva({
   return (
     <form action={formAction} className="border-b border-dc-line bg-dc-card px-3 py-2">
       <div className={GRID_TIMETRACKER}>
+        <span />
         <input
           name="fecha"
           type="date"

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSesionActual } from "@/lib/auth";
 import { logout } from "@/app/actions";
 import { TabsNav } from "./tabs-nav";
+import { Papelera } from "./papelera/papelera";
 import { BTN_SECONDARY_SM } from "@/lib/ui";
 
 const CONTENEDOR = "mx-auto w-full max-w-[1440px] px-6 md:px-10 lg:px-14";
@@ -28,7 +29,7 @@ function tabsParaRol(rol: string) {
     return [
       ...TABS_CARGA,
       { href: "/rentabilidad", label: "Rentabilidad" },
-      { href: "/admin/usuarios", label: "Settings" },
+      { href: "/admin/usuarios", label: "Settings", match: "/admin" },
     ];
   }
   // reader: solo lectura de la rentabilidad de sus proyectos asignados.
@@ -77,7 +78,14 @@ export default async function AppLayout({
             </form>
           </div>
         </div>
-        <TabsNav tabs={tabsParaRol(usuario.rol)} containerClass={CONTENEDOR} />
+        <div className={`${CONTENEDOR} flex items-center justify-between gap-3`}>
+          <TabsNav tabs={tabsParaRol(usuario.rol)} containerClass="flex-1 min-w-0" />
+          {usuario.rol !== "reader" && (
+            <div className="shrink-0 pb-1">
+              <Papelera />
+            </div>
+          )}
+        </div>
       </header>
       <main className={`${CONTENEDOR} flex-1 py-8`}>{children}</main>
     </div>

@@ -147,7 +147,7 @@ export async function crearRegistro(
 // fecha original y la nueva están dentro de la ventana de 30 días.
 async function registroEditable(id: string, usuarioId: string, esAdmin: boolean) {
   const registro = await prisma.registroHoras.findUnique({ where: { id } });
-  if (!registro) return { error: "Registro no encontrado." };
+  if (!registro || registro.eliminadoEn) return { error: "Registro no encontrado." };
   if (!esAdmin && registro.usuarioId !== usuarioId) {
     return { error: "No podés modificar registros de otra persona." };
   }
@@ -200,7 +200,30 @@ export async function eliminarRegistro(id: string): Promise<void> {
   const check = await registroEditable(id, usuario.id, esAdmin);
   if (check.error) throw new Error(check.error);
 
-  await prisma.registroHoras.delete({ where: { id } });
+  // Borrado lógico: va a la papelera, se puede restaurar.
+  await prisma.registroHoras.update({
+    where: { id },
+    data: { eliminadoEn: new Date() },
+  });
+  revalidatePath("/timetracker");
+  revalidatePath("/dashboard");
+}
+
+// Borrado masivo de las filas seleccionadas (solo las propias, o cualquiera
+// si es admin), también lógico.
+export async function eliminarRegistros(ids: string[]): Promise<void> {
+  const usuario = await requireGuest();
+  const esAdmin = usuario.rol === "admin";
+  if (ids.length === 0) return;
+
+  await prisma.registroHoras.updateMany({
+    where: {
+      id: { in: ids },
+      eliminadoEn: null,
+      ...(esAdmin ? {} : { usuarioId: usuario.id }),
+    },
+    data: { eliminadoEn: new Date() },
+  });
   revalidatePath("/timetracker");
   revalidatePath("/dashboard");
 }

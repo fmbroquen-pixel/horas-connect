@@ -103,7 +103,10 @@ export async function eliminarVacacion(id: string): Promise<void> {
     throw new Error("No podés borrar vacaciones de otra persona.");
   }
 
-  await prisma.vacacion.delete({ where: { id } });
+  await prisma.vacacion.update({
+    where: { id },
+    data: { eliminadoEn: new Date() },
+  });
   revalidatePath("/vacaciones");
   revalidatePath("/dashboard");
 }

@@ -3,22 +3,37 @@ import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
 import { formatHorasHsMin } from "@/lib/horas";
-import { formatMonto } from "@/lib/formato";
-import { GRID_TIMETRACKER } from "./grid";
-import { FilaNueva } from "./fila-nueva";
-import { FilaRegistro } from "./fila-registro";
+import { formatMonto, hoyISO } from "@/lib/formato";
+import { FiltroPopover } from "@/components/filtro-popover";
+import { TablaRegistros } from "./tabla-registros";
 import type { MapaTarifas, RegistroFila } from "./tipos";
 
 const DIAS_VENTANA_EDICION = 30;
 
-export default async function TimetrackerPage() {
+function validarISO(v?: string) {
+  return v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : undefined;
+}
+
+export default async function TimetrackerPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ desde?: string; hasta?: string; proyecto?: string }>;
+}) {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
   const { usuario } = sesion;
   if (usuario.rol === "reader") redirect("/rentabilidad");
 
-  const [proyectos, etapas, tarifasVigentes, registros] = await Promise.all([
-    getProyectosPermitidos(usuario.id),
+  const params = await searchParams;
+  const desde = validarISO(params.desde);
+  const hasta = validarISO(params.hasta);
+
+  const proyectos = await getProyectosPermitidos(usuario.id);
+  const proyectoId = proyectos.some((p) => p.id === params.proyecto)
+    ? params.proyecto
+    : undefined;
+
+  const [etapas, tarifasVigentes, registros] = await Promise.all([
     prisma.etapa.findMany({
       where: { activo: true },
       orderBy: [{ grupo: "asc" }, { orden: "asc" }],
@@ -27,9 +42,21 @@ export default async function TimetrackerPage() {
       where: { usuarioId: usuario.id, vigenteHasta: null },
     }),
     prisma.registroHoras.findMany({
-      where: { usuarioId: usuario.id },
+      where: {
+        usuarioId: usuario.id,
+        eliminadoEn: null,
+        ...(desde || hasta
+          ? {
+              fecha: {
+                ...(desde ? { gte: new Date(desde + "T00:00:00Z") } : {}),
+                ...(hasta ? { lte: new Date(hasta + "T00:00:00Z") } : {}),
+              },
+            }
+          : {}),
+        ...(proyectoId ? { clienteId: proyectoId } : {}),
+      },
       orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
-      take: 200,
+      take: 300,
     }),
   ]);
 
@@ -66,11 +93,21 @@ export default async function TimetrackerPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-lg uppercase text-white">Timetracker</h1>
-        <p className="text-sm text-dc-muted">
-          {formatHorasHsMin(totalHoras)} hs · USD {formatMonto(totalUsd)}
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-dc-muted">
+            {formatHorasHsMin(totalHoras)} hs · USD {formatMonto(totalUsd)}
+          </p>
+          <FiltroPopover
+            basePath="/timetracker"
+            desde={desde ?? ""}
+            hasta={hasta ?? ""}
+            proyectoId={proyectoId ?? ""}
+            proyectos={opcionesProyecto}
+            maxHoy={hoyISO()}
+          />
+        </div>
       </div>
       <p className="mt-1 text-sm text-dc-muted">
         Cargá las horas como número decimal (por ejemplo <strong className="text-dc-text">1,5</strong> o
@@ -87,42 +124,14 @@ export default async function TimetrackerPage() {
         </p>
       )}
 
-      <div className="mt-6 overflow-x-auto dc-panel">
-        <div className={`dc-thead ${GRID_TIMETRACKER} border-b border-dc-line px-3 py-2 text-xs text-dc-muted`}>
-          <span>Fecha</span>
-          <span>Proyecto</span>
-          <span>Etapa</span>
-          <span>Ownership</span>
-          <span>Horas</span>
-          <span>Modalidad</span>
-          <span className="text-right">USD/hora</span>
-          <span className="text-right">USD total</span>
-          <span />
-        </div>
-
-        {!sinTarifa && (
-          <FilaNueva
-            proyectos={opcionesProyecto}
-            etapas={opcionesEtapa}
-            tarifas={tarifas}
-          />
-        )}
-
-        {filas.map((f) => (
-          <FilaRegistro
-            key={f.id}
-            registro={f}
-            proyectos={opcionesProyecto}
-            etapas={opcionesEtapa}
-            tarifas={tarifas}
-          />
-        ))}
-
-        {filas.length === 0 && (
-          <p className="px-4 py-6 text-center text-sm text-dc-muted">
-            Todavía no cargaste horas.
-          </p>
-        )}
+      <div className="mt-6">
+        <TablaRegistros
+          filas={filas}
+          proyectos={opcionesProyecto}
+          etapas={opcionesEtapa}
+          tarifas={tarifas}
+          sinTarifa={sinTarifa}
+        />
       </div>
     </div>
   );

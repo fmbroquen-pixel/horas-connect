@@ -22,11 +22,15 @@ export function FilaRegistro({
   proyectos,
   etapas,
   tarifas,
+  seleccionado,
+  onToggle,
 }: {
   registro: RegistroFila;
   proyectos: OpcionSelect[];
   etapas: OpcionSelect[];
   tarifas: MapaTarifas;
+  seleccionado: boolean;
+  onToggle: (id: string) => void;
 }) {
   const [editando, setEditando] = useState(false);
 
@@ -36,6 +40,17 @@ export function FilaRegistro({
     return (
       <div className="border-b border-dc-line px-3 py-2 last:border-0">
         <div className={GRID_TIMETRACKER}>
+          {registro.editable ? (
+            <input
+              type="checkbox"
+              checked={seleccionado}
+              onChange={() => onToggle(registro.id)}
+              className="h-4 w-4 accent-dc-purple"
+              aria-label="Seleccionar fila"
+            />
+          ) : (
+            <span />
+          )}
           <span className="text-sm text-dc-text">{mostrarFecha(registro.fecha)}</span>
           <span className="truncate text-sm text-dc-text">
             {proyecto?.nombre ?? "—"}
@@ -130,6 +145,7 @@ function FormEdicion({
       className="border-b border-dc-line bg-dc-card px-3 py-2 last:border-0"
     >
       <div className={GRID_TIMETRACKER}>
+        <span />
         <input
           name="fecha"
           type="date"

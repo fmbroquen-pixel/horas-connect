@@ -16,9 +16,9 @@ export default async function ClientesPage() {
 
   return (
     <div>
-      <h1 className="font-display text-lg uppercase text-white">Clientes</h1>
+      <h1 className="font-display text-lg uppercase text-white">Proyectos</h1>
       <p className="mt-1 text-sm text-dc-muted">
-        Proyectos/clientes disponibles al cargar horas.
+        Proyectos disponibles al cargar horas y viáticos.
       </p>
 
       <NuevoClienteForm action={crearCliente} />
