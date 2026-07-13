@@ -51,7 +51,7 @@ export default async function UsuariosPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3">
-                  {u.rol === "guest" && (
+                  {(u.rol === "guest" || u.rol === "admin") && (
                     <span
                       className={
                         u.tipoTarifa

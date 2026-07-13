@@ -28,13 +28,15 @@ export default async function UsuarioDetallePage({
   const usuario = await prisma.usuario.findUnique({ where: { id } });
   if (!usuario) notFound();
 
-  const esGuest = usuario.rol === "guest";
-  // El reader también recibe proyectos asignados (definen qué rentabilidad
-  // puede ver), pero no tiene tarifa (no reporta horas).
+  // Guest y admin reportan horas, así que ambos necesitan tarifa (el admin
+  // también actúa como mentor). El reader no reporta horas.
+  const puedeTarifa = usuario.rol === "guest" || usuario.rol === "admin";
+  // El reader recibe proyectos asignados (definen qué rentabilidad puede ver);
+  // el guest, para limitar en qué proyectos carga horas.
   const asignaProyectos = usuario.rol === "guest" || usuario.rol === "reader";
 
   const [tarifas, clientes, asignados] = await Promise.all([
-    esGuest
+    puedeTarifa
       ? prisma.tarifa.findMany({
           where: { usuarioId: id },
           orderBy: { vigenteDesde: "desc" },
@@ -96,7 +98,7 @@ export default async function UsuarioDetallePage({
         </form>
       </div>
 
-      {esGuest && (
+      {puedeTarifa && (
         <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
           <h2 className="font-display text-sm uppercase text-white">
             Convenio de tarifa
@@ -122,7 +124,7 @@ export default async function UsuarioDetallePage({
             Proyectos asignados
           </h2>
           <p className="mt-1 text-xs text-dc-muted">
-            {esGuest
+            {usuario.rol === "guest"
               ? "Limitan en qué proyectos puede cargar horas."
               : "Limitan qué proyectos puede ver en el informe de rentabilidad."}
           </p>
@@ -136,7 +138,7 @@ export default async function UsuarioDetallePage({
         </div>
       )}
 
-      {esGuest && (
+      {puedeTarifa && (
         <>
           {historial.length > 0 && (
             <div>
