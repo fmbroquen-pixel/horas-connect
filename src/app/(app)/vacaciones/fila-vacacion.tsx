@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { actualizarVacacion, eliminarVacacion } from "./actions";
-import { GRID_VACACIONES } from "./fila-nueva";
+import { GRID_VACACIONES } from "./registrar-boton";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM, BTN_DANGER_SM, BTN_DANGER_CONFIRM_SM } from "@/lib/ui";
 
 const INPUT =

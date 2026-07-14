@@ -2,7 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { eliminarRegistros, editarRegistros, type CampoMasivo } from "./actions";
-import { FilaNueva } from "./fila-nueva";
 import { FilaRegistro } from "./fila-registro";
 import { GRID_TIMETRACKER } from "./grid";
 import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
@@ -14,13 +13,11 @@ export function TablaRegistros({
   proyectos,
   etapas,
   tarifas,
-  sinTarifa,
 }: {
   filas: RegistroFila[];
   proyectos: OpcionSelect[];
   etapas: OpcionSelect[];
   tarifas: MapaTarifas;
-  sinTarifa: boolean;
 }) {
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirmar, setConfirmar] = useState(false);
@@ -170,7 +167,7 @@ export function TablaRegistros({
 
       <div className="flex min-h-0 flex-1 overflow-x-auto dc-panel">
         <div className="flex min-h-0 min-w-[940px] flex-1 flex-col">
-          {/* Encabezado y fila de carga fijos; solo el cuerpo scrollea. */}
+          {/* Encabezado fijo; solo el cuerpo scrollea. */}
           <div className={`dc-thead ${GRID_TIMETRACKER} shrink-0 border-b border-dc-line px-3`}>
             <input
               type="checkbox"
@@ -190,12 +187,6 @@ export function TablaRegistros({
             <span>USD total</span>
             <span />
           </div>
-
-          {!sinTarifa && (
-            <div className="shrink-0">
-              <FilaNueva proyectos={proyectos} etapas={etapas} tarifas={tarifas} />
-            </div>
-          )}
 
           <div className="min-h-0 flex-1 overflow-y-auto">
             {filas.map((f) => (

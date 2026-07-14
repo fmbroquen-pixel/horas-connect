@@ -10,7 +10,7 @@ import {
 import { FiltroPopover } from "@/components/filtro-popover";
 import { InfoButton } from "@/components/info-button";
 import { GRID_VIATICOS, type ViaticoFila } from "./tipos";
-import { FilaNuevaViatico } from "./fila-nueva";
+import { RegistrarViaticoBoton } from "./registrar-boton";
 import { FilaViatico } from "./fila-viatico";
 
 export default async function ViaticosPage({
@@ -87,6 +87,10 @@ export default async function ViaticosPage({
             Cargá los gastos asociados a un proyecto. El comprobante es opcional.
           </InfoButton>
         </div>
+        <RegistrarViaticoBoton proyectos={opcionesProyecto} etapas={opcionesEtapa} />
+      </div>
+
+      <div className="mt-4 flex shrink-0 items-center justify-end">
         <FiltroPopover
           basePath="/viaticos"
           desde={desde}
@@ -97,7 +101,7 @@ export default async function ViaticosPage({
         />
       </div>
 
-      <div className="mt-6 flex min-h-0 flex-1 overflow-x-auto dc-panel">
+      <div className="mt-4 flex min-h-0 flex-1 overflow-x-auto dc-panel">
         <div className="flex min-h-0 min-w-[860px] flex-1 flex-col">
           <div className={`dc-thead ${GRID_VIATICOS} shrink-0 border-b border-dc-line px-3`}>
             <span>Fecha</span>
@@ -108,10 +112,6 @@ export default async function ViaticosPage({
             <span>Concepto</span>
             <span>Archivo</span>
             <span />
-          </div>
-
-          <div className="shrink-0">
-            <FilaNuevaViatico proyectos={opcionesProyecto} etapas={opcionesEtapa} />
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto">

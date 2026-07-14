@@ -8,6 +8,7 @@ import { FiltroPopover } from "@/components/filtro-popover";
 import { InfoButton } from "@/components/info-button";
 import { TablaRegistros } from "./tabla-registros";
 import { AccionesMenu } from "./acciones-menu";
+import { RegistrarHorasBoton } from "./registrar-boton";
 import type { MapaTarifas, RegistroFila } from "./tipos";
 
 const DIAS_VENTANA_EDICION = 30;
@@ -94,23 +95,13 @@ export default async function TimetrackerPage({
             últimos {DIAS_VENTANA_EDICION} días; no se admiten fechas futuras.
           </InfoButton>
         </div>
-        <div className="flex items-center gap-2">
-          <FiltroPopover
-            basePath="/timetracker"
-            desde={desde}
-            hasta={hasta}
-            proyectoId={proyectoId ?? ""}
+        {!sinTarifa && (
+          <RegistrarHorasBoton
             proyectos={opcionesProyecto}
-            maxHoy={hoyISO()}
+            etapas={opcionesEtapa}
+            tarifas={tarifas}
           />
-          {!sinTarifa && (
-            <AccionesMenu
-              desde={desde}
-              hasta={hasta}
-              proyecto={proyectoId ?? ""}
-            />
-          )}
-        </div>
+        )}
       </div>
 
       {sinTarifa && (
@@ -120,13 +111,27 @@ export default async function TimetrackerPage({
         </p>
       )}
 
-      <div className="mt-6 flex min-h-0 flex-1 flex-col">
+      {/* Barra de acciones del historial: consultar (filtro) e importar/exportar (⋮). */}
+      <div className="mt-4 flex shrink-0 items-center justify-end gap-2">
+        <FiltroPopover
+          basePath="/timetracker"
+          desde={desde}
+          hasta={hasta}
+          proyectoId={proyectoId ?? ""}
+          proyectos={opcionesProyecto}
+          maxHoy={hoyISO()}
+        />
+        {!sinTarifa && (
+          <AccionesMenu desde={desde} hasta={hasta} proyecto={proyectoId ?? ""} />
+        )}
+      </div>
+
+      <div className="mt-4 flex min-h-0 flex-1 flex-col">
         <TablaRegistros
           filas={filas}
           proyectos={opcionesProyecto}
           etapas={opcionesEtapa}
           tarifas={tarifas}
-          sinTarifa={sinTarifa}
         />
       </div>
     </div>

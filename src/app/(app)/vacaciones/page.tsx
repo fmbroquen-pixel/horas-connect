@@ -4,7 +4,7 @@ import { getSesionActual } from "@/lib/auth";
 import { rangoDefault30 } from "@/lib/formato";
 import { FiltroPopover } from "@/components/filtro-popover";
 import { InfoButton } from "@/components/info-button";
-import { FilaNuevaVacacion, GRID_VACACIONES } from "./fila-nueva";
+import { RegistrarVacacionesBoton, GRID_VACACIONES } from "./registrar-boton";
 import { FilaVacacion, type VacacionFila } from "./fila-vacacion";
 
 export default async function VacacionesPage({
@@ -49,6 +49,10 @@ export default async function VacacionesPage({
             ejemplo, para descontar fines de semana).
           </InfoButton>
         </div>
+        <RegistrarVacacionesBoton />
+      </div>
+
+      <div className="mt-4 flex shrink-0 items-center justify-end">
         <FiltroPopover
           basePath="/vacaciones"
           desde={desde}
@@ -60,17 +64,13 @@ export default async function VacacionesPage({
         />
       </div>
 
-      <div className="mt-6 flex min-h-0 flex-1 overflow-x-auto dc-panel">
+      <div className="mt-4 flex min-h-0 flex-1 overflow-x-auto dc-panel">
         <div className="flex min-h-0 min-w-[560px] flex-1 flex-col">
           <div className={`dc-thead ${GRID_VACACIONES} shrink-0 border-b border-dc-line px-3`}>
             <span>Fecha inicio</span>
             <span>Fecha fin</span>
             <span>Días OOO</span>
             <span />
-          </div>
-
-          <div className="shrink-0">
-            <FilaNuevaVacacion />
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
