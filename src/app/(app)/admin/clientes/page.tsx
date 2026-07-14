@@ -5,7 +5,7 @@ import {
   actualizarCliente,
   alternarActivoCliente,
 } from "./actions";
-import { NuevoClienteForm } from "./nuevo-cliente-form";
+import { AgregarModal } from "@/components/admin/agregar-modal";
 import { BTN_SECONDARY_SM, BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
 import { InfoButton } from "@/components/info-button";
 
@@ -17,13 +17,19 @@ export default async function ClientesPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center gap-2">
-        <h1 className="font-display text-lg uppercase text-white">Proyectos</h1>
-        <InfoButton>Proyectos disponibles al cargar horas y viáticos.</InfoButton>
-      </div>
-
-      <div className="shrink-0">
-        <NuevoClienteForm action={crearCliente} />
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h1 className="font-display text-lg uppercase text-white">Proyectos</h1>
+          <InfoButton>Proyectos disponibles al cargar horas y viáticos.</InfoButton>
+        </div>
+        <AgregarModal
+          botonLabel="+ Agregar proyecto"
+          titulo="Nuevo proyecto"
+          campos={[{ name: "nombre", label: "Nombre del proyecto", placeholder: "Ej: Andreu" }]}
+          action={crearCliente}
+          toastMsg="Proyecto creado"
+          submitLabel="Crear proyecto"
+        />
       </div>
 
       <div className="mt-6 min-h-0 flex-1 overflow-auto dc-panel">

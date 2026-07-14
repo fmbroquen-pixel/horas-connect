@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
-import { actualizarEtapa, alternarActivoEtapa } from "./actions";
-import { NuevaEtapaForm } from "./nueva-etapa-form";
+import { actualizarEtapa, alternarActivoEtapa, crearEtapa } from "./actions";
+import { AgregarModal } from "@/components/admin/agregar-modal";
 import { BTN_SECONDARY_SM, BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
 import { InfoButton } from "@/components/info-button";
 
@@ -13,16 +13,25 @@ export default async function EtapasPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center gap-2">
-        <h1 className="font-display text-lg uppercase text-white">Etapas</h1>
-        <InfoButton>
-          Opciones del desplegable de Etapa al cargar horas y viáticos,
-          agrupadas.
-        </InfoButton>
-      </div>
-
-      <div className="shrink-0">
-        <NuevaEtapaForm />
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h1 className="font-display text-lg uppercase text-white">Etapas</h1>
+          <InfoButton>
+            Opciones del desplegable de Etapa al cargar horas y viáticos,
+            agrupadas.
+          </InfoButton>
+        </div>
+        <AgregarModal
+          botonLabel="+ Agregar etapa"
+          titulo="Nueva etapa"
+          campos={[
+            { name: "etiqueta", label: "Etiqueta", placeholder: "Ej: Retrospectiva" },
+            { name: "grupo", label: "Grupo", placeholder: "Ej: Cierre / Retrospectiva" },
+          ]}
+          action={crearEtapa}
+          toastMsg="Etapa creada"
+          submitLabel="Crear etapa"
+        />
       </div>
 
       <div className="mt-6 min-h-0 flex-1 overflow-auto dc-panel">
