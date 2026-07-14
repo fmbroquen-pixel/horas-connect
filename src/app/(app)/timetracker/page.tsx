@@ -8,7 +8,7 @@ import { FiltroPopover } from "@/components/filtro-popover";
 import { InfoButton } from "@/components/info-button";
 import { TablaRegistros } from "./tabla-registros";
 import { AccionesMenu } from "./acciones-menu";
-import { RegistrarHorasBoton } from "./registrar-boton";
+import { BarraCaptura } from "./barra-captura";
 import type { MapaTarifas, RegistroFila } from "./tipos";
 
 const DIAS_VENTANA_EDICION = 30;
@@ -102,33 +102,33 @@ export default async function TimetrackerPage({
         </p>
       )}
 
-      {/* Barra de acciones: creación (izq.) vs. consulta e importar/exportar (der.). */}
-      <div className="mt-4 flex shrink-0 flex-wrap items-center justify-between gap-2">
-        <div>
-          {!sinTarifa && (
-            <RegistrarHorasBoton
-              proyectos={opcionesProyecto}
-              etapas={opcionesEtapa}
-              tarifas={tarifas}
-            />
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <FiltroPopover
-            basePath="/timetracker"
-            desde={desde}
-            hasta={hasta}
-            proyectoId={proyectoId ?? ""}
-            proyectos={opcionesProyecto}
-            maxHoy={hoyISO()}
-          />
-          {!sinTarifa && (
-            <AccionesMenu desde={desde} hasta={hasta} proyecto={proyectoId ?? ""} />
-          )}
-        </div>
+      {/* Acciones del historial: consultar (filtro) e importar/exportar (⋮). */}
+      <div className="mt-4 flex shrink-0 items-center justify-end gap-2">
+        <FiltroPopover
+          basePath="/timetracker"
+          desde={desde}
+          hasta={hasta}
+          proyectoId={proyectoId ?? ""}
+          proyectos={opcionesProyecto}
+          maxHoy={hoyISO()}
+        />
+        {!sinTarifa && (
+          <AccionesMenu desde={desde} hasta={hasta} proyecto={proyectoId ?? ""} />
+        )}
       </div>
 
-      <div className="mt-4 flex min-h-0 flex-1 flex-col">
+      {/* Barra de captura permanente, inmediatamente encima del historial. */}
+      {!sinTarifa && (
+        <div className="mt-4">
+          <BarraCaptura
+            proyectos={opcionesProyecto}
+            etapas={opcionesEtapa}
+            tarifas={tarifas}
+          />
+        </div>
+      )}
+
+      <div className="mt-3 flex min-h-0 flex-1 flex-col">
         <TablaRegistros
           filas={filas}
           proyectos={opcionesProyecto}
