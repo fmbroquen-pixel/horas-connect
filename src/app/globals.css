@@ -82,10 +82,10 @@ button:not(:disabled):active {
 .dc-panel thead th,
 .dc-panel .dc-thead > * {
   text-align: center;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  font-size: 11px;
+  font-size: 13px;
   color: #4b477a;
 }
 .dc-panel thead tr,
@@ -93,12 +93,12 @@ button:not(:disabled):active {
   background: #ece9f8;
 }
 .dc-panel thead th {
-  padding-top: 0.7rem;
-  padding-bottom: 0.7rem;
+  padding-top: 0.95rem;
+  padding-bottom: 0.95rem;
 }
 .dc-panel .dc-thead {
-  padding-top: 0.6rem;
-  padding-bottom: 0.6rem;
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
 }
 
 /* Menú flotante (dropdowns, popovers, tooltips): superficie oscura elegante.

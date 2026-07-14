@@ -54,6 +54,19 @@ export async function GET() {
   ws.addRow(CABECERAS);
   ws.getRow(1).font = { bold: true };
 
+  // Comentarios de ayuda en cada encabezado (formato esperado por columna).
+  const NOTAS = [
+    "Acepta AAAA-MM-DD o DD/MM/AAAA.",
+    "Seleccioná un proyecto existente de la lista.",
+    "Seleccioná una etapa existente de la lista.",
+    "Seleccioná un ownership existente de la lista.",
+    "Acepta formato hora:minuto (ej. 1:30) o decimal (ej. 1,5).",
+    "Seleccioná una modalidad existente de la lista.",
+  ];
+  NOTAS.forEach((texto, i) => {
+    ws.getCell(1, i + 1).note = texto;
+  });
+
   // Fila de ejemplo completa y válida.
   ws.addRow([
     hoyISO(),
