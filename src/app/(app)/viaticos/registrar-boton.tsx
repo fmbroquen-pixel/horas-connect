@@ -80,7 +80,7 @@ export function RegistrarViaticoBoton({
   return (
     <>
       <button type="button" onClick={abrir} className={BTN_PRIMARY}>
-        + Registrar viático
+        + Nuevo viático
       </button>
 
       <Modal open={open} onClose={() => setOpen(false)} labelledBy="titulo-registrar-viatico">

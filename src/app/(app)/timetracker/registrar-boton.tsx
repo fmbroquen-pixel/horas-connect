@@ -93,7 +93,7 @@ export function RegistrarHorasBoton({
   return (
     <>
       <button type="button" onClick={abrir} className={BTN_PRIMARY}>
-        + Registrar horas
+        + Nuevo registro
       </button>
 
       <Modal open={open} onClose={() => setOpen(false)} labelledBy="titulo-registrar-horas">

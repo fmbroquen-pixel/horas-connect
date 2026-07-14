@@ -40,19 +40,17 @@ export default async function VacacionesPage({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <h1 className="font-display text-lg uppercase text-white">Vacaciones</h1>
-          <InfoButton>
-            Registrá tus días fuera de la oficina (pasados o futuros). Los días
-            se calculan solos a partir del rango, pero podés corregirlos (por
-            ejemplo, para descontar fines de semana).
-          </InfoButton>
-        </div>
-        <RegistrarVacacionesBoton />
+      <div className="flex shrink-0 items-center gap-2">
+        <h1 className="font-display text-lg uppercase text-white">Vacaciones</h1>
+        <InfoButton>
+          Registrá tus días fuera de la oficina (pasados o futuros). Los días
+          se calculan solos a partir del rango, pero podés corregirlos (por
+          ejemplo, para descontar fines de semana).
+        </InfoButton>
       </div>
 
-      <div className="mt-4 flex shrink-0 items-center justify-end">
+      <div className="mt-4 flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <RegistrarVacacionesBoton />
         <FiltroPopover
           basePath="/vacaciones"
           desde={desde}

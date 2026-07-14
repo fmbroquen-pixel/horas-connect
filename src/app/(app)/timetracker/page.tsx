@@ -86,22 +86,13 @@ export default async function TimetrackerPage({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h1 className="font-display text-lg uppercase text-white">Timetracker</h1>
-          <InfoButton>
-            Cargá las horas como número decimal (por ejemplo 1,5 o 1.5) y se
-            muestran como 1:30. Se pueden cargar y corregir registros de los
-            últimos {DIAS_VENTANA_EDICION} días; no se admiten fechas futuras.
-          </InfoButton>
-        </div>
-        {!sinTarifa && (
-          <RegistrarHorasBoton
-            proyectos={opcionesProyecto}
-            etapas={opcionesEtapa}
-            tarifas={tarifas}
-          />
-        )}
+      <div className="flex shrink-0 items-center gap-2">
+        <h1 className="font-display text-lg uppercase text-white">Timetracker</h1>
+        <InfoButton>
+          Cargá las horas como número decimal (por ejemplo 1,5 o 1.5) y se
+          muestran como 1:30. Se pueden cargar y corregir registros de los
+          últimos {DIAS_VENTANA_EDICION} días; no se admiten fechas futuras.
+        </InfoButton>
       </div>
 
       {sinTarifa && (
@@ -111,19 +102,30 @@ export default async function TimetrackerPage({
         </p>
       )}
 
-      {/* Barra de acciones del historial: consultar (filtro) e importar/exportar (⋮). */}
-      <div className="mt-4 flex shrink-0 items-center justify-end gap-2">
-        <FiltroPopover
-          basePath="/timetracker"
-          desde={desde}
-          hasta={hasta}
-          proyectoId={proyectoId ?? ""}
-          proyectos={opcionesProyecto}
-          maxHoy={hoyISO()}
-        />
-        {!sinTarifa && (
-          <AccionesMenu desde={desde} hasta={hasta} proyecto={proyectoId ?? ""} />
-        )}
+      {/* Barra de acciones: creación (izq.) vs. consulta e importar/exportar (der.). */}
+      <div className="mt-4 flex shrink-0 flex-wrap items-center justify-between gap-2">
+        <div>
+          {!sinTarifa && (
+            <RegistrarHorasBoton
+              proyectos={opcionesProyecto}
+              etapas={opcionesEtapa}
+              tarifas={tarifas}
+            />
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <FiltroPopover
+            basePath="/timetracker"
+            desde={desde}
+            hasta={hasta}
+            proyectoId={proyectoId ?? ""}
+            proyectos={opcionesProyecto}
+            maxHoy={hoyISO()}
+          />
+          {!sinTarifa && (
+            <AccionesMenu desde={desde} hasta={hasta} proyecto={proyectoId ?? ""} />
+          )}
+        </div>
       </div>
 
       <div className="mt-4 flex min-h-0 flex-1 flex-col">

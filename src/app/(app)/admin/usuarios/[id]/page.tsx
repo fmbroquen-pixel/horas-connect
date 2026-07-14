@@ -5,16 +5,15 @@ import { requireAdmin } from "@/lib/require-admin";
 import { actualizarUsuario, guardarTarifa } from "../actions";
 import { TarifaForm } from "./tarifa-form";
 import { ProyectosForm } from "./proyectos-form";
-import { RolDropdown } from "../rol-dropdown";
 import { HistorialTarifas } from "@/components/perfil/historial-tarifas";
-import { BTN_SECONDARY } from "@/lib/ui";
+import { SeccionDatosUsuario } from "@/components/perfil/seccion-datos";
 
 export default async function UsuarioDetallePage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const { id } = await params;
 
   const usuario = await prisma.usuario.findUnique({ where: { id } });
@@ -66,27 +65,14 @@ export default async function UsuarioDetallePage({
         <h1 className="mt-2 font-display text-lg uppercase text-white">
           {usuario.nombre}
         </h1>
-        <form
-          action={actualizarUsuario.bind(null, usuario.id)}
-          className="mt-4 flex flex-wrap gap-2"
-        >
-          <input
-            name="nombre"
-            defaultValue={usuario.nombre}
-            className="rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
-          />
-          <input
-            name="email"
-            type="email"
-            defaultValue={usuario.email}
-            className="rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
-          />
-          <RolDropdown defaultValue={usuario.rol} className="w-52" />
-          <button type="submit" className={BTN_SECONDARY}>
-            Guardar datos
-          </button>
-        </form>
       </div>
+
+      <SeccionDatosUsuario
+        titulo={admin.id === usuario.id ? "Mis datos" : "Datos del usuario"}
+        soloLectura={false}
+        usuario={usuario}
+        action={actualizarUsuario.bind(null, usuario.id)}
+      />
 
       {puedeTarifa && (
         <div className="rounded-2xl border border-dc-line bg-dc-card p-6">

@@ -4,12 +4,7 @@ import { getSesionActual } from "@/lib/auth";
 import { ProyectosForm } from "../admin/usuarios/[id]/proyectos-form";
 import { TarifaReadOnly } from "@/components/perfil/tarifa-read-only";
 import { HistorialTarifas } from "@/components/perfil/historial-tarifas";
-
-const ETIQUETA_ROL: Record<string, string> = {
-  admin: "Admin",
-  guest: "Mentor",
-  reader: "Solo lectura",
-};
+import { SeccionDatosUsuario } from "@/components/perfil/seccion-datos";
 
 // Perfil propio del guest (mentor): sus datos y tarifa son de solo lectura;
 // solo puede editar sus proyectos asignados.
@@ -60,39 +55,7 @@ export default async function MiPerfilPage() {
         <h1 className="mt-1 font-display text-lg uppercase text-white">Mi perfil</h1>
       </div>
 
-      {/* Datos personales: los gestiona un administrador (solo lectura). */}
-      <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
-        <h2 className="font-display text-sm uppercase text-white">Mis datos</h2>
-        <p className="mt-1 text-xs text-dc-muted">
-          Tu nombre, email y tipo de usuario los gestiona un administrador.
-        </p>
-        <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          <div>
-            <label className="mb-1 block text-xs text-dc-muted">Nombre</label>
-            <input
-              value={usuario.nombre}
-              disabled
-              readOnly
-              className="w-full cursor-not-allowed rounded-lg border border-dc-line bg-dc-deeper/60 px-3 py-2 text-sm text-dc-muted outline-none"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-dc-muted">Email</label>
-            <input
-              value={usuario.email}
-              disabled
-              readOnly
-              className="w-full cursor-not-allowed rounded-lg border border-dc-line bg-dc-deeper/60 px-3 py-2 text-sm text-dc-muted outline-none"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-dc-muted">Tipo de usuario</label>
-            <div className="rounded-lg border border-dc-line bg-dc-deeper/60 px-3 py-2 text-sm text-dc-muted">
-              {ETIQUETA_ROL[usuario.rol] ?? usuario.rol}
-            </div>
-          </div>
-        </div>
-      </div>
+      <SeccionDatosUsuario titulo="Mis datos" soloLectura usuario={usuario} />
 
       <TarifaReadOnly
         tipoActual={usuario.tipoTarifa}

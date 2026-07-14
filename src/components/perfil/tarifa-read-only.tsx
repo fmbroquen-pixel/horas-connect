@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { IconoCandado, SoloLecturaBadge } from "@/components/ui/solo-lectura-badge";
 
 type ValoresActuales = {
   presencialOwner?: number;
@@ -8,15 +9,6 @@ type ValoresActuales = {
   virtualOwner?: number;
   virtualBackup?: number;
 };
-
-function IconoCandado({ size = 16 }: { size?: number }) {
-  return (
-    <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="4" y="11" width="16" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-    </svg>
-  );
-}
 
 function Campo({ label, valor }: { label: string; valor?: number }) {
   return (
@@ -62,15 +54,13 @@ export function TarifaReadOnly({
   return (
     <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-dc-muted">
+        <span className="text-dc-peri">
           <IconoCandado />
         </span>
         <h2 className="font-display text-sm uppercase text-white">
           Convenio de tarifa
         </h2>
-        <span className="rounded-full border border-dc-line bg-dc-deeper px-2.5 py-0.5 text-[11px] uppercase tracking-wide text-dc-muted">
-          Solo lectura
-        </span>
+        <SoloLecturaBadge />
       </div>
       <p className="mt-1 text-xs text-dc-muted">
         Solo los usuarios Admin pueden modificar el convenio de tarifa.

@@ -75,7 +75,7 @@ export function RegistrarVacacionesBoton() {
   return (
     <>
       <button type="button" onClick={abrir} className={BTN_PRIMARY}>
-        + Registrar vacaciones
+        + Nueva solicitud
       </button>
 
       <Modal open={open} onClose={() => setOpen(false)} labelledBy="titulo-registrar-vacaciones">
