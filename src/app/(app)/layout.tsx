@@ -11,7 +11,7 @@ import { urlAvatar } from "@/lib/supabase/admin";
 const CONTENEDOR = "mx-auto w-full max-w-[1440px] px-6 md:px-10 lg:px-14";
 
 const ETIQUETA_ROL: Record<string, string> = {
-  admin: "Administrador",
+  admin: "Admin",
   guest: "Mentor",
   reader: "Solo lectura",
 };
@@ -78,9 +78,9 @@ export default async function AppLayout({
         <div className={`${CONTENEDOR} flex items-center justify-between gap-3`}>
           <TabsNav tabs={tabsParaRol(usuario.rol)} containerClass="flex-1 min-w-0" />
           <div className="flex shrink-0 items-center gap-1.5 pb-1">
-            {usuario.rol === "admin" && (
+            {(usuario.rol === "admin" || usuario.rol === "guest") && (
               <Link
-                href="/admin/usuarios"
+                href={usuario.rol === "admin" ? "/admin/usuarios" : "/mi-perfil"}
                 title="Settings"
                 aria-label="Settings"
                 className="flex items-center rounded-lg border border-dc-line px-2.5 py-1.5 text-base leading-none text-dc-muted transition hover:border-dc-peri hover:text-dc-text"

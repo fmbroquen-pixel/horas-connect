@@ -6,7 +6,7 @@ import { Dropdown } from "@/components/dropdown";
 const OPCIONES_ROL = [
   { value: "guest", label: "Mentor (guest)" },
   { value: "reader", label: "Solo lectura (reader)" },
-  { value: "admin", label: "Administrador" },
+  { value: "admin", label: "Admin" },
 ];
 
 // Dropdown de rol autogestionado: mantiene su propio estado y expone el valor

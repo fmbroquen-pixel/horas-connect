@@ -7,7 +7,7 @@ import { BTN_PILL_ON, BTN_PILL_OFF, BTN_SECONDARY_SM } from "@/lib/ui";
 import { InfoButton } from "@/components/info-button";
 
 const ETIQUETA_ROL: Record<string, string> = {
-  admin: "Administrador",
+  admin: "Admin",
   guest: "Mentor",
   reader: "Solo lectura",
 };

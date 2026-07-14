@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
+import { getSesionActual } from "@/lib/auth";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
 const UsuarioSchema = z.object({
@@ -221,7 +222,15 @@ export async function guardarProyectosAsignados(
   usuarioId: string,
   formData: FormData,
 ) {
-  await requireAdmin();
+  // Un admin edita los proyectos de cualquiera; un guest solo los propios.
+  const sesion = await getSesionActual();
+  if (sesion.estado !== "autorizado") throw new Error("No autorizado.");
+  const actor = sesion.usuario;
+  const esSelfGuest = actor.id === usuarioId && actor.rol === "guest";
+  if (actor.rol !== "admin" && !esSelfGuest) {
+    throw new Error("No autorizado.");
+  }
+
   const clienteIds = formData.getAll("clienteId").map(String);
 
   await prisma.$transaction([
@@ -232,4 +241,5 @@ export async function guardarProyectosAsignados(
   ]);
 
   revalidatePath(`/admin/usuarios/${usuarioId}`);
+  revalidatePath("/mi-perfil");
 }

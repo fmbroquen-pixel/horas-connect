@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
@@ -5,18 +6,8 @@ import { actualizarUsuario, guardarTarifa } from "../actions";
 import { TarifaForm } from "./tarifa-form";
 import { ProyectosForm } from "./proyectos-form";
 import { RolDropdown } from "../rol-dropdown";
+import { HistorialTarifas } from "@/components/perfil/historial-tarifas";
 import { BTN_SECONDARY } from "@/lib/ui";
-
-const ETIQUETA_MODALIDAD: Record<string, string> = {
-  presencial: "Presencial",
-  virtual: "Virtual",
-  valor_cero: "Valor cero",
-};
-const ETIQUETA_OWNERSHIP: Record<string, string> = {
-  owner: "Owner",
-  backup: "Backup",
-  valor_cero: "Valor cero",
-};
 
 export default async function UsuarioDetallePage({
   params,
@@ -32,9 +23,9 @@ export default async function UsuarioDetallePage({
   // Guest y admin reportan horas, así que ambos necesitan tarifa (el admin
   // también actúa como mentor). El reader no reporta horas.
   const puedeTarifa = usuario.rol === "guest" || usuario.rol === "admin";
-  // El reader recibe proyectos asignados (definen qué rentabilidad puede ver);
-  // el guest, para limitar en qué proyectos carga horas.
-  const asignaProyectos = usuario.rol === "guest" || usuario.rol === "reader";
+  // Todos los roles reciben proyectos asignados: guest y admin para limitar
+  // dónde cargan horas; reader para acotar qué rentabilidad puede ver.
+  const asignaProyectos = true;
 
   const [tarifas, clientes, asignados] = await Promise.all([
     puedeTarifa
@@ -63,7 +54,16 @@ export default async function UsuarioDetallePage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="font-display text-lg uppercase text-white">
+        <Link
+          href="/admin/usuarios"
+          className="inline-flex items-center gap-1.5 text-sm text-dc-muted transition hover:text-dc-text"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+          Volver a Usuarios
+        </Link>
+        <h1 className="mt-2 font-display text-lg uppercase text-white">
           {usuario.nombre}
         </h1>
         <form
@@ -114,9 +114,9 @@ export default async function UsuarioDetallePage({
             Proyectos asignados
           </h2>
           <p className="mt-1 text-xs text-dc-muted">
-            {usuario.rol === "guest"
-              ? "Limitan en qué proyectos puede cargar horas."
-              : "Limitan qué proyectos puede ver en el informe de rentabilidad."}
+            {usuario.rol === "reader"
+              ? "Limitan qué proyectos puede ver en el informe de rentabilidad."
+              : "Limitan en qué proyectos puede cargar horas."}
           </p>
           <div className="mt-4">
             <ProyectosForm
@@ -129,45 +129,16 @@ export default async function UsuarioDetallePage({
       )}
 
       {puedeTarifa && (
-        <>
-          {historial.length > 0 && (
-            <div>
-              <h2 className="font-display text-sm uppercase text-white">
-                Historial de tarifas
-              </h2>
-              <div className="mt-3 overflow-hidden dc-panel">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-dc-line text-left text-xs text-dc-muted">
-                      <th className="px-4 py-2 font-normal">Modalidad</th>
-                      <th className="px-4 py-2 font-normal">Ownership</th>
-                      <th className="px-4 py-2 font-normal">Valor USD</th>
-                      <th className="px-4 py-2 font-normal">Vigencia</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {historial.map((t) => (
-                      <tr
-                        key={t.id}
-                        className="border-b border-dc-line last:border-0 text-dc-muted"
-                      >
-                        <td className="px-4 py-2">
-                          {ETIQUETA_MODALIDAD[t.modalidad]}
-                        </td>
-                        <td className="px-4 py-2">{ETIQUETA_OWNERSHIP[t.ownership]}</td>
-                        <td className="px-4 py-2">{Number(t.valorUsd).toFixed(2)}</td>
-                        <td className="px-4 py-2">
-                          {t.vigenteDesde.toLocaleDateString("es-AR")} –{" "}
-                          {t.vigenteHasta?.toLocaleDateString("es-AR")}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </>
+        <HistorialTarifas
+          historial={historial.map((t) => ({
+            id: t.id,
+            modalidad: t.modalidad,
+            ownership: t.ownership,
+            valorUsd: Number(t.valorUsd),
+            vigenteDesde: t.vigenteDesde,
+            vigenteHasta: t.vigenteHasta,
+          }))}
+        />
       )}
     </div>
   );
