@@ -80,16 +80,45 @@ export function ImportarModal({ onCerrar }: { onCerrar: () => void }) {
 
         {!resultado && (
           <>
-            <div className="mt-4 rounded-xl border border-dc-line bg-dc-deeper/40 p-3 text-xs text-dc-muted">
-              <p className="text-dc-text">Columnas obligatorias:</p>
-              <p className="mt-1">Fecha · Proyecto · Etapa · Ownership · Horas · Modalidad</p>
-              <p className="mt-2">
-                No incluyas <strong className="text-dc-text">USD/Hora</strong> ni{" "}
-                <strong className="text-dc-text">USD Total</strong>: los calcula el
-                sistema. Fecha en formato AAAA-MM-DD o DD/MM/AAAA; horas como
-                número (1,5) o hora:minuto (1:30).
+            <div className="mt-4 rounded-xl border border-dc-line bg-dc-deeper/40 p-4 text-xs text-dc-muted">
+              <p className="text-sm text-dc-text">Columnas obligatorias</p>
+              <p className="mt-1 font-medium text-dc-peri">
+                Fecha · Proyecto · Etapa · Ownership · Horas · Modalidad
               </p>
-              <a href="/timetracker/plantilla" className="mt-2 inline-block text-dc-peri hover:text-dc-pink">
+              <ul className="mt-3 space-y-2">
+                <li className="flex gap-2">
+                  <span className="text-dc-peri" aria-hidden="true">•</span>
+                  <span>
+                    No incluyas las columnas{" "}
+                    <strong className="text-dc-text">USD/Hora</strong> ni{" "}
+                    <strong className="text-dc-text">USD Total</strong>: los calcula
+                    el sistema automáticamente.
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-dc-peri" aria-hidden="true">•</span>
+                  <span>
+                    <strong className="text-dc-text">Fecha:</strong> formato
+                    AAAA-MM-DD o DD/MM/AAAA.
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-dc-peri" aria-hidden="true">•</span>
+                  <span>
+                    <strong className="text-dc-text">Horas:</strong> formato
+                    hora:minuto (1:30) o decimal (1,5).
+                  </span>
+                </li>
+              </ul>
+              <a
+                href="/timetracker/plantilla"
+                className="mt-4 inline-flex items-center gap-2 rounded-lg border border-dc-peri/50 bg-dc-peri/10 px-3 py-2 text-sm font-medium text-dc-peri transition hover:border-dc-peri hover:bg-dc-peri/20 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri focus-visible:ring-offset-2 focus-visible:ring-offset-dc-deep"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <path d="M7 10l5 5 5-5" />
+                  <path d="M12 15V3" />
+                </svg>
                 Descargar plantilla
               </a>
             </div>
