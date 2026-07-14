@@ -186,3 +186,38 @@ button:not(:disabled):active {
     animation: none;
   }
 }
+
+/* Scrollbar propio de la app: fino, redondeado y translúcido, para que se
+   sienta parte del sistema y no el scrollbar nativo. Se aplica a todos los
+   contenedores con scroll (tablas, modales, dropdowns, menús y la página).
+   El thumb usa el periwinkle de la paleta con baja opacidad: se integra
+   tanto sobre superficies oscuras como sobre las tablas claras (.dc-panel),
+   y gana contraste al pasar el cursor. Firefox usa scrollbar-color/width,
+   que se heredan desde :root. */
+:root {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 140, 255, 0.35) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: rgba(139, 140, 255, 0.28);
+  border-radius: 9999px;
+  /* Borde transparente + clip: adelgaza el thumb (~6px) y lo hace "flotar". */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color 0.2s ease;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(139, 140, 255, 0.55);
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
