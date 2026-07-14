@@ -2,7 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { alternarActivoUsuario } from "./actions";
-import { NuevoUsuarioForm } from "./nuevo-usuario-form";
+import { NuevoUsuarioBoton } from "./nuevo-usuario-form";
 import { BTN_PILL_ON, BTN_PILL_OFF, BTN_SECONDARY_SM } from "@/lib/ui";
 import { InfoButton } from "@/components/info-button";
 
@@ -23,18 +23,17 @@ export default async function UsuariosPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center gap-2">
-        <h1 className="font-display text-lg uppercase text-white">Usuarios</h1>
-        <InfoButton>
-          Lista blanca de personas autorizadas a entrar con Google o email.
-          Los usuarios solo los crea el administrador; nadie puede ingresar si
-          no tiene un usuario creado. Los mentores (guest) necesitan una tarifa
-          configurada antes de poder cargar horas facturables.
-        </InfoButton>
-      </div>
-
-      <div className="shrink-0">
-        <NuevoUsuarioForm />
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <h1 className="font-display text-lg uppercase text-white">Usuarios</h1>
+          <InfoButton>
+            Lista blanca de personas autorizadas a entrar con Google o email.
+            Los usuarios solo los crea el administrador; nadie puede ingresar si
+            no tiene un usuario creado. Los mentores (guest) necesitan una tarifa
+            configurada antes de poder cargar horas facturables.
+          </InfoButton>
+        </div>
+        <NuevoUsuarioBoton />
       </div>
 
       <div className="mt-6 min-h-0 flex-1 overflow-auto dc-panel">
