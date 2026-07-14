@@ -7,7 +7,7 @@ import { hoyISO, rangoDefault30 } from "@/lib/formato";
 import { FiltroPopover } from "@/components/filtro-popover";
 import { InfoButton } from "@/components/info-button";
 import { TablaRegistros } from "./tabla-registros";
-import { ExportarBoton } from "./exportar-boton";
+import { AccionesMenu } from "./acciones-menu";
 import type { MapaTarifas, RegistroFila } from "./tipos";
 
 const DIAS_VENTANA_EDICION = 30;
@@ -95,11 +95,6 @@ export default async function TimetrackerPage({
           </InfoButton>
         </div>
         <div className="flex items-center gap-2">
-          <ExportarBoton
-            desde={desde}
-            hasta={hasta}
-            proyecto={proyectoId ?? ""}
-          />
           <FiltroPopover
             basePath="/timetracker"
             desde={desde}
@@ -108,6 +103,13 @@ export default async function TimetrackerPage({
             proyectos={opcionesProyecto}
             maxHoy={hoyISO()}
           />
+          {!sinTarifa && (
+            <AccionesMenu
+              desde={desde}
+              hasta={hasta}
+              proyecto={proyectoId ?? ""}
+            />
+          )}
         </div>
       </div>
 

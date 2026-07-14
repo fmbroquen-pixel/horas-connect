@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
-import { formatHorasHsMin } from "@/lib/horas";
 import { rangoDefault30, esISO } from "@/lib/formato";
 
 const ETIQUETA_OWNERSHIP: Record<string, string> = {
@@ -70,7 +69,7 @@ export async function GET(request: NextRequest) {
     r.cliente.nombre,
     r.etapa?.etiqueta ?? "",
     ETIQUETA_OWNERSHIP[r.ownership] ?? r.ownership,
-    formatHorasHsMin(Number(r.horas)),
+    Number(r.horas), // número decimal para permitir cálculos en la planilla
     ETIQUETA_MODALIDAD[r.modalidad] ?? r.modalidad,
     Number(r.tarifaUsdAplicada),
     Number(r.montoUsd),
@@ -104,6 +103,7 @@ export async function GET(request: NextRequest) {
   ws.columns.forEach((col) => {
     col.width = 16;
   });
+  ws.getColumn(5).numFmt = "0.00"; // Horas como número con decimales
   const buffer = await wb.xlsx.writeBuffer();
 
   return new NextResponse(buffer, {
