@@ -57,7 +57,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-dc-deeper">
-      <header className="shrink-0 border-b border-dc-line bg-dc-deep">
+      <header className="relative z-50 shrink-0 border-b border-dc-line bg-dc-deep">
         <div className={`${CONTENEDOR} flex items-center justify-between py-4`}>
           <Link href="/dashboard">
             <p className="font-display text-[10px] tracking-[0.3em] text-dc-pink">

@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { crearUsuario } from "./actions";
 import { RolDropdown } from "./rol-dropdown";
+import { Modal } from "@/components/ui/modal";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
 
 const INPUT =
@@ -47,15 +48,8 @@ export function NuevoUsuarioBoton() {
   useEffect(() => {
     if (!open) return;
     // Foco inicial en Nombre.
-    const t = setTimeout(() => nombreRef.current?.focus(), 20);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") cerrar();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener("keydown", onKey);
-    };
+    const t = setTimeout(() => nombreRef.current?.focus(), 60);
+    return () => clearTimeout(t);
   }, [open]);
 
   useEffect(() => {
@@ -72,27 +66,16 @@ export function NuevoUsuarioBoton() {
         + Agregar usuario
       </button>
 
-      {open && (
-        <div
-          className="dc-page-in fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={cerrar}
-          role="presentation"
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="titulo-nuevo-usuario"
-            onClick={(e) => e.stopPropagation()}
-            className="dc-menu dc-pop-in w-full max-w-md rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]"
+      <Modal open={open} onClose={cerrar} labelledBy="titulo-nuevo-usuario">
+        <div className="dc-menu dc-pop-in w-full max-w-md rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+          <h2
+            id="titulo-nuevo-usuario"
+            className="font-display text-sm uppercase text-white"
           >
-            <h2
-              id="titulo-nuevo-usuario"
-              className="font-display text-sm uppercase text-white"
-            >
-              Nuevo usuario
-            </h2>
+            Nuevo usuario
+          </h2>
 
-            <form action={formAction} className="mt-4 space-y-4">
+          <form action={formAction} className="mt-4 space-y-4">
               <label className="block">
                 <span className="mb-1 block text-xs text-dc-muted">Nombre</span>
                 <input
@@ -144,9 +127,8 @@ export function NuevoUsuarioBoton() {
                 </button>
               </div>
             </form>
-          </div>
         </div>
-      )}
+      </Modal>
 
       {toast && (
         <div

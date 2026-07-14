@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { Modal } from "@/components/ui/modal";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
 
 const INPUT =
@@ -63,15 +64,8 @@ export function AgregarModal({
 
   useEffect(() => {
     if (!open) return;
-    const t = setTimeout(() => primerRef.current?.focus(), 20);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") cerrar();
-    };
-    document.addEventListener("keydown", onKey);
-    return () => {
-      clearTimeout(t);
-      document.removeEventListener("keydown", onKey);
-    };
+    const t = setTimeout(() => primerRef.current?.focus(), 60);
+    return () => clearTimeout(t);
   }, [open]);
 
   useEffect(() => {
@@ -88,27 +82,16 @@ export function AgregarModal({
         {botonLabel}
       </button>
 
-      {open && (
-        <div
-          className="dc-page-in fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={cerrar}
-          role="presentation"
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="titulo-agregar-modal"
-            onClick={(e) => e.stopPropagation()}
-            className="dc-menu dc-pop-in w-full max-w-md rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]"
+      <Modal open={open} onClose={cerrar} labelledBy="titulo-agregar-modal">
+        <div className="dc-menu dc-pop-in w-full max-w-md rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+          <h2
+            id="titulo-agregar-modal"
+            className="font-display text-sm uppercase text-white"
           >
-            <h2
-              id="titulo-agregar-modal"
-              className="font-display text-sm uppercase text-white"
-            >
-              {titulo}
-            </h2>
+            {titulo}
+          </h2>
 
-            <form action={formAction} className="mt-4 space-y-4">
+          <form action={formAction} className="mt-4 space-y-4">
               {campos.map((c, i) => (
                 <label key={c.name} className="block">
                   <span className="mb-1 block text-xs text-dc-muted">{c.label}</span>
@@ -145,9 +128,8 @@ export function AgregarModal({
                 </button>
               </div>
             </form>
-          </div>
         </div>
-      )}
+      </Modal>
 
       {toast && (
         <div
