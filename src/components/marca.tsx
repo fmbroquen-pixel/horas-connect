@@ -12,17 +12,22 @@ export function Marca({
   className?: string;
 }) {
   const hero = variant === "hero";
+  const secundario = hero ? "text-[12px]" : "text-[10px]";
   return (
     <div className={`${hero ? "text-center" : ""} ${className}`}>
-      <p className="font-sans text-[10px] font-semibold uppercase leading-tight tracking-[0.28em] text-dc-muted">
+      <p
+        className={`font-sans font-semibold uppercase leading-tight tracking-[0.28em] text-dc-muted ${secundario}`}
+      >
         Embarca
       </p>
-      <p className="font-sans text-[10px] uppercase leading-tight tracking-[0.2em] text-dc-muted/55">
+      <p
+        className={`font-sans uppercase leading-tight tracking-[0.2em] text-dc-muted/55 ${secundario}`}
+      >
         Distrito Connect
       </p>
       <p
-        className={`mt-2 font-display uppercase leading-none text-white [text-shadow:0_0_18px_rgba(255,145,255,0.55)] ${
-          hero ? "text-3xl tracking-[0.12em]" : "text-base tracking-[0.08em]"
+        className={`font-display uppercase leading-none text-white [text-shadow:0_0_18px_rgba(255,145,255,0.55)] ${
+          hero ? "mt-2.5 text-[34px] tracking-[0.12em]" : "mt-2 text-base tracking-[0.08em]"
         }`}
       >
         CORE
