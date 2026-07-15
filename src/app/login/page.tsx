@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { loginConPassword, loginConGoogle } from "./actions";
 import { BTN_PRIMARY, BTN_LIGHT } from "@/lib/ui";
+import { Marca } from "@/components/marca";
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(
@@ -49,12 +50,7 @@ export default function LoginPage() {
           <span className="h-3 w-3 rounded-full bg-dc-blue" />
         </div>
 
-        <p className="font-display text-xs tracking-[0.3em] text-dc-pink">
-          DISTRITO CONNECT
-        </p>
-        <h1 className="mt-3 font-display text-2xl uppercase text-white">
-          Timetracker Connect
-        </h1>
+        <Marca variant="hero" className="mt-1" />
 
         <form action={loginConGoogle} className="mt-8">
           <button type="submit" className={`${BTN_LIGHT} w-full`}>

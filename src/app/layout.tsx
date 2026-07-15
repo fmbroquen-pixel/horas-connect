@@ -15,8 +15,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Timetracker Connect",
-  description: "Registro de horas y rentabilidad — Distrito Connect",
+  title: "CORE — Distrito Connect",
+  description: "CORE · Distrito Connect (Embarca) — registro de horas y rentabilidad",
 };
 
 export default function RootLayout({

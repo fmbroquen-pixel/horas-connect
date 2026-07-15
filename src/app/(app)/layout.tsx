@@ -4,6 +4,7 @@ import { getSesionActual } from "@/lib/auth";
 import { logout } from "@/app/actions";
 import { TabsNav } from "./tabs-nav";
 import { PageTransition } from "./page-transition";
+import { Marca } from "@/components/marca";
 import { PerfilBoton } from "./perfil/perfil-boton";
 import { urlAvatar } from "@/lib/supabase/admin";
 
@@ -58,13 +59,8 @@ export default async function AppLayout({
     <div className="flex h-dvh flex-col overflow-hidden bg-dc-deeper">
       <header className="relative z-50 shrink-0 border-b border-dc-line bg-dc-deep">
         <div className={`${CONTENEDOR} flex items-center justify-between py-4`}>
-          <Link href="/dashboard">
-            <p className="font-display text-[10px] tracking-[0.3em] text-dc-pink">
-              DISTRITO CONNECT
-            </p>
-            <p className="font-display text-sm uppercase text-white">
-              Timetracker Connect
-            </p>
+          <Link href="/dashboard" aria-label="CORE — Distrito Connect (Embarca)">
+            <Marca variant="header" />
           </Link>
           <div className="flex items-center gap-3 text-sm">
             <PerfilBoton

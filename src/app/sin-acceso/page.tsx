@@ -24,7 +24,7 @@ export default async function SinAccesoPage() {
         </h1>
         <p className="mt-3 text-sm text-dc-muted">
           <span className="text-dc-text">{sesion.email}</span> no está
-          habilitado para usar Timetracker Connect. Contactá al administrador para
+          habilitado para usar CORE. Contactá al administrador para
           que te agregue.
         </p>
         <form action={logout} className="mt-6">
