@@ -9,9 +9,8 @@ import { InfoButton } from "@/components/info-button";
 import { TablaRegistros } from "./tabla-registros";
 import { AccionesMenu } from "./acciones-menu";
 import { BarraCaptura } from "./barra-captura";
+import { DIAS_VENTANA_EDICION } from "./constantes";
 import type { MapaTarifas, RegistroFila } from "./tipos";
-
-const DIAS_VENTANA_EDICION = 30;
 
 export default async function TimetrackerPage({
   searchParams,

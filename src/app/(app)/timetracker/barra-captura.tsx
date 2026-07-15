@@ -4,7 +4,8 @@ import { useRef, useState, useTransition } from "react";
 import { crearRegistro, type CampoRegistro } from "./actions";
 import { BTN_PRIMARY } from "@/lib/ui";
 import { parseHorasHsMin, reformatEntradaHoras } from "@/lib/horas";
-import { formatMonto, hoyISO } from "@/lib/formato";
+import { formatMonto, hoyISO, restarDiasISO } from "@/lib/formato";
+import { DIAS_VENTANA_EDICION } from "./constantes";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import { ToastAviso } from "@/components/ui/toast-aviso";
@@ -117,6 +118,7 @@ export function BarraCaptura({
             value={valores.fecha}
             onChange={(v) => set("fecha", v)}
             max={hoyISO()}
+            min={restarDiasISO(hoyISO(), DIAS_VENTANA_EDICION)}
             invalido={estado?.campo === "fecha"}
             className="w-full"
             ariaLabel="Fecha"

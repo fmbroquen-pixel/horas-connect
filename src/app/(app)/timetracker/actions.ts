@@ -5,9 +5,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { parseHorasHsMin } from "@/lib/horas";
+import { DIAS_VENTANA_EDICION } from "./constantes";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
-
-const DIAS_VENTANA_EDICION = 30;
 
 const RegistroSchema = z.object({
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Fecha inválida." }),
@@ -144,7 +143,7 @@ export async function crearRegistro(
 }
 
 // Solo el dueño del registro (o un admin) puede modificarlo, y solo si la
-// fecha original y la nueva están dentro de la ventana de 30 días.
+// fecha original y la nueva están dentro de la ventana de edición.
 async function registroEditable(id: string, usuarioId: string, esAdmin: boolean) {
   const registro = await prisma.registroHoras.findUnique({ where: { id } });
   if (!registro || registro.eliminadoEn) return { error: "Registro no encontrado." };

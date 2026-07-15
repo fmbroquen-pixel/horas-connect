@@ -3,7 +3,8 @@
 import { useActionState, useState } from "react";
 import { actualizarRegistro, eliminarRegistro } from "./actions";
 import { parseHorasHsMin, reformatEntradaHoras } from "@/lib/horas";
-import { formatMonto, hoyISO } from "@/lib/formato";
+import { formatMonto, hoyISO, restarDiasISO } from "@/lib/formato";
+import { DIAS_VENTANA_EDICION } from "./constantes";
 import { GRID_TIMETRACKER } from "./grid";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
@@ -86,7 +87,10 @@ export function FilaRegistro({
                 <BotonEliminar id={registro.id} />
               </>
             ) : (
-              <span className="text-xs text-dc-muted" title="Pasados 30 días el registro queda fijo">
+              <span
+                className="text-xs text-dc-muted"
+                title={`Pasados ${DIAS_VENTANA_EDICION} días el registro queda fijo`}
+              >
                 Cerrado
               </span>
             )}
@@ -156,6 +160,7 @@ function FormEdicion({
           value={fecha}
           onChange={setFecha}
           max={hoyISO()}
+          min={restarDiasISO(hoyISO(), DIAS_VENTANA_EDICION)}
           className="w-full"
           ariaLabel="Fecha"
         />
