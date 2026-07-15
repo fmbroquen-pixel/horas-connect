@@ -17,6 +17,9 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "CORE — Distrito Connect",
   description: "CORE · Distrito Connect (Embarca) — registro de horas y rentabilidad",
+  // favicon.ico (16/32/48), icon.svg y apple-icon.png se enlazan solos por
+  // convención de archivos de Next (viven en src/app/).
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({

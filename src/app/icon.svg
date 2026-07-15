@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!--
+    Favicon de CORE, adaptado del logo (esfera violeta dividida por un tajo
+    blanco, dentro de un disco blanco). Ajustes para tamaños chicos:
+    - sin marco negro: el disco blanco es la insignia sobre fondo transparente;
+    - el gap central entre las dos mitades se ensancha (32/512 = 2px a 32px,
+      1px a 16px) para que la división se lea incluso en el tamaño mínimo;
+    - el borde externo de cada mitad es un arco del círculo r=200 (margen de
+      56px respecto al disco) para conservar la geometría "esférica" original.
+    La mitad inferior es la superior rotada 180°, lo que además invierte el
+    gradiente como en el logo original.
+  -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8b2fe0" />
+      <stop offset="1" stop-color="#3e0fd6" />
+    </linearGradient>
+  </defs>
+
+  <circle cx="256" cy="256" r="256" fill="#ffffff" />
+
+  <!-- Mitad superior: arco externo del círculo r=200; el borde interno baja
+       suavemente hasta y=240 en el centro. -->
+  <path
+    id="lente"
+    d="M 59 221 A 200 200 0 0 1 453 221 Q 256 259 59 221 Z"
+    fill="url(#g)"
+  />
+  <use href="#lente" transform="rotate(180 256 256)" />
+</svg>
