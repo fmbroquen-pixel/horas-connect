@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 import { Dropdown } from "@/components/dropdown";
+import { DatePicker } from "@/components/date-picker";
 
 type Proyecto = { id: string; nombre: string };
 
@@ -11,9 +12,6 @@ function fmt(iso: string) {
   const [a, m, d] = iso.split("-");
   return `${d}/${m}/${a}`;
 }
-
-const INPUT =
-  "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
 
 export function FiltroPopover({
   basePath,
@@ -34,6 +32,8 @@ export function FiltroPopover({
 }) {
   const [open, setOpen] = useState(false);
   const [proyectoSel, setProyectoSel] = useState(proyectoId);
+  const [desdeSel, setDesdeSel] = useState(desde);
+  const [hastaSel, setHastaSel] = useState(hasta);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -83,11 +83,25 @@ export function FiltroPopover({
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="mb-1 block text-xs text-dc-muted">Desde</label>
-                  <input type="date" name="desde" defaultValue={desde} max={maxHoy} className={INPUT} />
+                  <DatePicker
+                    name="desde"
+                    value={desdeSel}
+                    onChange={setDesdeSel}
+                    max={maxHoy || undefined}
+                    className="w-full"
+                    ariaLabel="Desde"
+                  />
                 </div>
                 <div>
                   <label className="mb-1 block text-xs text-dc-muted">Hasta</label>
-                  <input type="date" name="hasta" defaultValue={hasta} max={maxHoy} className={INPUT} />
+                  <DatePicker
+                    name="hasta"
+                    value={hastaSel}
+                    onChange={setHastaSel}
+                    max={maxHoy || undefined}
+                    className="w-full"
+                    ariaLabel="Hasta"
+                  />
                 </div>
               </div>
               {!soloFechas && (

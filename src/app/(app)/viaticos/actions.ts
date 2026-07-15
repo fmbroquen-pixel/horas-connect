@@ -14,7 +14,6 @@ import {
 const ViaticoSchema = z.object({
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Fecha inválida." }),
   clienteId: z.string().min(1, { error: "Elegí un proyecto." }),
-  etapaId: z.string().min(1, { error: "Elegí una etapa." }),
   moneda: z.enum(["USD", "ARS"], { error: "Elegí la moneda." }),
   monto: z.coerce.number().positive({ error: "El monto debe ser mayor a cero." }),
   concepto: z.enum(["combustible", "alojamiento", "traslado", "almuerzo", "otros"], {
@@ -25,7 +24,6 @@ const ViaticoSchema = z.object({
 export type CampoViatico =
   | "fecha"
   | "clienteId"
-  | "etapaId"
   | "moneda"
   | "monto"
   | "concepto";
@@ -36,7 +34,6 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
   const parsed = ViaticoSchema.safeParse({
     fecha: formData.get("fecha"),
     clienteId: formData.get("clienteId"),
-    etapaId: formData.get("etapaId"),
     moneda: formData.get("moneda"),
     monto: formData.get("monto"),
     concepto: formData.get("concepto"),
@@ -105,7 +102,6 @@ export async function crearViatico(
     data: {
       fecha: r.datos.fecha,
       clienteId: r.datos.clienteId,
-      etapaId: r.datos.etapaId,
       usuarioId: usuario.id,
       moneda: r.datos.moneda,
       monto: r.datos.monto,
@@ -148,7 +144,6 @@ export async function actualizarViatico(
     data: {
       fecha: r.datos.fecha,
       clienteId: r.datos.clienteId,
-      etapaId: r.datos.etapaId,
       moneda: r.datos.moneda,
       monto: r.datos.monto,
       concepto: r.datos.concepto,

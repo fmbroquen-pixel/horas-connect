@@ -1,29 +1,36 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   listarEliminados,
   restaurarItem,
   type ItemEliminado,
+  type TipoEliminado,
 } from "./actions";
+import { RETENCION_DIAS } from "./constantes";
+import { Modal } from "@/components/ui/modal";
 import { BTN_SECONDARY_SM } from "@/lib/ui";
 
-export function Papelera() {
-  const [abierto, setAbierto] = useState(false);
+// Papelera contextual de un módulo: muestra únicamente los registros
+// eliminados de ese tipo. Única acción disponible: Restaurar. Se abre desde el
+// menú de acciones (⋮) del historial.
+export function PapeleraModal({
+  tipo,
+  open,
+  onClose,
+}: {
+  tipo: TipoEliminado;
+  open: boolean;
+  onClose: () => void;
+}) {
   const [items, setItems] = useState<ItemEliminado[] | null>(null);
   const [cargando, startCarga] = useTransition();
   const [restaurando, startRestaurar] = useTransition();
-  const ref = useRef<HTMLDivElement>(null);
 
-  const cargar = () => {
-    startCarga(async () => setItems(await listarEliminados()));
-  };
-
-  const toggle = () => {
-    const nuevo = !abierto;
-    setAbierto(nuevo);
-    if (nuevo) cargar();
-  };
+  useEffect(() => {
+    if (!open) return;
+    startCarga(async () => setItems(await listarEliminados(tipo)));
+  }, [open, tipo]);
 
   const restaurar = (item: ItemEliminado) => {
     startRestaurar(async () => {
@@ -32,46 +39,29 @@ export function Papelera() {
     });
   };
 
-  // Cerrar al hacer click afuera.
-  useEffect(() => {
-    if (!abierto) return;
-    const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setAbierto(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [abierto]);
-
   return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={toggle}
-        title="Papelera de reciclaje"
-        aria-label="Papelera de reciclaje"
-        className="rounded-lg border border-dc-line px-2.5 py-1.5 text-base leading-none text-dc-muted transition hover:border-dc-peri hover:text-dc-text"
-      >
-        🗑️
-      </button>
+    <Modal open={open} onClose={onClose} labelledBy="titulo-papelera">
+      <div className="dc-menu dc-pop-in w-full max-w-md rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+        <h2 id="titulo-papelera" className="font-display text-sm uppercase text-white">
+          Papelera
+        </h2>
+        <p className="mt-1 text-xs text-dc-muted">
+          Los registros eliminados se conservan durante {RETENCION_DIAS} días y
+          luego se eliminan automáticamente.
+        </p>
 
-      {abierto && (
-        <div className="absolute right-0 z-30 mt-2 w-80 rounded-xl border border-dc-line bg-dc-deep p-3 shadow-xl">
-          <p className="mb-2 font-display text-xs uppercase tracking-widest text-dc-pink">
-            Papelera
-          </p>
+        <div className="mt-4">
           {cargando && !items ? (
-            <p className="py-4 text-center text-xs text-dc-muted">Cargando…</p>
+            <p className="py-6 text-center text-sm text-dc-muted">Cargando…</p>
           ) : items && items.length > 0 ? (
-            <ul className="max-h-80 space-y-2 overflow-y-auto">
+            <ul className="max-h-[50vh] space-y-2 overflow-y-auto">
               {items.map((i) => (
                 <li
-                  key={`${i.tipo}-${i.id}`}
-                  className="rounded-lg border border-dc-line p-2 text-xs"
+                  key={i.id}
+                  className="rounded-lg border border-dc-line p-3 text-sm"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="rounded-full bg-dc-peri/15 px-2 py-0.5 text-[10px] text-dc-peri">
-                      {i.seccion}
-                    </span>
+                    <p className="text-dc-text">{i.resumen}</p>
                     <button
                       type="button"
                       disabled={restaurando}
@@ -81,21 +71,21 @@ export function Papelera() {
                       Restaurar
                     </button>
                   </div>
-                  <p className="mt-1 text-dc-text">{i.resumen}</p>
-                  <p className="mt-0.5 text-[10px] text-dc-muted">
-                    Eliminado el{" "}
-                    {new Date(i.eliminadoEn).toLocaleDateString("es-AR")}
+                  <p className="mt-1 text-[11px] text-dc-muted">
+                    {i.diasRestantes > 0
+                      ? `Se eliminará en ${i.diasRestantes} día${i.diasRestantes === 1 ? "" : "s"}`
+                      : "Se eliminará hoy"}
                   </p>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="py-4 text-center text-xs text-dc-muted">
+            <p className="py-6 text-center text-sm text-dc-muted">
               La papelera está vacía.
             </p>
           )}
         </div>
-      )}
-    </div>
+      </div>
+    </Modal>
   );
 }

@@ -6,6 +6,7 @@ import { parseHorasHsMin, reformatEntradaHoras } from "@/lib/horas";
 import { formatMonto, hoyISO } from "@/lib/formato";
 import { GRID_TIMETRACKER } from "./grid";
 import { Dropdown } from "@/components/dropdown";
+import { DatePicker } from "@/components/date-picker";
 import {
   ETIQUETA_MODALIDAD,
   ETIQUETA_OWNERSHIP,
@@ -119,6 +120,7 @@ function FormEdicion({
   tarifas: MapaTarifas;
   onCerrar: () => void;
 }) {
+  const [fecha, setFecha] = useState(registro.fecha);
   const [clienteId, setClienteId] = useState(registro.clienteId);
   const [etapaId, setEtapaId] = useState(registro.etapaId);
   const [modalidad, setModalidad] = useState<string>(registro.modalidad);
@@ -149,13 +151,13 @@ function FormEdicion({
     >
       <div className={GRID_TIMETRACKER}>
         <span />
-        <input
+        <DatePicker
           name="fecha"
-          type="date"
-          defaultValue={registro.fecha}
-          required
+          value={fecha}
+          onChange={setFecha}
           max={hoyISO()}
-          className={INPUT}
+          className="w-full"
+          ariaLabel="Fecha"
         />
         <Dropdown
           name="clienteId"
@@ -184,6 +186,10 @@ function FormEdicion({
         <input
           name="horas"
           value={horas}
+          inputMode="decimal"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
           onChange={(e) => setHoras(e.target.value)}
           onBlur={() => {
             const f = reformatEntradaHoras(horas);

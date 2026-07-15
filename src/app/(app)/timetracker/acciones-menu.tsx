@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ImportarModal } from "./importar-modal";
+import { PapeleraModal } from "../papelera/papelera";
 
 const ITEM =
   "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-dc-muted transition hover:bg-dc-line/50 hover:text-dc-text focus:bg-dc-line/50 focus:text-dc-text focus:outline-none";
@@ -18,6 +19,7 @@ export function AccionesMenu({
   const [open, setOpen] = useState(false);
   const [vista, setVista] = useState<"main" | "export">("main");
   const [importOpen, setImportOpen] = useState(false);
+  const [papeleraOpen, setPapeleraOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const cerrar = () => {
@@ -106,6 +108,22 @@ export function AccionesMenu({
                   <path d="M9 6l6 6-6 6" />
                 </svg>
               </button>
+              <div className="my-1 h-px bg-dc-line" />
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setPapeleraOpen(true);
+                  cerrar();
+                }}
+                className={ITEM}
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6M14 11v6" />
+                </svg>
+                Papelera
+              </button>
             </>
           ) : (
             <>
@@ -131,6 +149,7 @@ export function AccionesMenu({
       )}
 
       {importOpen && <ImportarModal onCerrar={() => setImportOpen(false)} />}
+      <PapeleraModal tipo="hora" open={papeleraOpen} onClose={() => setPapeleraOpen(false)} />
     </div>
   );
 }

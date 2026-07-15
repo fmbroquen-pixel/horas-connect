@@ -11,6 +11,7 @@ import {
 } from "./tipos";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM, BTN_DANGER_SM, BTN_DANGER_CONFIRM_SM } from "@/lib/ui";
 import { Dropdown } from "@/components/dropdown";
+import { DatePicker } from "@/components/date-picker";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -18,17 +19,14 @@ const INPUT =
 export function FilaViatico({
   viatico,
   proyectos,
-  etapas,
 }: {
   viatico: ViaticoFila;
   proyectos: OpcionSelect[];
-  etapas: OpcionSelect[];
 }) {
   const [editando, setEditando] = useState(false);
 
   if (!editando) {
     const proyecto = proyectos.find((p) => p.id === viatico.clienteId);
-    const etapa = etapas.find((e) => e.id === viatico.etapaId);
     return (
       <div className="border-b border-dc-line px-3 py-2 last:border-0">
         <div className={GRID_VIATICOS}>
@@ -36,15 +34,12 @@ export function FilaViatico({
           <span className="truncate text-center text-sm text-dc-text">
             {proyecto?.nombre ?? "—"}
           </span>
-          <span className="truncate text-center text-sm text-dc-muted">
-            {etapa?.nombre ?? "—"}
+          <span className="text-center text-sm text-dc-muted">
+            {ETIQUETA_CONCEPTO[viatico.concepto] ?? viatico.concepto}
           </span>
           <span className="text-center text-sm text-dc-muted">{viatico.moneda}</span>
           <span className="text-center text-sm tabular-nums text-dc-text">
             {formatMonto(viatico.monto)}
-          </span>
-          <span className="text-center text-sm text-dc-muted">
-            {ETIQUETA_CONCEPTO[viatico.concepto] ?? viatico.concepto}
           </span>
           <span className="text-center text-sm">
             {viatico.archivoUrl ? (
@@ -52,20 +47,19 @@ export function FilaViatico({
                 href={viatico.archivoUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-dc-peri hover:text-dc-pink"
+                title="Ver comprobante"
+                className="inline-flex text-dc-peri hover:text-dc-pink"
               >
-                Ver archivo
+                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
               </a>
             ) : (
               <span className="text-dc-muted">—</span>
             )}
           </span>
           <span className="flex justify-center gap-1">
-            <button
-              type="button"
-              onClick={() => setEditando(true)}
-              className={BTN_SECONDARY_SM}
-            >
+            <button type="button" onClick={() => setEditando(true)} className={BTN_SECONDARY_SM}>
               Editar
             </button>
             <BotonEliminar id={viatico.id} />
@@ -79,7 +73,6 @@ export function FilaViatico({
     <FormEdicion
       viatico={viatico}
       proyectos={proyectos}
-      etapas={etapas}
       onCerrar={() => setEditando(false)}
     />
   );
@@ -88,16 +81,14 @@ export function FilaViatico({
 function FormEdicion({
   viatico,
   proyectos,
-  etapas,
   onCerrar,
 }: {
   viatico: ViaticoFila;
   proyectos: OpcionSelect[];
-  etapas: OpcionSelect[];
   onCerrar: () => void;
 }) {
+  const [fecha, setFecha] = useState(viatico.fecha);
   const [clienteId, setClienteId] = useState(viatico.clienteId);
-  const [etapaId, setEtapaId] = useState(viatico.etapaId);
   const [moneda, setMoneda] = useState<string>(viatico.moneda);
   const [concepto, setConcepto] = useState(viatico.concepto);
 
@@ -117,13 +108,13 @@ function FormEdicion({
       className="border-b border-dc-line bg-dc-card px-3 py-2 last:border-0"
     >
       <div className={GRID_VIATICOS}>
-        <input
+        <DatePicker
           name="fecha"
-          type="date"
-          defaultValue={viatico.fecha}
-          required
+          value={fecha}
+          onChange={setFecha}
           max={hoyISO()}
-          className={INPUT}
+          className="w-full"
+          ariaLabel="Fecha"
         />
         <Dropdown
           name="clienteId"
@@ -133,11 +124,14 @@ function FormEdicion({
           ariaLabel="Proyecto"
         />
         <Dropdown
-          name="etapaId"
-          value={etapaId}
-          onChange={setEtapaId}
-          options={etapas.map((e) => ({ value: e.id, label: e.nombre }))}
-          ariaLabel="Etapa"
+          name="concepto"
+          value={concepto}
+          onChange={setConcepto}
+          options={Object.entries(ETIQUETA_CONCEPTO).map(([valor, etiqueta]) => ({
+            value: valor,
+            label: etiqueta,
+          }))}
+          ariaLabel="Concepto"
         />
         <Dropdown
           name="moneda"
@@ -158,35 +152,18 @@ function FormEdicion({
           required
           className={`${INPUT} text-right`}
         />
-        <Dropdown
-          name="concepto"
-          value={concepto}
-          onChange={setConcepto}
-          options={Object.entries(ETIQUETA_CONCEPTO).map(([valor, etiqueta]) => ({
-            value: valor,
-            label: etiqueta,
-          }))}
-          ariaLabel="Concepto"
-        />
         <input
           name="archivo"
           type="file"
           accept="image/*,.pdf"
+          aria-label="Comprobante"
           className="text-xs text-dc-muted file:mr-1 file:rounded-lg file:border file:border-dc-line file:bg-dc-deeper file:px-2 file:py-1 file:text-xs file:text-dc-muted"
         />
-        <span className="flex justify-end gap-1">
-          <button
-            type="submit"
-            disabled={pending}
-            className={BTN_PRIMARY_SM}
-          >
+        <span className="flex justify-center gap-1">
+          <button type="submit" disabled={pending} className={BTN_PRIMARY_SM}>
             {pending ? "…" : "Guardar"}
           </button>
-          <button
-            type="button"
-            onClick={onCerrar}
-            className={BTN_SECONDARY_SM}
-          >
+          <button type="button" onClick={onCerrar} className={BTN_SECONDARY_SM}>
             ✕
           </button>
         </span>
@@ -201,21 +178,13 @@ function BotonEliminar({ id }: { id: string }) {
 
   if (!confirmando) {
     return (
-      <button
-        type="button"
-        onClick={() => setConfirmando(true)}
-        className={BTN_DANGER_SM}
-      >
+      <button type="button" onClick={() => setConfirmando(true)} className={BTN_DANGER_SM}>
         Borrar
       </button>
     );
   }
   return (
-    <button
-      type="button"
-      onClick={() => eliminarViatico(id)}
-      className={BTN_DANGER_CONFIRM_SM}
-    >
+    <button type="button" onClick={() => eliminarViatico(id)} className={BTN_DANGER_CONFIRM_SM}>
       ¿Seguro?
     </button>
   );

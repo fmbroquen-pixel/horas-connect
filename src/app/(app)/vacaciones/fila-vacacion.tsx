@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { actualizarVacacion, eliminarVacacion } from "./actions";
 import { GRID_VACACIONES } from "./registrar-boton";
+import { DatePicker } from "@/components/date-picker";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM, BTN_DANGER_SM, BTN_DANGER_CONFIRM_SM } from "@/lib/ui";
 
 const INPUT =
@@ -52,6 +53,8 @@ function FormEdicion({
   vacacion: VacacionFila;
   onCerrar: () => void;
 }) {
+  const [inicio, setInicio] = useState(vacacion.fechaInicio);
+  const [fin, setFin] = useState(vacacion.fechaFin);
   const accion = actualizarVacacion.bind(null, vacacion.id);
   const [state, formAction, pending] = useActionState(
     async (prev: { error?: string } | undefined, formData: FormData) => {
@@ -68,25 +71,27 @@ function FormEdicion({
       className="border-b border-dc-line bg-dc-card px-3 py-2 last:border-0"
     >
       <div className={GRID_VACACIONES}>
-        <input
+        <DatePicker
           name="fechaInicio"
-          type="date"
-          defaultValue={vacacion.fechaInicio}
-          required
-          className={INPUT}
+          value={inicio}
+          onChange={setInicio}
+          className="w-full"
+          ariaLabel="Fecha inicio"
         />
-        <input
+        <DatePicker
           name="fechaFin"
-          type="date"
-          defaultValue={vacacion.fechaFin}
-          required
-          className={INPUT}
+          value={fin}
+          onChange={setFin}
+          className="w-full"
+          ariaLabel="Fecha fin"
         />
         <input
           name="dias"
           type="number"
           min="1"
           step="1"
+          inputMode="numeric"
+          autoComplete="off"
           defaultValue={vacacion.dias}
           required
           className={`${INPUT} text-right`}

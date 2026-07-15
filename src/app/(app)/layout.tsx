@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { getSesionActual } from "@/lib/auth";
 import { logout } from "@/app/actions";
 import { TabsNav } from "./tabs-nav";
-import { Papelera } from "./papelera/papelera";
 import { PageTransition } from "./page-transition";
 import { PerfilBoton } from "./perfil/perfil-boton";
 import { urlAvatar } from "@/lib/supabase/admin";
@@ -18,14 +17,14 @@ const ETIQUETA_ROL: Record<string, string> = {
 
 const TABS_CARGA = [
   { href: "/dashboard", label: "Dashboard", icono: "dashboard" },
-  { href: "/timetracker", label: "Timetracker", icono: "reloj" },
-  { href: "/viaticos", label: "Viáticos", icono: "auto" },
-  { href: "/vacaciones", label: "Vacaciones", icono: "sombrilla" },
+  { href: "/timetracker", label: "Time Tracking", icono: "reloj" },
+  { href: "/viaticos", label: "Expenses", icono: "auto" },
+  { href: "/vacaciones", label: "Time Off", icono: "sombrilla" },
 ];
 
 const TAB_PM = {
   href: "/rentabilidad",
-  label: "Project Management",
+  label: "Projects",
   icono: "pm",
 };
 
@@ -88,7 +87,6 @@ export default async function AppLayout({
                 ⚙️
               </Link>
             )}
-            {usuario.rol !== "reader" && <Papelera />}
             {/* Separador: Salir es cierre de sesión, no una herramienta. */}
             <span className="mx-1 h-6 w-px bg-dc-line" aria-hidden="true" />
             <form action={logout}>

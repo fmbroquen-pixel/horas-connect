@@ -5,8 +5,10 @@ import { crearViatico, type CampoViatico } from "./actions";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
 import { hoyISO } from "@/lib/formato";
 import { Dropdown } from "@/components/dropdown";
+import { DatePicker } from "@/components/date-picker";
 import { Modal } from "@/components/ui/modal";
 import { ToastOk } from "@/components/ui/toast-ok";
+import { ToastAviso } from "@/components/ui/toast-aviso";
 import { type OpcionSelect, ETIQUETA_CONCEPTO } from "./tipos";
 
 const INPUT =
@@ -17,27 +19,33 @@ const LABEL = "mb-1 block text-xs text-dc-muted";
 const INICIAL = {
   fecha: "",
   clienteId: "",
-  etapaId: "",
   moneda: "ARS",
   monto: "",
   concepto: "",
 };
 
-// CTA "+ Registrar viático" + modal con el mismo formulario de carga.
-export function RegistrarViaticoBoton({
-  proyectos,
-  etapas,
-}: {
-  proyectos: OpcionSelect[];
-  etapas: OpcionSelect[];
-}) {
+const OBLIGATORIOS: { campo: CampoViatico; label: string }[] = [
+  { campo: "fecha", label: "Fecha" },
+  { campo: "clienteId", label: "Proyecto" },
+  { campo: "concepto", label: "Concepto" },
+  { campo: "monto", label: "Monto" },
+];
+
+// CTA "+ Nuevo viático" + modal con el mismo formulario de carga.
+export function RegistrarViaticoBoton({ proyectos }: { proyectos: OpcionSelect[] }) {
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [valores, setValores] = useState(INICIAL);
   const [estado, setEstado] = useState<{ error?: string; campo?: CampoViatico }>();
   const [pending, start] = useTransition();
-  const fechaRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const archivoRef = useRef<HTMLInputElement>(null);
+
+  const enfocar = (campo: string) => {
+    const cont = formRef.current?.querySelector(`[data-campo="${campo}"]`);
+    (cont?.querySelector("button, input") as HTMLElement | undefined)?.focus();
+  };
 
   const abrir = () => {
     setValores(INICIAL);
@@ -48,7 +56,7 @@ export function RegistrarViaticoBoton({
 
   useEffect(() => {
     if (!open) return;
-    const t = setTimeout(() => fechaRef.current?.focus(), 60);
+    const t = setTimeout(() => enfocar("fecha"), 60);
     return () => clearTimeout(t);
   }, [open]);
 
@@ -59,17 +67,23 @@ export function RegistrarViaticoBoton({
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const faltante = OBLIGATORIOS.find(({ campo }) => !valores[campo].trim());
+    if (faltante) {
+      setEstado({ campo: faltante.campo });
+      setAviso(`Completá el campo "${faltante.label}" para guardar el viático.`);
+      enfocar(faltante.campo);
+      return;
+    }
     const fd = new FormData(e.currentTarget);
     start(async () => {
       const r = await crearViatico(undefined, fd);
       if (!r.error) {
-        setValores(INICIAL);
-        setEstado(undefined);
-        if (archivoRef.current) archivoRef.current.value = "";
         setOpen(false);
         setToast(true);
       } else {
         setEstado(r);
+        if (r.error) setAviso(r.error);
+        if (r.campo) enfocar(r.campo);
       }
     });
   };
@@ -89,21 +103,21 @@ export function RegistrarViaticoBoton({
             Registrar viático
           </h2>
 
-          <form onSubmit={onSubmit} className="mt-4 space-y-4">
+          <form ref={formRef} onSubmit={onSubmit} className="mt-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <label className="block">
+              <div data-campo="fecha">
                 <span className={LABEL}>Fecha</span>
-                <input
-                  ref={fechaRef}
+                <DatePicker
                   name="fecha"
-                  type="date"
-                  max={hoyISO()}
                   value={valores.fecha}
-                  onChange={(e) => set("fecha", e.target.value)}
-                  className={cls("fecha")}
+                  onChange={(v) => set("fecha", v)}
+                  max={hoyISO()}
+                  invalido={estado?.campo === "fecha"}
+                  className="w-full"
+                  ariaLabel="Fecha"
                 />
-              </label>
-              <div>
+              </div>
+              <div data-campo="concepto">
                 <span className={LABEL}>Concepto</span>
                 <Dropdown
                   name="concepto"
@@ -121,7 +135,7 @@ export function RegistrarViaticoBoton({
               </div>
             </div>
 
-            <div>
+            <div data-campo="clienteId">
               <span className={LABEL}>Proyecto</span>
               <Dropdown
                 name="clienteId"
@@ -135,22 +149,8 @@ export function RegistrarViaticoBoton({
               />
             </div>
 
-            <div>
-              <span className={LABEL}>Etapa</span>
-              <Dropdown
-                name="etapaId"
-                value={valores.etapaId}
-                onChange={(v) => set("etapaId", v)}
-                options={etapas.map((e) => ({ value: e.id, label: e.nombre }))}
-                placeholder="Elegí una etapa"
-                invalido={estado?.campo === "etapaId"}
-                className="w-full"
-                ariaLabel="Etapa"
-              />
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
-              <div>
+              <div data-campo="moneda">
                 <span className={LABEL}>Moneda</span>
                 <Dropdown
                   name="moneda"
@@ -164,13 +164,15 @@ export function RegistrarViaticoBoton({
                   ariaLabel="Moneda"
                 />
               </div>
-              <label className="block">
+              <label className="block" data-campo="monto">
                 <span className={LABEL}>Monto</span>
                 <input
                   name="monto"
                   type="number"
                   step="0.01"
                   min="0.01"
+                  inputMode="decimal"
+                  autoComplete="off"
                   placeholder="0,00"
                   value={valores.monto}
                   onChange={(e) => set("monto", e.target.value)}
@@ -190,10 +192,6 @@ export function RegistrarViaticoBoton({
               />
             </label>
 
-            {estado?.error && (
-              <p className="text-xs text-dc-pink" role="alert">{estado.error}</p>
-            )}
-
             <div className="flex justify-end gap-2 pt-1">
               <button type="button" onClick={() => setOpen(false)} className={BTN_SECONDARY}>
                 Cancelar
@@ -203,13 +201,14 @@ export function RegistrarViaticoBoton({
                 disabled={pending}
                 className={`${BTN_PRIMARY} disabled:cursor-not-allowed disabled:opacity-50`}
               >
-                {pending ? "Registrando…" : "Registrar viático"}
+                {pending ? "Guardando…" : "Guardar"}
               </button>
             </div>
           </form>
         </div>
       </Modal>
 
+      <ToastAviso mensaje={aviso} onClose={() => setAviso(null)} />
       <ToastOk show={toast} onHide={() => setToast(false)}>
         Viático registrado
       </ToastOk>

@@ -6,6 +6,8 @@ import { BTN_PRIMARY } from "@/lib/ui";
 import { parseHorasHsMin, reformatEntradaHoras } from "@/lib/horas";
 import { formatMonto, hoyISO } from "@/lib/formato";
 import { Dropdown } from "@/components/dropdown";
+import { DatePicker } from "@/components/date-picker";
+import { ToastAviso } from "@/components/ui/toast-aviso";
 import type { MapaTarifas, OpcionSelect } from "./tipos";
 
 const INPUT =
@@ -22,10 +24,16 @@ const VALORES_INICIALES = {
   horas: "",
 };
 
+// Campos obligatorios y su etiqueta legible, en orden de foco.
+const OBLIGATORIOS: { campo: CampoRegistro; label: string }[] = [
+  { campo: "fecha", label: "Fecha" },
+  { campo: "clienteId", label: "Proyecto" },
+  { campo: "etapaId", label: "Etapa" },
+  { campo: "horas", label: "Horas" },
+];
+
 // Barra de captura permanente (no es la primera fila de la tabla): componente
-// independiente, optimizado para cargar varias horas seguidas con el mínimo de
-// clics. Al guardar conserva los campos que no suelen cambiar (fecha, proyecto,
-// ownership, modalidad), limpia Etapa y Horas y devuelve el foco a Etapa.
+// independiente, optimizado para cargar varias horas seguidas solo con teclado.
 export function BarraCaptura({
   proyectos,
   etapas,
@@ -37,28 +45,44 @@ export function BarraCaptura({
 }) {
   const [valores, setValores] = useState(VALORES_INICIALES);
   const [estado, setEstado] = useState<{ error?: string; campo?: CampoRegistro }>();
+  const [aviso, setAviso] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const etapaRef = useRef<HTMLDivElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const set = (campo: keyof typeof valores, valor: string) => {
     setValores((v) => ({ ...v, [campo]: valor }));
     setEstado((e) => (e?.campo === campo ? { error: e.error } : e));
   };
 
-  const enfocarEtapa = () => etapaRef.current?.querySelector("button")?.focus();
+  const enfocar = (campo: string) => {
+    const cont = formRef.current?.querySelector(`[data-campo="${campo}"]`);
+    (cont?.querySelector("button, input") as HTMLElement | undefined)?.focus();
+  };
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    // Validación en cliente: resaltar y avisar por toast qué falta.
+    const faltante = OBLIGATORIOS.find(({ campo }) => !valores[campo].trim());
+    if (faltante) {
+      setEstado({ campo: faltante.campo });
+      setAviso(`Completá el campo "${faltante.label}" para guardar el registro.`);
+      enfocar(faltante.campo);
+      return;
+    }
+
     const fd = new FormData(e.currentTarget);
     start(async () => {
       const r = await crearRegistro(undefined, fd);
       if (!r.error) {
-        // Conserva fecha/proyecto/ownership/modalidad; limpia lo que cambia.
+        // Precarga la siguiente carga: conserva proyecto, ownership y modalidad
+        // (y la fecha del día); limpia los campos que cambian.
         setValores((v) => ({ ...v, etapaId: "", horas: "" }));
         setEstado(undefined);
-        setTimeout(enfocarEtapa, 20);
+        setTimeout(() => enfocar("etapaId"), 20);
       } else {
         setEstado(r);
+        if (r.error) setAviso(r.error);
+        if (r.campo) enfocar(r.campo);
       }
     });
   };
@@ -80,24 +104,26 @@ export function BarraCaptura({
 
   return (
     <form
+      ref={formRef}
       onSubmit={onSubmit}
       className="shrink-0 rounded-xl border border-dc-peri/25 bg-dc-card p-3"
       aria-label="Barra de captura de horas"
     >
       <div className="flex flex-wrap items-end gap-2">
-        <label className="block w-36">
+        <div className="w-36" data-campo="fecha">
           <span className={LABEL}>Fecha</span>
-          <input
+          <DatePicker
             name="fecha"
-            type="date"
-            max={hoyISO()}
             value={valores.fecha}
-            onChange={(e) => set("fecha", e.target.value)}
-            className={cls("fecha")}
+            onChange={(v) => set("fecha", v)}
+            max={hoyISO()}
+            invalido={estado?.campo === "fecha"}
+            className="w-full"
+            ariaLabel="Fecha"
           />
-        </label>
+        </div>
 
-        <div className="w-44">
+        <div className="w-44" data-campo="clienteId">
           <span className={LABEL}>Proyecto</span>
           <Dropdown
             name="clienteId"
@@ -111,7 +137,7 @@ export function BarraCaptura({
           />
         </div>
 
-        <div className="w-44" ref={etapaRef}>
+        <div className="w-44" data-campo="etapaId">
           <span className={LABEL}>Etapa</span>
           <Dropdown
             name="etapaId"
@@ -125,7 +151,7 @@ export function BarraCaptura({
           />
         </div>
 
-        <div className="w-32">
+        <div className="w-32" data-campo="ownership">
           <span className={LABEL}>Ownership</span>
           <Dropdown
             name="ownership"
@@ -140,10 +166,14 @@ export function BarraCaptura({
           />
         </div>
 
-        <label className="block w-24">
+        <div className="w-24" data-campo="horas">
           <span className={LABEL}>Horas</span>
           <input
             name="horas"
+            inputMode="decimal"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
             placeholder="1,5"
             title="Cargá un número (1,5 o 1.5); se muestra como 1:30"
             value={valores.horas}
@@ -151,9 +181,9 @@ export function BarraCaptura({
             onBlur={reformatearHoras}
             className={cls("horas")}
           />
-        </label>
+        </div>
 
-        <div className="w-32">
+        <div className="w-32" data-campo="modalidad">
           <span className={LABEL}>Modalidad</span>
           <Dropdown
             name="modalidad"
@@ -176,13 +206,11 @@ export function BarraCaptura({
         </div>
 
         <button type="submit" disabled={pending} className={BTN_PRIMARY}>
-          {pending ? "Guardando…" : "+ Nuevo registro"}
+          {pending ? "Guardando…" : "Guardar"}
         </button>
       </div>
 
-      {estado?.error && (
-        <p className="mt-2 text-xs text-dc-pink" role="alert">{estado.error}</p>
-      )}
+      <ToastAviso mensaje={aviso} onClose={() => setAviso(null)} />
     </form>
   );
 }

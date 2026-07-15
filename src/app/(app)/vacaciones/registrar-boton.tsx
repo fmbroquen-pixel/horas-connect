@@ -5,6 +5,8 @@ import { crearVacacion } from "./actions";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
 import { Modal } from "@/components/ui/modal";
 import { ToastOk } from "@/components/ui/toast-ok";
+import { ToastAviso } from "@/components/ui/toast-aviso";
+import { DatePicker } from "@/components/date-picker";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -22,35 +24,54 @@ function diasEntre(inicioISO: string, finISO: string): number | null {
   return Math.round((fin.getTime() - inicio.getTime()) / 86400000) + 1;
 }
 
-// CTA "+ Registrar vacaciones" + modal con el mismo formulario de carga.
+// CTA "+ Nueva solicitud" + modal con el mismo formulario de carga.
 export function RegistrarVacacionesBoton() {
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [inicio, setInicio] = useState("");
   const [fin, setFin] = useState("");
   const [dias, setDias] = useState("");
   const [diasEditado, setDiasEditado] = useState(false);
-  const [error, setError] = useState<string>();
+  const [campoError, setCampoError] = useState<string>();
   const [pending, start] = useTransition();
-  const inicioRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   const abrir = () => {
     setInicio("");
     setFin("");
     setDias("");
     setDiasEditado(false);
-    setError(undefined);
+    setCampoError(undefined);
     setOpen(true);
+  };
+
+  const enfocar = (campo: string) => {
+    const cont = formRef.current?.querySelector(`[data-campo="${campo}"]`);
+    (cont?.querySelector("button, input") as HTMLElement | undefined)?.focus();
   };
 
   useEffect(() => {
     if (!open) return;
-    const t = setTimeout(() => inicioRef.current?.focus(), 60);
+    const t = setTimeout(() => enfocar("fechaInicio"), 60);
     return () => clearTimeout(t);
   }, [open]);
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const faltante = !inicio.trim()
+      ? { campo: "fechaInicio", label: "Fecha inicio" }
+      : !fin.trim()
+        ? { campo: "fechaFin", label: "Fecha fin" }
+        : !dias.trim()
+          ? { campo: "dias", label: "Días OOO" }
+          : null;
+    if (faltante) {
+      setCampoError(faltante.campo);
+      setAviso(`Completá el campo "${faltante.label}" para guardar la solicitud.`);
+      enfocar(faltante.campo);
+      return;
+    }
     const fd = new FormData(e.currentTarget);
     start(async () => {
       const result = await crearVacacion(undefined, fd);
@@ -58,7 +79,7 @@ export function RegistrarVacacionesBoton() {
         setOpen(false);
         setToast(true);
       } else {
-        setError(result.error);
+        setAviso(result.error);
       }
     });
   };
@@ -66,11 +87,15 @@ export function RegistrarVacacionesBoton() {
   const actualizarFechas = (nuevoInicio: string, nuevoFin: string) => {
     setInicio(nuevoInicio);
     setFin(nuevoFin);
+    setCampoError(undefined);
     if (!diasEditado) {
       const calculados = diasEntre(nuevoInicio, nuevoFin);
       setDias(calculados !== null ? String(calculados) : "");
     }
   };
+
+  const borde = (campo: string) =>
+    campoError === campo ? "border-dc-pink ring-1 ring-dc-pink" : "";
 
   return (
     <>
@@ -84,55 +109,55 @@ export function RegistrarVacacionesBoton() {
             Registrar vacaciones
           </h2>
 
-          <form onSubmit={onSubmit} className="mt-4 space-y-4">
+          <form ref={formRef} onSubmit={onSubmit} className="mt-4 space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <label className="block">
+              <div data-campo="fechaInicio">
                 <span className={LABEL}>Fecha inicio</span>
-                <input
-                  ref={inicioRef}
+                <DatePicker
                   name="fechaInicio"
-                  type="date"
                   value={inicio}
-                  onChange={(e) => actualizarFechas(e.target.value, fin)}
-                  className={INPUT}
+                  onChange={(v) => actualizarFechas(v, fin)}
+                  invalido={campoError === "fechaInicio"}
+                  className="w-full"
+                  ariaLabel="Fecha inicio"
                 />
-              </label>
-              <label className="block">
+              </div>
+              <div data-campo="fechaFin">
                 <span className={LABEL}>Fecha fin</span>
-                <input
+                <DatePicker
                   name="fechaFin"
-                  type="date"
                   value={fin}
-                  onChange={(e) => actualizarFechas(inicio, e.target.value)}
-                  className={INPUT}
+                  onChange={(v) => actualizarFechas(inicio, v)}
+                  invalido={campoError === "fechaFin"}
+                  className="w-full"
+                  ariaLabel="Fecha fin"
                 />
-              </label>
+              </div>
             </div>
 
-            <label className="block">
+            <label className="block" data-campo="dias">
               <span className={LABEL}>Días OOO</span>
               <input
                 name="dias"
                 type="number"
                 min="1"
                 step="1"
+                inputMode="numeric"
+                autoComplete="off"
                 placeholder="Días OOO"
                 value={dias}
                 onChange={(e) => {
                   setDias(e.target.value);
                   setDiasEditado(true);
+                  setCampoError(undefined);
                 }}
-                className={INPUT}
+                className={`${INPUT} ${borde("dias")}`}
               />
               <span className="mt-1 block text-[11px] text-dc-muted">
                 Se calcula solo a partir del rango; podés corregirlo (por ejemplo,
                 para descontar fines de semana).
               </span>
             </label>
-
-            {error && (
-              <p className="text-xs text-dc-pink" role="alert">{error}</p>
-            )}
 
             <div className="flex justify-end gap-2 pt-1">
               <button type="button" onClick={() => setOpen(false)} className={BTN_SECONDARY}>
@@ -143,13 +168,14 @@ export function RegistrarVacacionesBoton() {
                 disabled={pending}
                 className={`${BTN_PRIMARY} disabled:cursor-not-allowed disabled:opacity-50`}
               >
-                {pending ? "Registrando…" : "Registrar vacaciones"}
+                {pending ? "Guardando…" : "Guardar"}
               </button>
             </div>
           </form>
         </div>
       </Modal>
 
+      <ToastAviso mensaje={aviso} onClose={() => setAviso(null)} />
       <ToastOk show={toast} onHide={() => setToast(false)}>
         Vacaciones registradas
       </ToastOk>
