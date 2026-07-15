@@ -18,9 +18,19 @@ function PendingBar() {
 }
 
 const ICONOS: Record<string, React.ReactNode> = {
-  // Dashboard: paneles.
-  dashboard: (
-    <path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 15h7v6H3z" />
+  // Home: casa.
+  home: (
+    <>
+      <path d="M3 11l9-8 9 8" />
+      <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
+    </>
+  ),
+  // Dashboard/Analytics: barras + ejes.
+  analytics: (
+    <>
+      <path d="M3 3v18h18" />
+      <path d="M7 15v3M12 10v8M17 6v12" />
+    </>
   ),
   // Timetracker: reloj.
   reloj: (
@@ -89,12 +99,12 @@ function TabLink({
   activa: boolean;
   size?: "md" | "sm";
 }) {
-  const base = size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm";
+  const base = size === "sm" ? "px-2.5 py-1.5 text-xs" : "px-3 py-2 text-sm";
   return (
     <Link
       href={href}
       prefetch
-      className={`relative flex items-center gap-1.5 whitespace-nowrap rounded-t-lg transition-colors ${base} ${
+      className={`relative flex items-center gap-1 whitespace-nowrap rounded-t-lg transition-colors ${base} ${
         activa
           ? "text-white [text-shadow:0_0_14px_rgba(255,145,255,0.6)]"
           : "text-dc-muted hover:text-dc-text"
@@ -128,7 +138,7 @@ export function TabsNav({
   const pathname = usePathname();
 
   return (
-    <nav className={`${containerClass} flex gap-1 overflow-x-auto`}>
+    <nav className={`${containerClass} flex gap-0.5 overflow-x-auto`}>
       {tabs.map((t) => (
         <TabLink
           key={t.href}

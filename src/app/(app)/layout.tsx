@@ -16,7 +16,7 @@ const ETIQUETA_ROL: Record<string, string> = {
 };
 
 const TABS_CARGA = [
-  { href: "/dashboard", label: "Dashboard", icono: "dashboard" },
+  { href: "/dashboard", label: "Home", icono: "home" },
   { href: "/timetracker", label: "Time Tracking", icono: "reloj" },
   { href: "/viaticos", label: "Expenses", icono: "auto" },
   { href: "/vacaciones", label: "Time Off", icono: "sombrilla" },
@@ -24,8 +24,8 @@ const TABS_CARGA = [
 
 const TAB_PM = {
   href: "/rentabilidad",
-  label: "Projects",
-  icono: "pm",
+  label: "Dashboard",
+  icono: "analytics",
 };
 
 function tabsParaRol(rol: string) {
@@ -75,7 +75,7 @@ export default async function AppLayout({
           </div>
         </div>
         <div className={`${CONTENEDOR} flex items-center justify-between gap-3`}>
-          <TabsNav tabs={tabsParaRol(usuario.rol)} containerClass="flex-1 min-w-0" />
+          <TabsNav tabs={tabsParaRol(usuario.rol)} containerClass="min-w-0" />
           <div className="flex shrink-0 items-center gap-1.5 pb-1">
             {(usuario.rol === "admin" || usuario.rol === "guest") && (
               <Link
