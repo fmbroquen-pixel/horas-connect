@@ -33,11 +33,20 @@ function offsetLunes(d: Date) {
 // visual que Dropdown (bordes, radios, colores, menú flotante dc-menu) y
 // navegable con teclado (↓ abre, flechas mueven, Enter selecciona, Esc cierra,
 // Tab confirma y continúa). Expone un input hidden name=… con valor ISO.
+//
+// Modo rango (opcional): si se pasan rangeStart/rangeEnd, se destaca todo el
+// tramo (extremos sólidos + días intermedios en banda tenue) además del día
+// que controla esta instancia. Pensado para pares "Fecha inicio"/"Fecha fin"
+// que muestran el mismo rango desde sus dos calendarios. Sin esos props, el
+// comportamiento es idéntico al de un selector de fecha única.
 export function DatePicker({
   name,
   value,
   onChange,
   max,
+  min,
+  rangeStart,
+  rangeEnd,
   placeholder = "dd/mm/aaaa",
   invalido = false,
   ariaLabel,
@@ -47,6 +56,9 @@ export function DatePicker({
   value: string;
   onChange: (value: string) => void;
   max?: string;
+  min?: string;
+  rangeStart?: string;
+  rangeEnd?: string;
   placeholder?: string;
   invalido?: boolean;
   ariaLabel?: string;
@@ -57,6 +69,11 @@ export function DatePicker({
   const ref = useRef<HTMLDivElement>(null);
 
   const maxDate = max ? fromISO(max) : null;
+  const minDate = min ? fromISO(min) : null;
+  // "||" (no "??"): un rangeStart/rangeEnd vacío ("") también debe caer al
+  // valor propio de esta instancia, no solo cuando es undefined.
+  const rStart = fromISO(rangeStart || value);
+  const rEnd = fromISO(rangeEnd || value);
 
   useEffect(() => {
     if (!open) return;
@@ -68,14 +85,15 @@ export function DatePicker({
   }, [open]);
 
   const abrir = () => {
-    setCursor(fromISO(value) ?? maxDate ?? new Date());
+    setCursor(fromISO(value) ?? minDate ?? maxDate ?? new Date());
     setOpen(true);
   };
 
-  const excede = (d: Date) => (maxDate ? d > maxDate : false);
+  const fueraDeRango = (d: Date) =>
+    (maxDate ? d > maxDate : false) || (minDate ? d < minDate : false);
 
   const elegir = (d: Date) => {
-    if (excede(d)) return;
+    if (fueraDeRango(d)) return;
     onChange(toISO(d));
     setOpen(false);
     // Devolver el foco al trigger para poder tabular al siguiente campo.
@@ -86,7 +104,9 @@ export function DatePicker({
     setCursor((c) => {
       const n = new Date(c);
       n.setDate(n.getDate() + dias);
-      return maxDate && n > maxDate ? maxDate : n;
+      if (maxDate && n > maxDate) return maxDate;
+      if (minDate && n < minDate) return minDate;
+      return n;
     });
   };
 
@@ -139,7 +159,6 @@ export function DatePicker({
     d.setDate(inicioGrilla.getDate() + i);
     celdas.push(d);
   }
-  const seleccionada = fromISO(value);
 
   return (
     <div className={`relative ${className}`} ref={ref}>
@@ -187,26 +206,44 @@ export function DatePicker({
             ))}
           </div>
 
-          <div className="grid grid-cols-7 gap-0.5">
+          <div className="grid grid-cols-7 gap-x-0 gap-y-0.5">
             {celdas.map((d) => {
+              const iso = toISO(d);
               const otroMes = d.getMonth() !== cursor.getMonth();
-              const sel = seleccionada && toISO(d) === toISO(seleccionada);
-              const foco = toISO(d) === toISO(cursor);
-              const deshab = excede(d);
+              const foco = iso === toISO(cursor);
+              const deshab = fueraDeRango(d);
+
+              const rangoValido = rStart && rEnd && rStart.getTime() <= rEnd.getTime();
+              const esInicio = rangoValido && iso === toISO(rStart!);
+              const esFin = rangoValido && iso === toISO(rEnd!);
+              const esUnico = esInicio && esFin;
+              const enRango = rangoValido && d > rStart! && d < rEnd!;
+
+              let redondeo = "rounded-lg";
+              let base = otroMes
+                ? "text-dc-muted/40 hover:bg-dc-line/30"
+                : "text-dc-text hover:bg-dc-line/40";
+              if (esInicio || esFin) {
+                base =
+                  "bg-dc-peri text-white [text-shadow:0_0_10px_rgba(255,145,255,0.45)] font-medium hover:brightness-110";
+                redondeo = esUnico
+                  ? "rounded-lg"
+                  : esInicio
+                    ? "rounded-l-lg rounded-r-none"
+                    : "rounded-r-lg rounded-l-none";
+              } else if (enRango) {
+                base = "rounded-none bg-dc-peri/15 text-dc-text hover:bg-dc-peri/25";
+                redondeo = "rounded-none";
+              }
+
               return (
                 <button
-                  key={toISO(d)}
+                  key={iso}
                   type="button"
                   disabled={deshab}
                   onClick={() => elegir(d)}
-                  className={`h-8 rounded-lg text-center text-sm transition ${
-                    sel
-                      ? "bg-dc-peri/25 text-white [text-shadow:0_0_10px_rgba(255,145,255,0.4)]"
-                      : foco
-                        ? "bg-dc-line/50 text-dc-text"
-                        : otroMes
-                          ? "text-dc-muted/40"
-                          : "text-dc-text hover:bg-dc-line/40"
+                  className={`h-8 text-center text-sm transition ${redondeo} ${base} ${
+                    foco && !deshab ? "ring-1 ring-inset ring-dc-peri" : ""
                   } disabled:cursor-not-allowed disabled:text-dc-muted/25 disabled:hover:bg-transparent`}
                 >
                   {d.getDate()}

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { actualizarVacacion, eliminarVacacion } from "./actions";
-import { GRID_VACACIONES } from "./registrar-boton";
+import { GRID_VACACIONES, diasHabilesEntre } from "./registrar-boton";
 import { DatePicker } from "@/components/date-picker";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM, BTN_DANGER_SM, BTN_DANGER_CONFIRM_SM } from "@/lib/ui";
 
@@ -55,6 +55,8 @@ function FormEdicion({
 }) {
   const [inicio, setInicio] = useState(vacacion.fechaInicio);
   const [fin, setFin] = useState(vacacion.fechaFin);
+  const [dias, setDias] = useState(String(vacacion.dias));
+  const [diasEditado, setDiasEditado] = useState(false);
   const accion = actualizarVacacion.bind(null, vacacion.id);
   const [state, formAction, pending] = useActionState(
     async (prev: { error?: string } | undefined, formData: FormData) => {
@@ -65,6 +67,21 @@ function FormEdicion({
     undefined,
   );
 
+  const actualizarFechas = (nuevoInicio: string, finPropuesto: string) => {
+    // La fecha de fin nunca puede ser anterior a la de inicio: se corrige
+    // automáticamente en vez de dejar guardar un rango inválido.
+    const nuevoFin =
+      nuevoInicio && finPropuesto && finPropuesto < nuevoInicio
+        ? nuevoInicio
+        : finPropuesto;
+    setInicio(nuevoInicio);
+    setFin(nuevoFin);
+    if (!diasEditado) {
+      const calculados = diasHabilesEntre(nuevoInicio, nuevoFin);
+      setDias(calculados !== null ? String(calculados) : "");
+    }
+  };
+
   return (
     <form
       action={formAction}
@@ -74,28 +91,58 @@ function FormEdicion({
         <DatePicker
           name="fechaInicio"
           value={inicio}
-          onChange={setInicio}
+          onChange={(v) => actualizarFechas(v, fin)}
+          rangeStart={inicio}
+          rangeEnd={fin}
           className="w-full"
           ariaLabel="Fecha inicio"
         />
         <DatePicker
           name="fechaFin"
           value={fin}
-          onChange={setFin}
+          onChange={(v) => actualizarFechas(inicio, v)}
+          rangeStart={inicio}
+          rangeEnd={fin}
+          min={inicio || undefined}
           className="w-full"
           ariaLabel="Fecha fin"
         />
-        <input
-          name="dias"
-          type="number"
-          min="1"
-          step="1"
-          inputMode="numeric"
-          autoComplete="off"
-          defaultValue={vacacion.dias}
-          required
-          className={`${INPUT} text-right`}
-        />
+        <div className="relative">
+          <input
+            name="dias"
+            type="number"
+            min="1"
+            step="1"
+            inputMode="numeric"
+            autoComplete="off"
+            aria-label="Días OOO"
+            value={dias}
+            onChange={(e) => {
+              setDias(e.target.value);
+              setDiasEditado(true);
+            }}
+            required
+            className={`${INPUT} ${diasEditado ? "pr-7" : ""} text-right`}
+          />
+          {diasEditado && (
+            <button
+              type="button"
+              title="Recalcular automáticamente"
+              aria-label="Recalcular automáticamente"
+              onClick={() => {
+                setDiasEditado(false);
+                const calculados = diasHabilesEntre(inicio, fin);
+                setDias(calculados !== null ? String(calculados) : "");
+              }}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-dc-muted transition hover:text-dc-peri"
+            >
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M21 12a9 9 0 1 1-3-6.7" />
+                <path d="M21 3v6h-6" />
+              </svg>
+            </button>
+          )}
+        </div>
         <span className="flex justify-end gap-1">
           <button
             type="submit"

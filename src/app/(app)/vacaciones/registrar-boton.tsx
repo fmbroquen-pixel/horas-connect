@@ -15,13 +15,22 @@ const LABEL = "mb-1 block text-xs text-dc-muted";
 export const GRID_VACACIONES =
   "grid min-w-[560px] grid-cols-[150px_150px_120px_130px] items-center gap-2";
 
-// Cantidad de días calendario entre dos fechas ISO, ambas inclusive.
-function diasEntre(inicioISO: string, finISO: string): number | null {
+// Cantidad de días hábiles (excluye sábados y domingos) entre dos fechas ISO,
+// ambas inclusive. Es el cálculo por defecto de "Días OOO"; el usuario puede
+// editarlo a mano para contemplar feriados u otras excepciones.
+export function diasHabilesEntre(inicioISO: string, finISO: string): number | null {
   if (!inicioISO || !finISO) return null;
   const inicio = new Date(inicioISO + "T00:00:00");
   const fin = new Date(finISO + "T00:00:00");
   if (isNaN(inicio.getTime()) || isNaN(fin.getTime()) || fin < inicio) return null;
-  return Math.round((fin.getTime() - inicio.getTime()) / 86400000) + 1;
+  let dias = 0;
+  const cur = new Date(inicio);
+  while (cur <= fin) {
+    const diaSemana = cur.getDay(); // 0 = domingo, 6 = sábado
+    if (diaSemana !== 0 && diaSemana !== 6) dias++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dias;
 }
 
 // CTA "+ Nueva solicitud" + modal con el mismo formulario de carga.
@@ -84,14 +93,26 @@ export function RegistrarVacacionesBoton() {
     });
   };
 
-  const actualizarFechas = (nuevoInicio: string, nuevoFin: string) => {
+  const actualizarFechas = (nuevoInicio: string, finPropuesto: string) => {
+    // La fecha de fin nunca puede ser anterior a la de inicio: se corrige
+    // automáticamente en vez de dejar guardar un rango inválido.
+    const nuevoFin =
+      nuevoInicio && finPropuesto && finPropuesto < nuevoInicio
+        ? nuevoInicio
+        : finPropuesto;
     setInicio(nuevoInicio);
     setFin(nuevoFin);
     setCampoError(undefined);
     if (!diasEditado) {
-      const calculados = diasEntre(nuevoInicio, nuevoFin);
+      const calculados = diasHabilesEntre(nuevoInicio, nuevoFin);
       setDias(calculados !== null ? String(calculados) : "");
     }
+  };
+
+  const recalcular = () => {
+    setDiasEditado(false);
+    const calculados = diasHabilesEntre(inicio, fin);
+    setDias(calculados !== null ? String(calculados) : "");
   };
 
   const borde = (campo: string) =>
@@ -117,6 +138,8 @@ export function RegistrarVacacionesBoton() {
                   name="fechaInicio"
                   value={inicio}
                   onChange={(v) => actualizarFechas(v, fin)}
+                  rangeStart={inicio}
+                  rangeEnd={fin}
                   invalido={campoError === "fechaInicio"}
                   className="w-full"
                   ariaLabel="Fecha inicio"
@@ -128,6 +151,9 @@ export function RegistrarVacacionesBoton() {
                   name="fechaFin"
                   value={fin}
                   onChange={(v) => actualizarFechas(inicio, v)}
+                  rangeStart={inicio}
+                  rangeEnd={fin}
+                  min={inicio || undefined}
                   invalido={campoError === "fechaFin"}
                   className="w-full"
                   ariaLabel="Fecha fin"
@@ -135,9 +161,27 @@ export function RegistrarVacacionesBoton() {
               </div>
             </div>
 
-            <label className="block" data-campo="dias">
-              <span className={LABEL}>Días OOO</span>
+            <div data-campo="dias">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <label htmlFor="dias-ooo" className="text-xs text-dc-muted">
+                  Días OOO
+                </label>
+                {diasEditado && (
+                  <button
+                    type="button"
+                    onClick={recalcular}
+                    className="inline-flex items-center gap-1 text-[11px] text-dc-peri transition hover:text-dc-pink"
+                  >
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M21 12a9 9 0 1 1-3-6.7" />
+                      <path d="M21 3v6h-6" />
+                    </svg>
+                    Recalcular automáticamente
+                  </button>
+                )}
+              </div>
               <input
+                id="dias-ooo"
                 name="dias"
                 type="number"
                 min="1"
@@ -154,10 +198,11 @@ export function RegistrarVacacionesBoton() {
                 className={`${INPUT} ${borde("dias")}`}
               />
               <span className="mt-1 block text-[11px] text-dc-muted">
-                Se calcula solo a partir del rango; podés corregirlo (por ejemplo,
-                para descontar fines de semana).
+                Se calcula solo a partir del rango, excluyendo sábados y
+                domingos; podés corregirlo (por ejemplo, para descontar
+                feriados).
               </span>
-            </label>
+            </div>
 
             <div className="flex justify-end gap-2 pt-1">
               <button type="button" onClick={() => setOpen(false)} className={BTN_SECONDARY}>

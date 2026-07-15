@@ -55,6 +55,19 @@ button:not(:disabled):active {
   filter: brightness(0.9);
 }
 
+/* Inputs numéricos sin el spinner nativo del navegador (rompe la estética):
+   se ingresa el valor únicamente por teclado, sin cambiar formato, decimales
+   ni validación. Regla global para que aplique de forma consistente a
+   cualquier input[type="number"] presente o futuro. */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 /* Panel de tabla con superficie clara sobre el fondo oscuro, para que las
    tablas se lean como tarjetas bien diferenciadas. Se logra redefiniendo las
    variables de la paleta solo dentro del panel: así los inputs, bordes y
