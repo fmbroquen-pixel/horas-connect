@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { actualizarVacacion, eliminarVacacion } from "./actions";
 import { GRID_VACACIONES, diasHabilesEntre } from "./registrar-boton";
 import { DatePicker } from "@/components/date-picker";
+import { hoyISO } from "@/lib/formato";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM, BTN_DANGER_SM, BTN_DANGER_CONFIRM_SM } from "@/lib/ui";
 
 const INPUT =
@@ -94,6 +95,7 @@ function FormEdicion({
           onChange={(v) => actualizarFechas(v, fin)}
           rangeStart={inicio}
           rangeEnd={fin}
+          min={hoyISO()}
           className="w-full"
           ariaLabel="Fecha inicio"
         />
@@ -103,7 +105,7 @@ function FormEdicion({
           onChange={(v) => actualizarFechas(inicio, v)}
           rangeStart={inicio}
           rangeEnd={fin}
-          min={inicio || undefined}
+          min={inicio > hoyISO() ? inicio : hoyISO()}
           className="w-full"
           ariaLabel="Fecha fin"
         />

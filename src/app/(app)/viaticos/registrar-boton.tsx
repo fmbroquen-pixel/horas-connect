@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { crearViatico, type CampoViatico } from "./actions";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
-import { hoyISO } from "@/lib/formato";
+import { hoyISO, restarDiasISO } from "@/lib/formato";
+import { DIAS_VENTANA_CARGA } from "@/lib/ventana-carga";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import { Modal } from "@/components/ui/modal";
@@ -112,6 +113,7 @@ export function RegistrarViaticoBoton({ proyectos }: { proyectos: OpcionSelect[]
                   value={valores.fecha}
                   onChange={(v) => set("fecha", v)}
                   max={hoyISO()}
+                  min={restarDiasISO(hoyISO(), DIAS_VENTANA_CARGA)}
                   invalido={estado?.campo === "fecha"}
                   className="w-full"
                   ariaLabel="Fecha"

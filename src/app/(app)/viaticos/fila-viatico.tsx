@@ -2,7 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { actualizarViatico, eliminarViatico } from "./actions";
-import { formatMonto, hoyISO } from "@/lib/formato";
+import { formatMonto, hoyISO, restarDiasISO } from "@/lib/formato";
+import { DIAS_VENTANA_CARGA } from "@/lib/ventana-carga";
 import {
   GRID_VIATICOS,
   ETIQUETA_CONCEPTO,
@@ -113,6 +114,7 @@ function FormEdicion({
           value={fecha}
           onChange={setFecha}
           max={hoyISO()}
+          min={restarDiasISO(hoyISO(), DIAS_VENTANA_CARGA)}
           className="w-full"
           ariaLabel="Fecha"
         />

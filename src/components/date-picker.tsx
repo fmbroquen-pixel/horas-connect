@@ -85,7 +85,16 @@ export function DatePicker({
   }, [open]);
 
   const abrir = () => {
-    setCursor(fromISO(value) ?? minDate ?? maxDate ?? new Date());
+    // Sin un valor cargado, el calendario abre siempre en HOY (no en el
+    // límite inferior/superior permitido): solo se ajusta al borde más
+    // cercano si hoy mismo cae fuera del rango habilitado.
+    let inicial = fromISO(value);
+    if (!inicial) {
+      inicial = new Date();
+      if (maxDate && inicial > maxDate) inicial = maxDate;
+      if (minDate && inicial < minDate) inicial = minDate;
+    }
+    setCursor(inicial);
     setOpen(true);
   };
 

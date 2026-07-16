@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { crearVacacion } from "./actions";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
+import { hoyISO } from "@/lib/formato";
 import { Modal } from "@/components/ui/modal";
 import { ToastOk } from "@/components/ui/toast-ok";
 import { ToastAviso } from "@/components/ui/toast-aviso";
@@ -143,6 +144,7 @@ export function RegistrarVacacionesBoton() {
                   onChange={(v) => actualizarFechas(v, fin)}
                   rangeStart={inicio}
                   rangeEnd={fin}
+                  min={hoyISO()}
                   invalido={campoError === "fechaInicio"}
                   className="w-full"
                   ariaLabel="Fecha inicio"
@@ -156,7 +158,7 @@ export function RegistrarVacacionesBoton() {
                   onChange={(v) => actualizarFechas(inicio, v)}
                   rangeStart={inicio}
                   rangeEnd={fin}
-                  min={inicio || undefined}
+                  min={inicio > hoyISO() ? inicio : hoyISO()}
                   invalido={campoError === "fechaFin"}
                   className="w-full"
                   ariaLabel="Fecha fin"
