@@ -169,7 +169,7 @@ function FormEdicion({
           value={clienteId}
           onChange={setClienteId}
           options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
-          ariaLabel="Proyecto"
+          ariaLabel="Cliente"
         />
         <Dropdown
           name="etapaId"

@@ -103,13 +103,13 @@ export default async function DashboardPage({
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi etiqueta="Horas" valor={`${formatHorasHsMin(totalHoras)} hs`} />
         <Kpi etiqueta="A cobrar (USD)" valor={formatMonto(totalMonto)} destacado />
-        <Kpi etiqueta="Proyectos" valor={String(proyectosOrden.length)} />
+        <Kpi etiqueta="Clientes" valor={String(proyectosOrden.length)} />
         <Kpi etiqueta={`Vacaciones ${anioActual}`} valor={`${diasVacaciones} días`} />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-dc-line bg-dc-card p-5">
-          <h2 className="mb-3 text-sm text-white">Horas por proyecto</h2>
+          <h2 className="mb-3 text-sm text-white">Horas por cliente</h2>
           <BarrasHoras
             labels={proyectosOrden.map((p) => p.nombre)}
             horas={proyectosOrden.map((p) => p.horas)}

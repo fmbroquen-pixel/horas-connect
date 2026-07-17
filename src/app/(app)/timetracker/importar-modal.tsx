@@ -83,7 +83,7 @@ export function ImportarModal({ onCerrar }: { onCerrar: () => void }) {
             <div className="mt-4 rounded-xl border border-dc-line bg-dc-deeper/40 p-4 text-xs text-dc-muted">
               <p className="text-sm text-dc-text">Columnas obligatorias</p>
               <p className="mt-1 font-medium text-dc-peri">
-                Fecha · Proyecto · Etapa · Ownership · Horas · Modalidad
+                Fecha · Cliente · Etapa · Ownership · Horas · Modalidad
               </p>
               <ul className="mt-3 space-y-2">
                 <li className="flex gap-2">

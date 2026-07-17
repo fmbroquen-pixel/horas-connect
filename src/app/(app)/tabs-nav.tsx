@@ -124,7 +124,15 @@ function TabLink({
   );
 }
 
-export type Tab = { href: string; label: string; match?: string; icono?: string };
+// exact: la solapa solo se marca activa con la ruta exacta (para sub-solapas
+// anidadas tipo Datos/Equipo, donde una es prefijo de la otra).
+export type Tab = {
+  href: string;
+  label: string;
+  match?: string;
+  icono?: string;
+  exact?: boolean;
+};
 
 export function TabsNav({
   tabs,
@@ -147,9 +155,11 @@ export function TabsNav({
           icono={t.icono}
           size={size}
           activa={
-            pathname === t.href ||
-            pathname.startsWith(t.href + "/") ||
-            (t.match ? pathname.startsWith(t.match) : false)
+            t.exact
+              ? pathname === t.href
+              : pathname === t.href ||
+                pathname.startsWith(t.href + "/") ||
+                (t.match ? pathname.startsWith(t.match) : false)
           }
         />
       ))}

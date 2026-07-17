@@ -27,7 +27,7 @@ const INICIAL = {
 
 const OBLIGATORIOS: { campo: CampoViatico; label: string }[] = [
   { campo: "fecha", label: "Fecha" },
-  { campo: "clienteId", label: "Proyecto" },
+  { campo: "clienteId", label: "Cliente" },
   { campo: "concepto", label: "Concepto" },
   { campo: "monto", label: "Monto" },
 ];
@@ -138,16 +138,16 @@ export function RegistrarViaticoBoton({ proyectos }: { proyectos: OpcionSelect[]
             </div>
 
             <div data-campo="clienteId">
-              <span className={LABEL}>Proyecto</span>
+              <span className={LABEL}>Cliente</span>
               <Dropdown
                 name="clienteId"
                 value={valores.clienteId}
                 onChange={(v) => set("clienteId", v)}
                 options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
-                placeholder="Elegí un proyecto"
+                placeholder="Elegí un cliente"
                 invalido={estado?.campo === "clienteId"}
                 className="w-full"
-                ariaLabel="Proyecto"
+                ariaLabel="Cliente"
               />
             </div>
 

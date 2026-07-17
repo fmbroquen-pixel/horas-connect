@@ -6,9 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { hoyISO } from "@/lib/formato";
 
 // Plantilla de importación: solo las columnas editables (USD/Hora y USD Total
-// se calculan solos y no van en el archivo). Las columnas Proyecto, Etapa,
+// se calculan solos y no van en el archivo). Las columnas Cliente, Etapa,
 // Ownership y Modalidad traen listas desplegables con los valores vigentes.
-const CABECERAS = ["Fecha", "Proyecto", "Etapa", "Ownership", "Horas", "Modalidad"];
+const CABECERAS = ["Fecha", "Cliente", "Etapa", "Ownership", "Horas", "Modalidad"];
 const OWNERSHIP = ["Owner", "Backup"];
 const MODALIDAD = ["Presencial", "Virtual"];
 const FILAS_VALIDACION = 200; // filas donde se ofrecen los desplegables
@@ -57,7 +57,7 @@ export async function GET() {
   // Comentarios de ayuda en cada encabezado (formato esperado por columna).
   const NOTAS = [
     "Acepta AAAA-MM-DD o DD/MM/AAAA.",
-    "Seleccioná un proyecto existente de la lista.",
+    "Seleccioná un cliente existente de la lista.",
     "Seleccioná una etapa existente de la lista.",
     "Seleccioná un ownership existente de la lista.",
     "Acepta formato hora:minuto (ej. 1:30) o decimal (ej. 1,5).",

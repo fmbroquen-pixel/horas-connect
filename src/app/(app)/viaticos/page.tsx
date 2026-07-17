@@ -77,7 +77,7 @@ export default async function ViaticosPage({
       <div className="flex shrink-0 items-center gap-2">
         <h1 className="font-display text-lg uppercase text-white">Expenses</h1>
         <InfoButton>
-          Cargá los gastos asociados a un proyecto. El comprobante es opcional.
+          Cargá los gastos asociados a un cliente. El comprobante es opcional.
         </InfoButton>
       </div>
 
@@ -100,7 +100,7 @@ export default async function ViaticosPage({
         <div className="flex min-h-0 min-w-[860px] flex-1 flex-col">
           <div className={`dc-thead ${GRID_VIATICOS} shrink-0 border-b border-dc-line px-3`}>
             <span>Fecha</span>
-            <span>Proyecto</span>
+            <span>Cliente</span>
             <span>Concepto</span>
             <span>Moneda</span>
             <span>Monto</span>

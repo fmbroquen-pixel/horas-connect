@@ -71,10 +71,10 @@ export default async function MiPerfilPage() {
       {/* Único bloque editable por el propio guest. */}
       <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
         <h2 className="font-display text-sm uppercase text-white">
-          Proyectos asignados
+          Clientes asignados
         </h2>
         <p className="mt-1 text-xs text-dc-muted">
-          Elegí en qué proyectos cargás horas.
+          Elegí en qué clientes cargás horas.
         </p>
         <div className="mt-4">
           <ProyectosForm

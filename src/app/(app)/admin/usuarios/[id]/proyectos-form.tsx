@@ -60,7 +60,7 @@ export function ProyectosForm({
         ))}
       </div>
       <button type="submit" className={`${BTN_SECONDARY} mt-4`}>
-        Guardar proyectos asignados
+        Guardar clientes asignados
       </button>
     </form>
   );

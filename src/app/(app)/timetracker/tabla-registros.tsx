@@ -106,7 +106,7 @@ export function TablaRegistros({
                 value={campo}
                 onChange={(v) => cambiarCampo(v as CampoMasivo)}
                 options={[
-                  { value: "clienteId", label: "Proyecto" },
+                  { value: "clienteId", label: "Cliente" },
                   { value: "etapaId", label: "Etapa" },
                   { value: "ownership", label: "Ownership" },
                   { value: "modalidad", label: "Modalidad" },
@@ -121,7 +121,7 @@ export function TablaRegistros({
                   onChange={setValor}
                   options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
                   className="w-44"
-                  ariaLabel="Proyecto"
+                  ariaLabel="Cliente"
                 />
               )}
               {campo === "etapaId" && (
@@ -178,7 +178,7 @@ export function TablaRegistros({
               aria-label="Seleccionar todo"
             />
             <span>Fecha</span>
-            <span>Proyecto</span>
+            <span>Cliente</span>
             <span>Etapa</span>
             <span>Ownership</span>
             <span>Horas</span>

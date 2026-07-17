@@ -10,7 +10,7 @@ import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
 const RegistroSchema = z.object({
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Fecha inválida." }),
-  clienteId: z.string().min(1, { error: "Elegí un proyecto." }),
+  clienteId: z.string().min(1, { error: "Elegí un cliente." }),
   etapaId: z.string().min(1, { error: "Elegí una etapa." }),
   ownership: z.enum(["owner", "backup"], { error: "Elegí el ownership." }),
   modalidad: z.enum(["presencial", "virtual"], { error: "Elegí la modalidad." }),
@@ -93,7 +93,7 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
 
   const permitidos = await getProyectosPermitidos(usuarioId);
   if (!permitidos.some((c) => c.id === parsed.data.clienteId)) {
-    return { error: "No tenés asignado ese proyecto.", campo: "clienteId" as const };
+    return { error: "No tenés asignado ese cliente.", campo: "clienteId" as const };
   }
 
   const tarifa = await resolverTarifa(
@@ -254,7 +254,7 @@ export async function editarRegistros(
   if (campo === "clienteId") {
     const permitidos = await getProyectosPermitidos(usuario.id);
     if (!permitidos.some((c) => c.id === valor)) {
-      return { error: "No tenés asignado ese proyecto." };
+      return { error: "No tenés asignado ese cliente." };
     }
   }
   if (campo === "ownership" && valor !== "owner" && valor !== "backup") {

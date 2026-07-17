@@ -28,7 +28,7 @@ const VALORES_INICIALES = {
 // Campos obligatorios y su etiqueta legible, en orden de foco.
 const OBLIGATORIOS: { campo: CampoRegistro; label: string }[] = [
   { campo: "fecha", label: "Fecha" },
-  { campo: "clienteId", label: "Proyecto" },
+  { campo: "clienteId", label: "Cliente" },
   { campo: "etapaId", label: "Etapa" },
   { campo: "horas", label: "Horas" },
 ];
@@ -126,16 +126,16 @@ export function BarraCaptura({
         </div>
 
         <div className="w-44" data-campo="clienteId">
-          <span className={LABEL}>Proyecto</span>
+          <span className={LABEL}>Cliente</span>
           <Dropdown
             name="clienteId"
             value={valores.clienteId}
             onChange={(v) => set("clienteId", v)}
             options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
-            placeholder="Proyecto"
+            placeholder="Cliente"
             invalido={estado?.campo === "clienteId"}
             className="w-full"
-            ariaLabel="Proyecto"
+            ariaLabel="Cliente"
           />
         </div>
 

@@ -10,13 +10,16 @@ import type { Modalidad, Ownership } from "@/generated/prisma/client";
 // se excluyen de la importación).
 const COLUMNAS_REQUERIDAS = [
   "fecha",
-  "proyecto",
+  "cliente",
   "etapa",
   "ownership",
   "horas",
   "modalidad",
 ];
 const COLUMNAS_IGNORADAS = ["usd/hora", "usd total", "usd/h", "usd", "total"];
+// Alias aceptados: archivos generados con la plantilla anterior usaban
+// "Proyecto" como cabecera; se sigue aceptando como sinónimo de "Cliente".
+const ALIAS_COLUMNAS: Record<string, string> = { proyecto: "cliente" };
 
 export type FilaPreview = {
   fila: number;
@@ -113,7 +116,9 @@ async function procesar(usuarioId: string, archivo: File) {
   const leido = await leerArchivo(archivo);
   if (!leido) return null;
 
-  const headersNorm = leido.headers.map(normalizar);
+  const headersNorm = leido.headers
+    .map(normalizar)
+    .map((h) => ALIAS_COLUMNAS[h] ?? h);
   const columnasFaltantes = COLUMNAS_REQUERIDAS.filter(
     (c) => !headersNorm.includes(c),
   );
@@ -176,7 +181,7 @@ async function procesar(usuarioId: string, archivo: File) {
     const val = (col: string) => String(cols[idx(col)] ?? "").trim();
     const rawFecha = cols[idx("fecha")];
     const fechaStr = val("fecha");
-    const proyecto = val("proyecto");
+    const proyecto = val("cliente");
     const etapa = val("etapa");
     const ownershipRaw = normalizar(val("ownership"));
     const horasStr = val("horas");
@@ -189,8 +194,8 @@ async function procesar(usuarioId: string, archivo: File) {
     else if (new Date(fechaISO + "T00:00:00") > hoy) errores.push("Fecha futura");
 
     const proy = proyPorNombre.get(normalizar(proyecto));
-    if (!proyecto) errores.push("Falta el proyecto");
-    else if (!proy) errores.push("Proyecto inexistente o no asignado");
+    if (!proyecto) errores.push("Falta el cliente");
+    else if (!proy) errores.push("Cliente inexistente o no asignado");
 
     const et = etapaPorNombre.get(normalizar(etapa));
     if (!etapa) errores.push("Falta la etapa");

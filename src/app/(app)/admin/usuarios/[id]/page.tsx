@@ -97,12 +97,12 @@ export default async function UsuarioDetallePage({
       {asignaProyectos && (
         <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
           <h2 className="font-display text-sm uppercase text-white">
-            Proyectos asignados
+            Clientes asignados
           </h2>
           <p className="mt-1 text-xs text-dc-muted">
             {usuario.rol === "reader"
-              ? "Limitan qué proyectos puede ver en el informe de rentabilidad."
-              : "Limitan en qué proyectos puede cargar horas."}
+              ? "Limitan qué clientes puede ver en el informe de rentabilidad."
+              : "Limitan en qué clientes puede cargar horas."}
           </p>
           <div className="mt-4">
             <ProyectosForm

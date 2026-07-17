@@ -4,7 +4,7 @@ import { TabsNav } from "../tabs-nav";
 
 const SECCIONES = [
   { href: "/admin/usuarios", label: "Usuarios" },
-  { href: "/admin/clientes", label: "Proyectos" },
+  { href: "/admin/clientes", label: "Clientes" },
   { href: "/admin/etapas", label: "Etapas" },
 ];
 

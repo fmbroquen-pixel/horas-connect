@@ -18,7 +18,7 @@ const ETIQUETA_MODALIDAD: Record<string, string> = {
 // Columnas de la exportación (mismas de la tabla).
 const COLUMNAS = [
   "Fecha",
-  "Proyecto",
+  "Cliente",
   "Etapa",
   "Ownership",
   "Horas",

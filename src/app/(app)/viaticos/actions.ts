@@ -13,7 +13,7 @@ import {
 
 const ViaticoSchema = z.object({
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Fecha inválida." }),
-  clienteId: z.string().min(1, { error: "Elegí un proyecto." }),
+  clienteId: z.string().min(1, { error: "Elegí un cliente." }),
   moneda: z.enum(["USD", "ARS"], { error: "Elegí la moneda." }),
   monto: z.coerce.number().positive({ error: "El monto debe ser mayor a cero." }),
   concepto: z.enum(["combustible", "alojamiento", "traslado", "almuerzo", "otros"], {
@@ -55,7 +55,7 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
 
   const permitidos = await getProyectosPermitidos(usuarioId);
   if (!permitidos.some((c) => c.id === parsed.data.clienteId)) {
-    return { error: "No tenés asignado ese proyecto.", campo: "clienteId" as const };
+    return { error: "No tenés asignado ese cliente.", campo: "clienteId" as const };
   }
 
   return { datos: { ...parsed.data, fecha } };

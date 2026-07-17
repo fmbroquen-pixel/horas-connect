@@ -37,8 +37,8 @@ export default async function RentabilidadPage({
           </h1>
           <p className="text-sm text-dc-muted">
             {r.esAdmin
-              ? "Rentabilidad de todos los proyectos y usuarios"
-              : "Tus proyectos asignados"}
+              ? "Rentabilidad de todos los clientes y usuarios"
+              : "Tus clientes asignados"}
           </p>
         </div>
         <SelectorMes anio={anio} mes={mes} />
@@ -46,7 +46,7 @@ export default async function RentabilidadPage({
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Proyectos con actividad" value={String(r.kpis.proyectosConActividad)} />
+        <Kpi label="Clientes con actividad" value={String(r.kpis.proyectosConActividad)} />
         <Kpi label="Facturado" value={`$${formatMonto(r.kpis.facturado)}`} sub="USD" />
         <Kpi
           label="Margen global"
@@ -67,7 +67,7 @@ export default async function RentabilidadPage({
 
       {/* 01 Margen por proyecto */}
       <section>
-        <SecHead num="01" title="Margen por proyecto" sub="Facturación menos costo de mentores, en USD." />
+        <SecHead num="01" title="Margen por cliente" sub="Facturación menos costo de mentores, en USD." />
         <div className="mt-4 rounded-2xl border border-dc-line bg-dc-card p-5">
           <MargenChart
             proyectos={r.filasProyecto.map((f) => f.nombre)}
@@ -80,7 +80,7 @@ export default async function RentabilidadPage({
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b border-dc-line text-xs text-dc-muted">
-                <th className="px-4 py-2">Proyecto</th>
+                <th className="px-4 py-2">Cliente</th>
                 <th className="px-4 py-2">Facturado</th>
                 <th className="px-4 py-2">Costo mentores</th>
                 <th className="px-4 py-2">Margen</th>
@@ -128,7 +128,7 @@ export default async function RentabilidadPage({
 
       {/* 02 Horas por proyecto y mentor */}
       <section>
-        <SecHead num="02" title="Horas por proyecto y mentor" sub="Horas entregadas, apiladas por quién las entregó." />
+        <SecHead num="02" title="Horas por cliente y mentor" sub="Horas entregadas, apiladas por quién las entregó." />
         <div className="mt-4 rounded-2xl border border-dc-line bg-dc-card p-5">
           <HorasStackChart stack={r.horasStack} />
         </div>
@@ -145,7 +145,7 @@ export default async function RentabilidadPage({
                 <tbody>
                   <FilaResumen k="Horas" v={`${formatHorasHsMin(m.horas)} hs`} />
                   <FilaResumen k="Honorarios" v={`USD ${formatMonto(m.honorarios)}`} />
-                  <FilaResumen k="Proyectos" v={String(m.proyectos)} />
+                  <FilaResumen k="Clientes" v={String(m.proyectos)} />
                   <FilaResumen k="USD/hora" v={m.usdPorHora === null ? "—" : formatMonto(m.usdPorHora)} />
                 </tbody>
               </table>

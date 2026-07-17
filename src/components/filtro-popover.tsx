@@ -106,7 +106,7 @@ export function FiltroPopover({
               </div>
               {!soloFechas && (
                 <div>
-                  <label className="mb-1 block text-xs text-dc-muted">Proyecto</label>
+                  <label className="mb-1 block text-xs text-dc-muted">Cliente</label>
                   <Dropdown
                     name="proyecto"
                     value={proyectoSel}
@@ -116,7 +116,7 @@ export function FiltroPopover({
                       ...proyectos.map((p) => ({ value: p.id, label: p.nombre })),
                     ]}
                     placeholder="Todos"
-                    ariaLabel="Proyecto"
+                    ariaLabel="Cliente"
                   />
                 </div>
               )}
