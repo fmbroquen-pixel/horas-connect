@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { actualizarVacacion, eliminarVacacion } from "./actions";
-import { GRID_VACACIONES, diasHabilesEntre } from "./registrar-boton";
+import { GRID_VACACIONES, diasHabilesEntre, type VacacionFila } from "./tipos";
 import { DatePicker } from "@/components/date-picker";
 import { hoyISO } from "@/lib/formato";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM, BTN_DANGER_SM, BTN_DANGER_CONFIRM_SM } from "@/lib/ui";
@@ -10,20 +10,13 @@ import { BTN_PRIMARY_SM, BTN_SECONDARY_SM, BTN_DANGER_SM, BTN_DANGER_CONFIRM_SM 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
 
-export type VacacionFila = {
-  id: string;
-  fechaInicio: string;
-  fechaFin: string;
-  dias: number;
-};
-
 export function FilaVacacion({ vacacion }: { vacacion: VacacionFila }) {
   const [editando, setEditando] = useState(false);
 
   if (!editando) {
     return (
       <div className="border-b border-dc-line px-3 py-2 last:border-0">
-        <div className={GRID_VACACIONES} style={{ gridTemplateColumns: "minmax(150px,1fr) minmax(150px,1fr) minmax(120px,1fr) 130px" }}>
+        <div className={GRID_VACACIONES}>
           <span className="text-center text-sm text-dc-text">{mostrarFecha(vacacion.fechaInicio)}</span>
           <span className="text-center text-sm text-dc-text">{mostrarFecha(vacacion.fechaFin)}</span>
           <span className="text-center text-sm tabular-nums text-dc-text">
@@ -88,7 +81,7 @@ function FormEdicion({
       action={formAction}
       className="border-b border-dc-line bg-dc-card px-3 py-2 last:border-0"
     >
-      <div className={GRID_VACACIONES} style={{ gridTemplateColumns: "minmax(150px,1fr) minmax(150px,1fr) minmax(120px,1fr) 130px" }}>
+      <div className={GRID_VACACIONES}>
         <DatePicker
           name="fechaInicio"
           value={inicio}

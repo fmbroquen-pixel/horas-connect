@@ -8,33 +8,11 @@ import { Modal } from "@/components/ui/modal";
 import { ToastOk } from "@/components/ui/toast-ok";
 import { ToastAviso } from "@/components/ui/toast-aviso";
 import { DatePicker } from "@/components/date-picker";
+import { diasHabilesEntre } from "./tipos";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
 const LABEL = "mb-1 block text-xs text-dc-muted";
-
-// Clases Tailwind para grid. Se complementan con style inline en page.tsx
-// que aplica gridTemplateColumns, ya que los valores arbitrarios de
-// grid-cols-[...] no se compilaban en Tailwind v4.
-export const GRID_VACACIONES = "grid gap-2 items-center";
-
-// Cantidad de días hábiles (excluye sábados y domingos) entre dos fechas ISO,
-// ambas inclusive. Es el cálculo por defecto de "Días OOO"; el usuario puede
-// editarlo a mano para contemplar feriados u otras excepciones.
-export function diasHabilesEntre(inicioISO: string, finISO: string): number | null {
-  if (!inicioISO || !finISO) return null;
-  const inicio = new Date(inicioISO + "T00:00:00");
-  const fin = new Date(finISO + "T00:00:00");
-  if (isNaN(inicio.getTime()) || isNaN(fin.getTime()) || fin < inicio) return null;
-  let dias = 0;
-  const cur = new Date(inicio);
-  while (cur <= fin) {
-    const diaSemana = cur.getDay(); // 0 = domingo, 6 = sábado
-    if (diaSemana !== 0 && diaSemana !== 6) dias++;
-    cur.setDate(cur.getDate() + 1);
-  }
-  return dias;
-}
 
 // CTA "+ Nueva solicitud" + modal con el mismo formulario de carga.
 export function RegistrarVacacionesBoton() {

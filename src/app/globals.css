@@ -236,13 +236,3 @@ input[type="number"]::-webkit-inner-spin-button {
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
-
-/* Grilla específica para tabla de vacaciones: 4 columnas fluidas con
-   mínimos garantizados para evitar compresión de headers. */
-.grid-vacaciones {
-  display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) minmax(120px, 1fr) 130px;
-  gap: 8px;
-  align-items: center;
-  min-width: 700px;
-}
