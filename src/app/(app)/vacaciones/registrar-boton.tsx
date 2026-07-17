@@ -13,11 +13,10 @@ const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
 const LABEL = "mb-1 block text-xs text-dc-muted";
 
-// Columnas fluidas con mínimo (como Time Tracking y Expenses): se reparten
-// todo el ancho del panel de forma pareja, con o sin registros, en vez de
-// comprimirse a la izquierda. La de acciones queda fija.
+// Columnas fluidas para garantizar headers legibles: 150px mínimo para fechas,
+// 120px para días, 130px fijo para acciones, gap-2 para consistencia.
 export const GRID_VACACIONES =
-  "grid min-w-[560px] grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_minmax(120px,1fr)_150px] items-center gap-3";
+  "grid min-w-[700px] grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_minmax(120px,1fr)_130px] items-center gap-2";
 
 // Cantidad de días hábiles (excluye sábados y domingos) entre dos fechas ISO,
 // ambas inclusive. Es el cálculo por defecto de "Días OOO"; el usuario puede
