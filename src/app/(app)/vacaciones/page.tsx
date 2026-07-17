@@ -67,8 +67,11 @@ export default async function VacacionesPage({
       </div>
 
       <div className="mt-4 flex min-h-0 flex-1 overflow-x-auto dc-panel">
-        <div className="flex min-h-0 flex-1 flex-col" style={{ minWidth: "700px" }}>
-          <div className={`dc-thead ${GRID_VACACIONES} shrink-0 border-b border-dc-line px-3`}>
+        <div className="flex min-h-0 min-w-[700px] flex-1 flex-col">
+          <div
+            className={`dc-thead ${GRID_VACACIONES} shrink-0 border-b border-dc-line px-3`}
+            style={{ gridTemplateColumns: "minmax(150px,1fr) minmax(150px,1fr) minmax(120px,1fr) 130px" }}
+          >
             <span>Fecha inicio</span>
             <span>Fecha fin</span>
             <span>Días OOO</span>

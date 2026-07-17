@@ -13,9 +13,10 @@ const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
 const LABEL = "mb-1 block text-xs text-dc-muted";
 
-// Grilla definida en globals.css como .grid-vacaciones para evitar
-// problemas con valores arbitrarios de Tailwind que no se compilaban.
-export const GRID_VACACIONES = "grid-vacaciones";
+// Clases Tailwind para grid. Se complementan con style inline en page.tsx
+// que aplica gridTemplateColumns, ya que los valores arbitrarios de
+// grid-cols-[...] no se compilaban en Tailwind v4.
+export const GRID_VACACIONES = "grid gap-2 items-center";
 
 // Cantidad de días hábiles (excluye sábados y domingos) entre dos fechas ISO,
 // ambas inclusive. Es el cálculo por defecto de "Días OOO"; el usuario puede
