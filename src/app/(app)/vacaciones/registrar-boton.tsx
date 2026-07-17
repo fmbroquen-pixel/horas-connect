@@ -13,10 +13,10 @@ const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
 const LABEL = "mb-1 block text-xs text-dc-muted";
 
-// Columnas fluidas para garantizar headers legibles: 150px mínimo para fechas,
-// 120px para días, 130px fijo para acciones, gap-2 para consistencia.
-export const GRID_VACACIONES =
-  "grid min-w-[700px] grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_minmax(120px,1fr)_130px] items-center gap-2";
+// Columnas fluidas: replica la estructura de Expenses pero con 4 columnas.
+// min-w-[700px] para evitar compresión, gap-2 consistente con otros módulos.
+export const GRID_VACACIONES = "grid min-w-[700px] gap-2 items-center" +
+  " grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_minmax(120px,1fr)_130px]";
 
 // Cantidad de días hábiles (excluye sábados y domingos) entre dos fechas ISO,
 // ambas inclusive. Es el cálculo por defecto de "Días OOO"; el usuario puede
