@@ -68,20 +68,22 @@ export default async function AppLayout({
 
   return (
     <div className="flex h-dvh overflow-hidden bg-dc-deeper">
-      <SidebarDesktop items={items} marca={<Marca variant="header" />} />
+      <SidebarDesktop items={items} marca={<Marca variant="core" />} />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {/* Header de una sola altura (h-12), continua con el tope de la
+            sidebar: el contenido es el protagonista, no el branding. */}
         <header className="relative z-50 shrink-0 border-b border-dc-line bg-dc-deep">
-          <div className="flex items-center justify-between gap-3 px-4 py-3 md:px-8">
+          <div className="flex h-12 items-center justify-between gap-3 px-4 md:px-6">
             <div className="flex min-w-0 items-center gap-3">
-              <SidebarMobile items={items} marca={<Marca variant="header" />} />
+              <SidebarMobile items={items} marca={<Marca variant="core" />} />
               {/* En desktop la marca vive en la sidebar; acá solo en mobile. */}
               <Link
                 href="/dashboard"
                 aria-label="CORE — Distrito Connect (Embarca)"
                 className="lg:hidden"
               >
-                <Marca variant="header" />
+                <Marca variant="core" />
               </Link>
             </div>
             <div className="flex shrink-0 items-center gap-3 text-sm">

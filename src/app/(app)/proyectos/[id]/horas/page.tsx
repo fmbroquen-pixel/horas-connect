@@ -127,6 +127,7 @@ export default async function ProyectoHorasPage({
               proyectos={opcionCliente}
               etapas={opcionesEtapa}
               tarifas={tarifas}
+              clienteIdInicial={cliente.id}
             />
           </div>
         )}
@@ -153,7 +154,10 @@ export default async function ProyectoHorasPage({
               de datos, sin duplicados.
             </InfoButton>
           </div>
-          <RegistrarViaticoBoton proyectos={opcionCliente} />
+          <RegistrarViaticoBoton
+            proyectos={opcionCliente}
+            clienteIdInicial={cliente.id}
+          />
         </div>
 
         <div className="mt-4 overflow-x-auto dc-panel">

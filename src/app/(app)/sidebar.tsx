@@ -72,7 +72,11 @@ export function SidebarDesktop({
 }) {
   return (
     <aside className="hidden w-60 shrink-0 flex-col border-r border-dc-line bg-dc-deep lg:flex">
-      <div className="border-b border-dc-line px-5 py-4">{marca}</div>
+      {/* Misma altura (h-12) que el header del contenido: una sola barra
+          continua en todo el ancho, sin saltos. */}
+      <div className="flex h-12 shrink-0 items-center border-b border-dc-line px-4">
+        {marca}
+      </div>
       <nav aria-label="Navegación principal" className="min-h-0 flex-1 overflow-y-auto p-3">
         <NavItems items={items} />
       </nav>
@@ -138,7 +142,7 @@ export function SidebarMobile({
             aria-label="Navegación principal"
             className="dc-pop-in absolute inset-y-0 left-0 flex w-64 flex-col border-r border-dc-line bg-dc-deep shadow-[0_0_60px_rgba(0,0,0,0.6)]"
           >
-            <div className="flex items-center justify-between border-b border-dc-line px-5 py-4">
+            <div className="flex h-12 shrink-0 items-center justify-between border-b border-dc-line px-4">
               {marca}
               <button
                 type="button"
