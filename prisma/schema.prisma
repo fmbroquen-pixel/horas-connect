@@ -62,16 +62,85 @@ model Cliente {
   producto      String?
   fechaInicio   DateTime? @map("fecha_inicio") @db.Date
 
+  // Enlace al tablero operativo externo del proyecto (sección Proyectos).
+  tableroUrl String? @map("tablero_url")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  registros     RegistroHoras[]
-  asignaciones  ProyectoAsignado[]
-  viaticos      Viatico[]
-  facturaciones Facturacion[]
-  equipo        MiembroEquipo[]
+  registros       RegistroHoras[]
+  asignaciones    ProyectoAsignado[]
+  viaticos        Viatico[]
+  facturaciones   Facturacion[]
+  equipo          MiembroEquipo[]
+  semaforoEventos SemaforoEvento[]
+  etapaEventos    EtapaEvento[]
+  tareas          TareaProyecto[]
 
   @@map("clientes")
+}
+
+// ── Sección Proyectos ──────────────────────────────────────────────────────
+// Un "proyecto" es el cliente enriquecido: no existe una entidad aparte.
+// El estado del semáforo y la etapa actual se registran como eventos: el
+// vigente es el último, y el resto queda como historial con responsable.
+
+enum SemaforoEstado {
+  verde
+  amarillo
+  rojo
+}
+
+model SemaforoEvento {
+  id          String         @id @default(cuid())
+  clienteId   String         @map("cliente_id")
+  cliente     Cliente        @relation(fields: [clienteId], references: [id])
+  estado      SemaforoEstado
+  creadoPorId String         @map("creado_por_id")
+  creadoPor   Usuario        @relation(fields: [creadoPorId], references: [id])
+  createdAt   DateTime       @default(now())
+
+  @@index([clienteId, createdAt])
+  @@map("semaforo_eventos")
+}
+
+model EtapaEvento {
+  id          String   @id @default(cuid())
+  clienteId   String   @map("cliente_id")
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+  etapaId     String   @map("etapa_id")
+  etapa       Etapa    @relation(fields: [etapaId], references: [id])
+  creadoPorId String   @map("creado_por_id")
+  creadoPor   Usuario  @relation(fields: [creadoPorId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([clienteId, createdAt])
+  @@map("etapa_eventos")
+}
+
+enum EstadoTarea {
+  pendiente
+  en_curso
+  hecha
+}
+
+// Tareas/hitos del cronograma (Gantt) del proyecto.
+model TareaProyecto {
+  id          String      @id @default(cuid())
+  clienteId   String      @map("cliente_id")
+  cliente     Cliente     @relation(fields: [clienteId], references: [id])
+  titulo      String
+  fechaInicio DateTime    @map("fecha_inicio") @db.Date
+  fechaFin    DateTime    @map("fecha_fin") @db.Date
+  estado      EstadoTarea @default(pendiente)
+  responsable String?
+  orden       Int         @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clienteId, fechaInicio])
+  @@map("tareas_proyecto")
 }
 
 // Integrantes del equipo del cliente (contactos del lado del cliente, no
@@ -152,6 +221,8 @@ model Usuario {
   proyectosAsignados ProyectoAsignado[]
   viaticos           Viatico[]
   vacaciones         Vacacion[]
+  semaforoEventos    SemaforoEvento[]
+  etapaEventos       EtapaEvento[]
 
   @@map("usuarios")
 }
@@ -184,6 +255,7 @@ model Etapa {
 
   registros RegistroHoras[]
   viaticos  Viatico[]
+  eventos   EtapaEvento[]
 
   @@map("temas")
 }

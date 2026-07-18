@@ -111,6 +111,7 @@ export async function crearViatico(
   });
 
   revalidatePath("/viaticos");
+  revalidatePath("/proyectos", "layout");
   return {};
 }
 
@@ -152,6 +153,7 @@ export async function actualizarViatico(
   });
 
   revalidatePath("/viaticos");
+  revalidatePath("/proyectos", "layout");
   return {};
 }
 
@@ -174,4 +176,5 @@ export async function eliminarViatico(id: string): Promise<void> {
   });
 
   revalidatePath("/viaticos");
+  revalidatePath("/proyectos", "layout");
 }

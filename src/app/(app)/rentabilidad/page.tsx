@@ -33,7 +33,7 @@ export default async function RentabilidadPage({
             DISTRITO CONNECT · INFORME MENSUAL
           </p>
           <h1 className="mt-1 font-display text-xl uppercase text-white">
-            Dashboard
+            Analytics
           </h1>
           <p className="text-sm text-dc-muted">
             {r.esAdmin

@@ -17,7 +17,22 @@ function PendingBar() {
   );
 }
 
-const ICONOS: Record<string, React.ReactNode> = {
+export const ICONOS: Record<string, React.ReactNode> = {
+  // Proyectos: maletín.
+  proyectos: (
+    <>
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+      <path d="M3 12h18" />
+    </>
+  ),
+  // Settings: engranaje simplificado.
+  settings: (
+    <>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" />
+    </>
+  ),
   // Home: casa.
   home: (
     <>
@@ -67,7 +82,7 @@ const ICONOS: Record<string, React.ReactNode> = {
   ),
 };
 
-function TabIcono({ id }: { id: string }) {
+export function TabIcono({ id }: { id: string }) {
   return (
     <svg
       viewBox="0 0 24 24"

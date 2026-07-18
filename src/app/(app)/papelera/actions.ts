@@ -100,9 +100,11 @@ export async function restaurarItem(
     await prisma.registroHoras.updateMany({ where: { id, ...scope }, data });
     revalidatePath("/timetracker");
     revalidatePath("/dashboard");
+    revalidatePath("/proyectos", "layout");
   } else if (tipo === "viatico") {
     await prisma.viatico.updateMany({ where: { id, ...scope }, data });
     revalidatePath("/viaticos");
+    revalidatePath("/proyectos", "layout");
   } else {
     await prisma.vacacion.updateMany({ where: { id, ...scope }, data });
     revalidatePath("/vacaciones");

@@ -139,6 +139,7 @@ export async function crearRegistro(
 
   revalidatePath("/timetracker");
   revalidatePath("/dashboard");
+  revalidatePath("/proyectos", "layout");
   return {};
 }
 
@@ -189,6 +190,7 @@ export async function actualizarRegistro(
 
   revalidatePath("/timetracker");
   revalidatePath("/dashboard");
+  revalidatePath("/proyectos", "layout");
   return {};
 }
 
@@ -206,6 +208,7 @@ export async function eliminarRegistro(id: string): Promise<void> {
   });
   revalidatePath("/timetracker");
   revalidatePath("/dashboard");
+  revalidatePath("/proyectos", "layout");
 }
 
 // Borrado masivo de las filas seleccionadas (solo las propias, o cualquiera
@@ -225,6 +228,7 @@ export async function eliminarRegistros(ids: string[]): Promise<void> {
   });
   revalidatePath("/timetracker");
   revalidatePath("/dashboard");
+  revalidatePath("/proyectos", "layout");
 }
 
 export type CampoMasivo = "clienteId" | "etapaId" | "ownership" | "modalidad";
@@ -298,5 +302,6 @@ export async function editarRegistros(
 
   revalidatePath("/timetracker");
   revalidatePath("/dashboard");
+  revalidatePath("/proyectos", "layout");
   return { actualizados };
 }

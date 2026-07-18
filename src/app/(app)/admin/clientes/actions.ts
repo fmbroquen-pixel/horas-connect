@@ -4,7 +4,27 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
+import { getSesionActual } from "@/lib/auth";
+import { getAccesoProyecto } from "@/lib/proyecto-acceso";
 import { ETIQUETA_PRODUCTO, ETIQUETA_ROL_EQUIPO } from "./constantes";
+
+// El equipo del cliente se gestiona desde Settings (solo admin) y desde la
+// pestaña Equipo del proyecto (admin o mentor con ese cliente asignado).
+async function requireGestionEquipo(clienteId: string) {
+  const sesion = await getSesionActual();
+  if (sesion.estado === "autorizado" && sesion.usuario.rol === "admin") {
+    return sesion.usuario;
+  }
+  const acceso = await getAccesoProyecto(clienteId);
+  if (!acceso) throw new Error("No autorizado.");
+  return acceso.usuario;
+}
+
+// Refresca las dos vistas que muestran el equipo del cliente.
+function revalidarEquipo(clienteId: string) {
+  revalidatePath(`/admin/clientes/${clienteId}/equipo`);
+  revalidatePath("/proyectos", "layout");
+}
 
 const ClienteSchema = z.object({
   nombre: z.string().trim().min(1, { error: "El nombre es obligatorio." }),
@@ -116,7 +136,7 @@ export async function crearMiembro(
   _prevState: unknown,
   formData: FormData,
 ): Promise<{ error?: string }> {
-  await requireAdmin();
+  await requireGestionEquipo(clienteId);
   const parsed = parseMiembro(formData);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
@@ -133,7 +153,7 @@ export async function crearMiembro(
         : null,
     },
   });
-  revalidatePath(`/admin/clientes/${clienteId}/equipo`);
+  revalidarEquipo(clienteId);
   return { error: undefined };
 }
 
@@ -142,13 +162,16 @@ export async function actualizarMiembro(
   _prevState: unknown,
   formData: FormData,
 ): Promise<{ error?: string }> {
-  await requireAdmin();
+  const existente = await prisma.miembroEquipo.findUnique({ where: { id } });
+  if (!existente) return { error: "Integrante inexistente." };
+  await requireGestionEquipo(existente.clienteId);
+
   const parsed = parseMiembro(formData);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
 
-  const miembro = await prisma.miembroEquipo.update({
+  await prisma.miembroEquipo.update({
     where: { id },
     data: {
       nombre: parsed.data.nombre,
@@ -159,12 +182,15 @@ export async function actualizarMiembro(
         : null,
     },
   });
-  revalidatePath(`/admin/clientes/${miembro.clienteId}/equipo`);
+  revalidarEquipo(existente.clienteId);
   return { error: undefined };
 }
 
 export async function eliminarMiembro(id: string) {
-  await requireAdmin();
-  const miembro = await prisma.miembroEquipo.delete({ where: { id } });
-  revalidatePath(`/admin/clientes/${miembro.clienteId}/equipo`);
+  const existente = await prisma.miembroEquipo.findUnique({ where: { id } });
+  if (!existente) return;
+  await requireGestionEquipo(existente.clienteId);
+
+  await prisma.miembroEquipo.delete({ where: { id } });
+  revalidarEquipo(existente.clienteId);
 }

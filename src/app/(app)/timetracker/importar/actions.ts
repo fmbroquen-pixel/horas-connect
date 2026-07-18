@@ -320,6 +320,7 @@ export async function confirmarImportacion(
 
   revalidatePath("/timetracker");
   revalidatePath("/dashboard");
+  revalidatePath("/proyectos", "layout");
   const omitidas = r.filas.length - r.validas.length;
   return { importadas: r.validas.length, omitidas };
 }
