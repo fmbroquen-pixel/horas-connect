@@ -39,19 +39,12 @@ export function BarraCaptura({
   proyectos,
   etapas,
   tarifas,
-  clienteIdInicial = "",
 }: {
   proyectos: OpcionSelect[];
   etapas: OpcionSelect[];
   tarifas: MapaTarifas;
-  // Preselecciona el cliente (p. ej. al cargar desde la pestaña Horas de un
-  // proyecto, donde el cliente ya está determinado por el contexto).
-  clienteIdInicial?: string;
 }) {
-  const [valores, setValores] = useState({
-    ...VALORES_INICIALES,
-    clienteId: clienteIdInicial,
-  });
+  const [valores, setValores] = useState(VALORES_INICIALES);
   const [estado, setEstado] = useState<{ error?: string; campo?: CampoRegistro }>();
   const [aviso, setAviso] = useState<string | null>(null);
   const [pending, start] = useTransition();

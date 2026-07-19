@@ -33,20 +33,11 @@ const OBLIGATORIOS: { campo: CampoViatico; label: string }[] = [
 ];
 
 // CTA "+ Nuevo viático" + modal con el mismo formulario de carga.
-// clienteIdInicial preselecciona el cliente cuando el contexto ya lo define
-// (pestaña Horas y viáticos de un proyecto).
-export function RegistrarViaticoBoton({
-  proyectos,
-  clienteIdInicial = "",
-}: {
-  proyectos: OpcionSelect[];
-  clienteIdInicial?: string;
-}) {
-  const inicial = { ...INICIAL, clienteId: clienteIdInicial };
+export function RegistrarViaticoBoton({ proyectos }: { proyectos: OpcionSelect[] }) {
   const [open, setOpen] = useState(false);
   const [toast, setToast] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
-  const [valores, setValores] = useState(inicial);
+  const [valores, setValores] = useState(INICIAL);
   const [estado, setEstado] = useState<{ error?: string; campo?: CampoViatico }>();
   const [pending, start] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -58,7 +49,7 @@ export function RegistrarViaticoBoton({
   };
 
   const abrir = () => {
-    setValores(inicial);
+    setValores(INICIAL);
     setEstado(undefined);
     if (archivoRef.current) archivoRef.current.value = "";
     setOpen(true);

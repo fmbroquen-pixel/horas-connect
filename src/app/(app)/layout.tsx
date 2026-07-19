@@ -83,20 +83,29 @@ export default async function AppLayout({
   const { items, settings } = navParaRol(usuario.rol);
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-dc-deeper">
-      {/* Header de una sola altura (h-11) en todo el ancho de la app, con
-          CORE arriba a la izquierda. El contenido es el protagonista. */}
-      <header className="relative z-50 shrink-0 border-b border-dc-line bg-dc-header">
-        <div className="flex h-11 items-center justify-between gap-3 px-4 md:px-5">
+    // Sistema de capas: canvas (fondo) → sidebar, header y workspace como
+    // tres cards flotantes con el mismo lenguaje (redondeo, borde, sombra).
+    <div className="flex h-dvh gap-3 overflow-hidden bg-dc-deeper p-3">
+      <SidebarDesktop
+        items={items}
+        settingsItem={settings}
+        marca={
+          <Link href="/dashboard" aria-label="CORE — Distrito Connect (Embarca)">
+            <Marca variant="core" />
+          </Link>
+        }
+      />
+
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+        {/* Header card: sin branding (CORE vive en la sidebar), compacto y
+            con el bloque de usuario centrado verticalmente. */}
+        <header className="relative z-50 flex h-10 shrink-0 items-center justify-between gap-3 rounded-2xl border border-dc-line bg-dc-header px-4 shadow-[0_8px_28px_rgba(0,0,0,0.28)]">
           <div className="flex min-w-0 items-center gap-3">
             <SidebarMobile
               items={items}
               settingsItem={settings}
               marca={<Marca variant="core" />}
             />
-            <Link href="/dashboard" aria-label="CORE — Distrito Connect (Embarca)">
-              <Marca variant="core" />
-            </Link>
           </div>
             <div className="flex shrink-0 items-center gap-3 text-sm">
               <PerfilBoton
@@ -121,14 +130,7 @@ export default async function AppLayout({
                 </button>
               </form>
           </div>
-        </div>
-      </header>
-
-      {/* Debajo del header, la sidebar y el workspace son dos cards
-          flotantes sobre el fondo de la app: bordes redondeados, sombra
-          sutil y aire entre sí y contra los bordes de la ventana. */}
-      <div className="flex min-h-0 flex-1 gap-3 p-3">
-        <SidebarDesktop items={items} settingsItem={settings} />
+        </header>
 
         <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-dc-line bg-dc-main shadow-[0_8px_28px_rgba(0,0,0,0.28)]">
           <div className="mx-auto flex min-h-0 w-full max-w-[1440px] flex-1 flex-col px-6 pb-10 pt-8 md:px-10">

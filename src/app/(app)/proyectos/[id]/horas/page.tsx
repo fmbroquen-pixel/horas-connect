@@ -1,24 +1,22 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
 import { formatHorasHsMin } from "@/lib/horas";
-import {
-  createAdminClient,
-  BUCKET_COMPROBANTES,
-} from "@/lib/supabase/admin";
-import { BarraCaptura } from "../../../timetracker/barra-captura";
-import { TablaRegistros } from "../../../timetracker/tabla-registros";
-import { DIAS_VENTANA_EDICION } from "../../../timetracker/constantes";
-import type { MapaTarifas, RegistroFila } from "../../../timetracker/tipos";
-import { GRID_VIATICOS, type ViaticoFila } from "../../../viaticos/tipos";
-import { RegistrarViaticoBoton } from "../../../viaticos/registrar-boton";
-import { FilaViatico } from "../../../viaticos/fila-viatico";
+import { formatMonto, formatFecha } from "@/lib/formato";
+import { BTN_SECONDARY } from "@/lib/ui";
 import { InfoButton } from "@/components/info-button";
 
-// Pestaña Horas y viáticos: reutiliza EXACTAMENTE los componentes y actions
-// de Time Tracking y Expenses, con los datos filtrados a este cliente. No
-// hay tablas propias: un registro cargado acá es el mismo registro que se ve
-// en Time Tracking (única fuente de datos), y viceversa.
+const CARD = "rounded-2xl border border-dc-line bg-dc-card p-6";
+const K = "text-xs text-dc-muted";
+const V = "mt-1 text-lg font-medium tabular-nums text-dc-text";
+
+// Pestaña Horas y viáticos: resumen de SOLO LECTURA. La carga y edición
+// viven únicamente en Time Tracking y Expenses; acá se integra y resume la
+// misma fuente de datos (registros del usuario en este cliente), y los
+// botones "Ver detalle" abren esos módulos ya filtrados por el proyecto.
+// Las actions de TT/Expenses revalidan /proyectos, así que estos números se
+// actualizan solos ante altas, ediciones o borrados.
 export default async function ProyectoHorasPage({
   params,
 }: {
@@ -27,165 +25,130 @@ export default async function ProyectoHorasPage({
   const { id } = await params;
   const acceso = await getAccesoProyecto(id);
   if (!acceso) notFound();
-  const { usuario, cliente } = acceso;
+  const { usuario } = acceso;
 
-  const [etapas, tarifasVigentes, registros, viaticos] = await Promise.all([
-    prisma.etapa.findMany({
-      where: { activo: true },
-      orderBy: [{ grupo: "asc" }, { orden: "asc" }],
+  const ahora = new Date();
+  const inicioMes = new Date(Date.UTC(ahora.getUTCFullYear(), ahora.getUTCMonth(), 1));
+
+  const scopeHoras = { usuarioId: usuario.id, clienteId: id, eliminadoEn: null };
+  const scopeViaticos = { usuarioId: usuario.id, clienteId: id, eliminadoEn: null };
+
+  const [
+    horasMes,
+    horasTotal,
+    ultimaHora,
+    viaticosMes,
+    viaticosTotal,
+    ultimoViatico,
+  ] = await Promise.all([
+    prisma.registroHoras.aggregate({
+      where: { ...scopeHoras, fecha: { gte: inicioMes } },
+      _sum: { horas: true, montoUsd: true },
     }),
-    prisma.tarifa.findMany({
-      where: { usuarioId: usuario.id, vigenteHasta: null },
+    prisma.registroHoras.aggregate({
+      where: scopeHoras,
+      _sum: { horas: true, montoUsd: true },
     }),
-    prisma.registroHoras.findMany({
-      where: { usuarioId: usuario.id, clienteId: id, eliminadoEn: null },
+    prisma.registroHoras.findFirst({
+      where: scopeHoras,
       orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
-      take: 300,
+      select: { fecha: true },
     }),
-    prisma.viatico.findMany({
-      where: { usuarioId: usuario.id, clienteId: id, eliminadoEn: null },
+    prisma.viatico.groupBy({
+      by: ["moneda"],
+      where: { ...scopeViaticos, fecha: { gte: inicioMes } },
+      _sum: { monto: true },
+    }),
+    prisma.viatico.groupBy({
+      by: ["moneda"],
+      where: scopeViaticos,
+      _sum: { monto: true },
+    }),
+    prisma.viatico.findFirst({
+      where: scopeViaticos,
       orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
-      take: 100,
+      select: { fecha: true },
     }),
   ]);
 
-  const tarifas: MapaTarifas = {};
-  for (const t of tarifasVigentes) {
-    tarifas[`${t.modalidad}-${t.ownership}`] = Number(t.valorUsd);
-  }
-  const sinTarifa = Object.keys(tarifas).length === 0;
+  const horas = (v: typeof horasMes) => {
+    const hs = Number(v._sum.horas ?? 0);
+    const usd = Number(v._sum.montoUsd ?? 0);
+    return hs > 0 ? `${formatHorasHsMin(hs)} hs · USD ${formatMonto(usd)}` : "—";
+  };
 
-  const limite = new Date();
-  limite.setDate(limite.getDate() - DIAS_VENTANA_EDICION);
-  limite.setHours(0, 0, 0, 0);
-
-  const filasHoras: RegistroFila[] = registros
-    .filter((r) => r.ownership !== "valor_cero")
-    .map((r) => ({
-      id: r.id,
-      fecha: r.fecha.toISOString().slice(0, 10),
-      clienteId: r.clienteId,
-      etapaId: r.etapaId ?? "",
-      ownership: r.ownership as "owner" | "backup",
-      modalidad: r.modalidad as "presencial" | "virtual",
-      horas: formatHorasHsMin(Number(r.horas)),
-      tarifaUsd: Number(r.tarifaUsdAplicada),
-      montoUsd: Number(r.montoUsd),
-      editable: r.fecha >= limite,
-    }));
-
-  // URLs firmadas (1 hora) para los comprobantes, igual que en Expenses.
-  const supabase = createAdminClient();
-  const filasViaticos: ViaticoFila[] = await Promise.all(
-    viaticos.map(async (v) => {
-      let archivoUrl: string | null = null;
-      if (v.archivoPath) {
-        const { data } = await supabase.storage
-          .from(BUCKET_COMPROBANTES)
-          .createSignedUrl(v.archivoPath, 3600);
-        archivoUrl = data?.signedUrl ?? null;
-      }
-      return {
-        id: v.id,
-        fecha: v.fecha.toISOString().slice(0, 10),
-        clienteId: v.clienteId,
-        etapaId: v.etapaId ?? "",
-        moneda: v.moneda,
-        monto: Number(v.monto),
-        concepto: v.concepto,
-        archivoUrl,
-      };
-    }),
-  );
-
-  // Los formularios reciben un único cliente: el del proyecto.
-  const opcionCliente = [{ id: cliente.id, nombre: cliente.nombre }];
-  const opcionesEtapa = etapas.map((e) => ({ id: e.id, nombre: e.etiqueta }));
+  // Los viáticos pueden mezclar monedas: se muestra un total por cada una.
+  const montos = (grupos: typeof viaticosMes) => {
+    const partes = grupos
+      .filter((g) => Number(g._sum.monto ?? 0) > 0)
+      .sort((a, b) => a.moneda.localeCompare(b.moneda))
+      .map((g) => `${g.moneda} ${formatMonto(Number(g._sum.monto ?? 0))}`);
+    return partes.length > 0 ? partes.join(" · ") : "—";
+  };
 
   return (
-    <div className="space-y-8">
+    <div className="grid gap-4 lg:grid-cols-2">
       {/* ── Horas ── */}
-      <section>
+      <section className={CARD}>
         <div className="flex items-center gap-2">
-          <h2 className="font-display text-sm uppercase text-white">
-            Horas del proyecto
-          </h2>
+          <h2 className="font-display text-sm uppercase text-white">Horas</h2>
           <InfoButton>
-            Misma carga que Time Tracking, limitada a este cliente: lo que
-            registrás acá aparece también en Time Tracking y viceversa.
+            Resumen de tus horas en este cliente. La carga y edición se hacen
+            en Time Tracking; misma fuente de datos, sin duplicados.
           </InfoButton>
         </div>
 
-        {sinTarifa ? (
-          <p className="mt-4 rounded-xl border border-dc-pink/40 bg-dc-pink/10 px-4 py-3 text-sm text-dc-pink">
-            Todavía no tenés una tarifa configurada, así que no podés cargar
-            horas. Pedile al administrador que la configure.
-          </p>
-        ) : (
-          <div className="mt-4">
-            <BarraCaptura
-              proyectos={opcionCliente}
-              etapas={opcionesEtapa}
-              tarifas={tarifas}
-              clienteIdInicial={cliente.id}
-            />
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className={K}>Total del mes</p>
+            <p className={V}>{horas(horasMes)}</p>
           </div>
-        )}
+          <div>
+            <p className={K}>Total acumulado</p>
+            <p className={V}>{horas(horasTotal)}</p>
+          </div>
+          <div>
+            <p className={K}>Última carga</p>
+            <p className={V}>{ultimaHora ? formatFecha(ultimaHora.fecha) : "—"}</p>
+          </div>
+        </div>
 
-        <div className="mt-3 flex max-h-[420px] min-h-0 flex-col">
-          <TablaRegistros
-            filas={filasHoras}
-            proyectos={opcionCliente}
-            etapas={opcionesEtapa}
-            tarifas={tarifas}
-          />
+        <div className="mt-6">
+          <Link href={`/timetracker?proyecto=${id}`} className={BTN_SECONDARY}>
+            Ver detalle en Time Tracking →
+          </Link>
         </div>
       </section>
 
       {/* ── Viáticos ── */}
-      <section>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <h2 className="font-display text-sm uppercase text-white">
-              Viáticos del proyecto
-            </h2>
-            <InfoButton>
-              Misma carga que Expenses, limitada a este cliente: única fuente
-              de datos, sin duplicados.
-            </InfoButton>
-          </div>
-          <RegistrarViaticoBoton
-            proyectos={opcionCliente}
-            clienteIdInicial={cliente.id}
-          />
+      <section className={CARD}>
+        <div className="flex items-center gap-2">
+          <h2 className="font-display text-sm uppercase text-white">Viáticos</h2>
+          <InfoButton>
+            Resumen de tus viáticos en este cliente. La carga y edición se
+            hacen en Expenses; misma fuente de datos, sin duplicados.
+          </InfoButton>
         </div>
 
-        <div className="mt-4 overflow-x-auto dc-panel">
-          <div className="min-w-[860px]">
-            <div className={`dc-thead ${GRID_VIATICOS} border-b border-dc-line px-3`}>
-              <span>Fecha</span>
-              <span>Cliente</span>
-              <span>Concepto</span>
-              <span>Moneda</span>
-              <span>Monto</span>
-              <span className="flex justify-center" title="Comprobante" aria-label="Comprobante">
-                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                </svg>
-              </span>
-              <span />
-            </div>
-
-            {filasViaticos.map((f) => (
-              <FilaViatico key={f.id} viatico={f} proyectos={opcionCliente} />
-            ))}
-
-            {filasViaticos.length === 0 && (
-              <p className="px-4 py-6 text-center text-sm text-dc-muted">
-                Todavía no cargaste viáticos en este proyecto.
-              </p>
-            )}
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className={K}>Total del mes</p>
+            <p className={V}>{montos(viaticosMes)}</p>
           </div>
+          <div>
+            <p className={K}>Total acumulado</p>
+            <p className={V}>{montos(viaticosTotal)}</p>
+          </div>
+          <div>
+            <p className={K}>Último registro</p>
+            <p className={V}>{ultimoViatico ? formatFecha(ultimoViatico.fecha) : "—"}</p>
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <Link href={`/viaticos?proyecto=${id}`} className={BTN_SECONDARY}>
+            Ver detalle en Expenses →
+          </Link>
         </div>
       </section>
     </div>

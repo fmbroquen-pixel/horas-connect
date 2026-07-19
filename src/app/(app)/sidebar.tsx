@@ -165,15 +165,19 @@ function SettingsNav({
 export function SidebarDesktop({
   items,
   settingsItem,
+  marca,
 }: {
   items: ItemSidebar[];
   settingsItem?: ItemSidebar;
+  marca: React.ReactNode;
 }) {
   return (
     <aside className="hidden w-60 shrink-0 flex-col rounded-2xl border border-dc-line bg-dc-sidebar shadow-[0_8px_28px_rgba(0,0,0,0.28)] lg:flex">
+      {/* Único branding dentro de la app: CORE, arriba de la sidebar. */}
+      <div className="shrink-0 px-4 pb-2 pt-4">{marca}</div>
       <nav
         aria-label="Navegación principal"
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 pt-2"
       >
         <NavItems items={items} />
         {settingsItem && (
