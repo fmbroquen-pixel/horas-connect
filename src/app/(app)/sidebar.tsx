@@ -166,14 +166,17 @@ export function SidebarDesktop({
   items,
   settingsItem,
   marca,
+  perfil,
 }: {
   items: ItemSidebar[];
   settingsItem?: ItemSidebar;
   marca: React.ReactNode;
+  // Bloque de usuario (avatar, nombre, rol y Salir) anclado al pie.
+  perfil: React.ReactNode;
 }) {
   return (
     <aside className="hidden w-60 shrink-0 flex-col rounded-2xl border border-dc-line bg-dc-sidebar shadow-[0_8px_28px_rgba(0,0,0,0.28)] lg:flex">
-      {/* Único branding dentro de la app: CORE, arriba de la sidebar. */}
+      {/* Único branding dentro de la app: isotipo + CORE. */}
       <div className="shrink-0 px-4 pb-2 pt-4">{marca}</div>
       <nav
         aria-label="Navegación principal"
@@ -181,10 +184,11 @@ export function SidebarDesktop({
       >
         <NavItems items={items} />
         {settingsItem && (
-          <div className="mt-auto border-t border-dc-line pt-4">
+          <div className="mt-1">
             <SettingsNav item={settingsItem} />
           </div>
         )}
+        <div className="mt-auto border-t border-dc-line pt-4">{perfil}</div>
       </nav>
     </aside>
   );
@@ -196,10 +200,12 @@ export function SidebarMobile({
   items,
   settingsItem,
   marca,
+  perfil,
 }: {
   items: ItemSidebar[];
   settingsItem?: ItemSidebar;
   marca: React.ReactNode;
+  perfil: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -266,10 +272,11 @@ export function SidebarMobile({
             <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
               <NavItems items={items} onNavigate={() => setOpen(false)} />
               {settingsItem && (
-                <div className="mt-auto border-t border-dc-line pt-3">
+                <div className="mt-1">
                   <SettingsNav item={settingsItem} onNavigate={() => setOpen(false)} />
                 </div>
               )}
+              <div className="mt-auto border-t border-dc-line pt-4">{perfil}</div>
             </nav>
           </aside>
         </div>

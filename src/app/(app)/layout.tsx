@@ -14,8 +14,8 @@ const ETIQUETA_ROL: Record<string, string> = {
   reader: "Solo lectura",
 };
 
-// Navegación principal en barra lateral. Orden: Home · Proyectos ·
-// Time Tracking · Expenses · Time Off · Analytics · Settings.
+// Navegación única y persistente en la sidebar. Orden: Home · Proyectos ·
+// Time Tracking · Expenses · Time Off · Analytics · Settings (desplegable).
 const ITEMS_CARGA: ItemSidebar[] = [
   { href: "/dashboard", label: "Home", icono: "home" },
   { href: "/proyectos", label: "Proyectos", icono: "proyectos" },
@@ -30,8 +30,6 @@ const ITEM_ANALYTICS: ItemSidebar = {
   icono: "analytics",
 };
 
-// El dock agrupa la navegación principal; Settings va aparte, anclado al
-// fondo de la sidebar con separación visual.
 function navParaRol(rol: string): {
   items: ItemSidebar[];
   settings?: ItemSidebar;
@@ -45,8 +43,6 @@ function navParaRol(rol: string): {
   if (rol === "admin") {
     return {
       items: [...ITEMS_CARGA, ITEM_ANALYTICS],
-      // Settings es una categoría desplegable: sus secciones viven en el
-      // submenú de la sidebar, no como tabs dentro del contenido.
       settings: {
         href: "/admin/usuarios",
         label: "Settings",
@@ -82,55 +78,68 @@ export default async function AppLayout({
   const avatarUrl = urlAvatar(usuario.avatarPath);
   const { items, settings } = navParaRol(usuario.rol);
 
+  // Isotipo oficial (favicon) + CORE: único branding dentro de la app.
+  const logo = (
+    <Link
+      href="/dashboard"
+      aria-label="CORE — Distrito Connect (Embarca)"
+      className="flex items-center gap-2.5"
+    >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/icon.svg" alt="" width={22} height={22} className="shrink-0" />
+      <Marca variant="core" />
+    </Link>
+  );
+
+  // Bloque de usuario del pie de la sidebar: avatar + nombre + rol (con el
+  // popover de perfil) y Salir como acción separada a la derecha.
+  const perfil = (
+    <div className="flex items-center gap-2">
+      <PerfilBoton
+        nombre={usuario.nombre}
+        rol={ETIQUETA_ROL[usuario.rol] ?? usuario.rol}
+        avatarUrl={avatarUrl}
+      />
+      <form action={logout} className="shrink-0">
+        <button
+          type="submit"
+          title="Cerrar sesión"
+          aria-label="Cerrar sesión"
+          className="flex items-center rounded-lg p-2 text-dc-muted transition hover:bg-dc-pink/10 hover:text-dc-pink"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <path d="M16 17l5-5-5-5" />
+            <path d="M21 12H9" />
+          </svg>
+        </button>
+      </form>
+    </div>
+  );
+
   return (
-    // Sistema de capas: canvas (fondo) → sidebar, header y workspace como
-    // tres cards flotantes con el mismo lenguaje (redondeo, borde, sombra).
+    // Sistema de capas sin header: canvas (fondo) → sidebar card (única
+    // navegación) → workspace card ocupando toda la altura disponible.
     <div className="flex h-dvh gap-3 overflow-hidden bg-dc-deeper p-3">
       <SidebarDesktop
         items={items}
         settingsItem={settings}
-        marca={
-          <Link href="/dashboard" aria-label="CORE — Distrito Connect (Embarca)">
-            <Marca variant="core" />
-          </Link>
-        }
+        marca={logo}
+        perfil={perfil}
       />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
-        {/* Header card: sin branding (CORE vive en la sidebar), compacto y
-            con el bloque de usuario centrado verticalmente. */}
-        <header className="relative z-50 flex h-10 shrink-0 items-center justify-between gap-3 rounded-2xl border border-dc-line bg-dc-header px-4 shadow-[0_8px_28px_rgba(0,0,0,0.28)]">
-          <div className="flex min-w-0 items-center gap-3">
-            <SidebarMobile
-              items={items}
-              settingsItem={settings}
-              marca={<Marca variant="core" />}
-            />
-          </div>
-            <div className="flex shrink-0 items-center gap-3 text-sm">
-              <PerfilBoton
-                nombre={usuario.nombre}
-                rol={ETIQUETA_ROL[usuario.rol] ?? usuario.rol}
-                avatarUrl={avatarUrl}
-              />
-              {/* Separador: Salir es cierre de sesión, no una herramienta. */}
-              <span className="h-6 w-px bg-dc-line" aria-hidden="true" />
-              <form action={logout}>
-                <button
-                  type="submit"
-                  title="Cerrar sesión"
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs text-dc-muted transition hover:bg-dc-pink/10 hover:text-dc-pink"
-                >
-                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                    <path d="M16 17l5-5-5-5" />
-                    <path d="M21 12H9" />
-                  </svg>
-                  Salir
-                </button>
-              </form>
-          </div>
-        </header>
+        {/* Barra mínima solo para mobile (la sidebar está oculta): abre el
+            drawer, que trae navegación, perfil y logout. */}
+        <div className="flex shrink-0 items-center gap-3 lg:hidden">
+          <SidebarMobile
+            items={items}
+            settingsItem={settings}
+            marca={logo}
+            perfil={perfil}
+          />
+          {logo}
+        </div>
 
         <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-dc-line bg-dc-main shadow-[0_8px_28px_rgba(0,0,0,0.28)]">
           <div className="mx-auto flex min-h-0 w-full max-w-[1440px] flex-1 flex-col px-6 pb-10 pt-8 md:px-10">

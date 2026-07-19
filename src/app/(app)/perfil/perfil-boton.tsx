@@ -109,17 +109,15 @@ export function PerfilBoton({
   const error = errorLocal ?? state?.error;
 
   return (
-    <div className="relative flex items-center gap-3" ref={ref}>
-      <div className="text-right">
-        <p className="text-dc-text">{nombre}</p>
-        <p className="text-xs text-dc-muted">{rol}</p>
-      </div>
+    // Vive al pie de la sidebar: avatar a la izquierda, nombre/rol al lado y
+    // el popover de perfil abre hacia ARRIBA para no salirse del viewport.
+    <div className="relative flex min-w-0 flex-1 items-center gap-2.5" ref={ref}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         title="Perfil"
         aria-label="Perfil"
-        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-dc-line text-dc-muted transition hover:border-dc-peri hover:text-dc-text"
+        className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dc-line text-dc-muted transition hover:border-dc-peri hover:text-dc-text"
       >
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -128,9 +126,13 @@ export function PerfilBoton({
           <IconoPersona />
         )}
       </button>
+      <div className="min-w-0">
+        <p className="truncate text-sm text-dc-text">{nombre}</p>
+        <p className="truncate text-xs text-dc-muted">{rol}</p>
+      </div>
 
       {open && (
-        <div className="dc-menu dc-pop-in absolute right-0 top-full z-40 mt-2 w-64 rounded-xl border border-dc-line bg-dc-deep p-4 shadow-[0_12px_32px_rgba(0,0,0,0.45)]">
+        <div className="dc-menu dc-pop-in absolute bottom-full left-0 z-40 mb-2 w-56 rounded-xl border border-dc-line bg-dc-deep p-4 shadow-[0_12px_32px_rgba(0,0,0,0.45)]">
           <div className="flex flex-col items-center">
             <div className="relative h-20 w-20 overflow-hidden rounded-full border border-dc-line">
               {avatarUrl ? (
