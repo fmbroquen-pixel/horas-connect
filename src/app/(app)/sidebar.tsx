@@ -62,32 +62,26 @@ function NavItems({
   );
 }
 
-// Barra lateral fija (pantallas lg en adelante). Es un "dock": el grupo
-// principal arriba y Settings abandonado al fondo, separado por aire y una
-// línea sutil. Usa el tono más oscuro de las capas (bg-dc-sidebar).
+// Barra lateral fija (pantallas lg en adelante): una card flotante sobre el
+// fondo de la app, con bordes redondeados, sombra sutil y margen respecto de
+// los bordes (los aporta el layout). Es un "dock": el grupo principal arriba
+// y Settings anclado al fondo, separado por aire y una línea sutil.
 export function SidebarDesktop({
   items,
   settingsItem,
-  marca,
 }: {
   items: ItemSidebar[];
   settingsItem?: ItemSidebar;
-  marca: React.ReactNode;
 }) {
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-dc-line bg-dc-sidebar lg:flex">
-      {/* Misma altura (h-11) que el header del contenido: una sola barra
-          continua en todo el ancho, sin saltos. */}
-      <div className="flex h-11 shrink-0 items-center border-b border-dc-line px-4">
-        {marca}
-      </div>
+    <aside className="hidden w-60 shrink-0 flex-col rounded-2xl border border-dc-line bg-dc-sidebar shadow-[0_8px_28px_rgba(0,0,0,0.28)] lg:flex">
       <nav
         aria-label="Navegación principal"
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4"
       >
         <NavItems items={items} />
         {settingsItem && (
-          <div className="mt-auto border-t border-dc-line pt-3">
+          <div className="mt-auto border-t border-dc-line pt-4">
             <NavItems items={[settingsItem]} />
           </div>
         )}

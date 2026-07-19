@@ -76,33 +76,21 @@ export default async function AppLayout({
   const { items, settings } = navParaRol(usuario.rol);
 
   return (
-    <div className="flex h-dvh overflow-hidden bg-dc-deeper">
-      <SidebarDesktop
-        items={items}
-        settingsItem={settings}
-        marca={<Marca variant="core" />}
-      />
-
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {/* Header de una sola altura (h-11), continua con el tope de la
-            sidebar: el contenido es el protagonista, no el branding. */}
-        <header className="relative z-50 shrink-0 border-b border-dc-line bg-dc-header">
-          <div className="flex h-11 items-center justify-between gap-3 px-4 md:px-6">
-            <div className="flex min-w-0 items-center gap-3">
-              <SidebarMobile
-                items={items}
-                settingsItem={settings}
-                marca={<Marca variant="core" />}
-              />
-              {/* En desktop la marca vive en la sidebar; acá solo en mobile. */}
-              <Link
-                href="/dashboard"
-                aria-label="CORE — Distrito Connect (Embarca)"
-                className="lg:hidden"
-              >
-                <Marca variant="core" />
-              </Link>
-            </div>
+    <div className="flex h-dvh flex-col overflow-hidden bg-dc-deeper">
+      {/* Header de una sola altura (h-11) en todo el ancho de la app, con
+          CORE arriba a la izquierda. El contenido es el protagonista. */}
+      <header className="relative z-50 shrink-0 border-b border-dc-line bg-dc-header">
+        <div className="flex h-11 items-center justify-between gap-3 px-4 md:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <SidebarMobile
+              items={items}
+              settingsItem={settings}
+              marca={<Marca variant="core" />}
+            />
+            <Link href="/dashboard" aria-label="CORE — Distrito Connect (Embarca)">
+              <Marca variant="core" />
+            </Link>
+          </div>
             <div className="flex shrink-0 items-center gap-3 text-sm">
               <PerfilBoton
                 nombre={usuario.nombre}
@@ -125,14 +113,18 @@ export default async function AppLayout({
                   Salir
                 </button>
               </form>
-            </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        {/* Área de trabajo un paso más clara que el header (capas de
-            profundidad) y con más aire alrededor del contenido. */}
-        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-dc-main">
-          <div className="mx-auto flex min-h-0 w-full max-w-[1440px] flex-1 flex-col px-6 pb-10 pt-9 md:px-10">
+      {/* Debajo del header, la sidebar y el workspace son dos cards
+          flotantes sobre el fondo de la app: bordes redondeados, sombra
+          sutil y aire entre sí y contra los bordes de la ventana. */}
+      <div className="flex min-h-0 flex-1 gap-3 p-3">
+        <SidebarDesktop items={items} settingsItem={settings} />
+
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-dc-line bg-dc-main shadow-[0_8px_28px_rgba(0,0,0,0.28)]">
+          <div className="mx-auto flex min-h-0 w-full max-w-[1440px] flex-1 flex-col px-6 pb-10 pt-8 md:px-10">
             <PageTransition>{children}</PageTransition>
           </div>
         </main>
