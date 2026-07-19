@@ -66,49 +66,51 @@ export function GridProyectos({ proyectos }: { proyectos: ProyectoCard[] }) {
           </p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {/* Cards blancas como las tablas (mismo borde y radio), pero
+                compactas y sin aspecto de registro editable: toda la card es
+                el link y el único indicador de acceso es el chevron. */}
             {filtrados.map((p) => (
               <Link
                 key={p.id}
                 href={`/proyectos/${p.id}`}
-                className="group flex flex-col rounded-2xl border border-dc-line bg-dc-card p-5 outline-none transition hover:border-dc-peri focus-visible:ring-2 focus-visible:ring-dc-peri"
+                aria-label={`Abrir proyecto ${p.nombre}`}
+                className="group flex flex-col rounded-2xl border border-[rgba(33,29,82,0.14)] bg-white p-4 outline-none transition hover:border-[#5a5be0] focus-visible:ring-2 focus-visible:ring-dc-peri"
               >
-                <h2 className="font-display text-sm uppercase text-white">
-                  {p.nombre}
-                </h2>
-
-                <div className="mt-3 flex-1">
-                  {p.producto ? (
-                    <span className="inline-block rounded-full bg-dc-peri/15 px-3 py-1 text-xs text-dc-peri">
-                      {p.producto}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-dc-muted">Sin producto</span>
-                  )}
-                  <p className="mt-3 text-xs text-dc-muted">
-                    {p.mentores.length > 0
-                      ? p.mentores.join(", ")
-                      : "Sin mentores asignados"}
-                  </p>
-                </div>
-
-                <span className="mt-4 inline-flex items-center gap-1.5 text-xs text-dc-peri transition group-hover:text-dc-pink">
-                  Abrir proyecto
+                <div className="flex items-start justify-between gap-2">
+                  <h2 className="font-display text-sm uppercase text-[#211d52]">
+                    {p.nombre}
+                  </h2>
                   <svg
                     viewBox="0 0 24 24"
-                    width="14"
-                    height="14"
+                    width="16"
+                    height="16"
                     fill="none"
                     stroke="currentColor"
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     aria-hidden="true"
-                    className="transition-transform group-hover:translate-x-0.5"
+                    className="mt-0.5 shrink-0 text-[#6b679c] transition group-hover:translate-x-0.5 group-hover:text-[#5a5be0]"
                   >
-                    <path d="M5 12h14" />
-                    <path d="M12 5l7 7-7 7" />
+                    <path d="M9 18l6-6-6-6" />
                   </svg>
-                </span>
+                </div>
+
+                <div className="mt-2.5">
+                  {p.producto ? (
+                    <span className="inline-block rounded-full bg-[#5a5be0]/10 px-2.5 py-0.5 text-xs text-[#5a5be0]">
+                      {p.producto}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-[#6b679c]">Sin producto</span>
+                  )}
+                </div>
+
+                <p className="mt-2 truncate text-xs text-[#6b679c]">
+                  {p.mentores.length > 0
+                    ? p.mentores.join(", ")
+                    : "Sin mentores asignados"}
+                </p>
               </Link>
             ))}
           </div>
