@@ -45,11 +45,18 @@ function navParaRol(rol: string): {
   if (rol === "admin") {
     return {
       items: [...ITEMS_CARGA, ITEM_ANALYTICS],
+      // Settings es una categoría desplegable: sus secciones viven en el
+      // submenú de la sidebar, no como tabs dentro del contenido.
       settings: {
         href: "/admin/usuarios",
         label: "Settings",
         icono: "settings",
         match: "/admin",
+        children: [
+          { href: "/admin/usuarios", label: "Usuarios" },
+          { href: "/admin/clientes", label: "Clientes" },
+          { href: "/admin/etapas", label: "Etapas" },
+        ],
       },
     };
   }

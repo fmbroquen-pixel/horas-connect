@@ -2,16 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { TabIcono } from "./tabs-nav";
 
 // match: prefijo extra que también marca el ítem como activo (p. ej. Settings
 // del admin apunta a /admin/usuarios pero cubre todo /admin).
+// children: convierte el ítem en una categoría desplegable (submenú).
 export type ItemSidebar = {
   href: string;
   label: string;
   icono: string;
   match?: string;
+  children?: { href: string; label: string }[];
 };
 
 // Lista de ítems compartida entre la barra fija (desktop) y el drawer
@@ -62,6 +64,100 @@ function NavItems({
   );
 }
 
+// Categoría desplegable (Settings): botón con chevron que abre un submenú
+// debajo, con las mismas convenciones visuales que los ítems de navegación.
+// Se expande solo al entrar a cualquiera de sus rutas y expone estado con
+// aria-expanded/aria-current para mantener la accesibilidad por teclado.
+function SettingsNav({
+  item,
+  onNavigate,
+}: {
+  item: ItemSidebar;
+  onNavigate?: () => void;
+}) {
+  const pathname = usePathname();
+  const submenuId = useId();
+  const enSeccion = item.match
+    ? pathname.startsWith(item.match)
+    : pathname === item.href || pathname.startsWith(item.href + "/");
+  const [abierto, setAbierto] = useState(enSeccion);
+
+  // Si se entra a una ruta de la sección (por link directo o navegación),
+  // el submenú se expande solo.
+  useEffect(() => {
+    if (enSeccion) setAbierto(true);
+  }, [enSeccion]);
+
+  // Sin hijos (Settings del mentor → Mi perfil): ítem simple.
+  if (!item.children?.length) {
+    return <NavItems items={[item]} onNavigate={onNavigate} />;
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setAbierto((o) => !o)}
+        aria-expanded={abierto}
+        aria-controls={submenuId}
+        className={`relative flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-dc-peri ${
+          enSeccion
+            ? "text-white [text-shadow:0_0_14px_rgba(255,145,255,0.6)]"
+            : "text-dc-muted hover:bg-dc-line/40 hover:text-dc-text"
+        }`}
+      >
+        <TabIcono id={item.icono} />
+        {item.label}
+        <svg
+          viewBox="0 0 24 24"
+          width="14"
+          height="14"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          className={`ml-auto shrink-0 transition-transform ${abierto ? "rotate-180" : ""}`}
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+
+      {abierto && (
+        <ul id={submenuId} className="mt-0.5 space-y-0.5 pl-9">
+          {item.children.map((c) => {
+            const activa = pathname === c.href || pathname.startsWith(c.href + "/");
+            return (
+              <li key={c.href}>
+                <Link
+                  href={c.href}
+                  prefetch
+                  onClick={onNavigate}
+                  aria-current={activa ? "page" : undefined}
+                  className={`relative flex items-center rounded-lg px-3 py-1.5 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-dc-peri ${
+                    activa
+                      ? "bg-dc-peri/10 text-white [text-shadow:0_0_14px_rgba(255,145,255,0.6)]"
+                      : "text-dc-muted hover:bg-dc-line/40 hover:text-dc-text"
+                  }`}
+                >
+                  {activa && (
+                    <span
+                      aria-hidden
+                      className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-dc-pink shadow-[0_0_10px_2px_rgba(255,145,255,0.7)]"
+                    />
+                  )}
+                  {c.label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 // Barra lateral fija (pantallas lg en adelante): una card flotante sobre el
 // fondo de la app, con bordes redondeados, sombra sutil y margen respecto de
 // los bordes (los aporta el layout). Es un "dock": el grupo principal arriba
@@ -82,7 +178,7 @@ export function SidebarDesktop({
         <NavItems items={items} />
         {settingsItem && (
           <div className="mt-auto border-t border-dc-line pt-4">
-            <NavItems items={[settingsItem]} />
+            <SettingsNav item={settingsItem} />
           </div>
         )}
       </nav>
@@ -167,7 +263,7 @@ export function SidebarMobile({
               <NavItems items={items} onNavigate={() => setOpen(false)} />
               {settingsItem && (
                 <div className="mt-auto border-t border-dc-line pt-3">
-                  <NavItems items={[settingsItem]} onNavigate={() => setOpen(false)} />
+                  <SettingsNav item={settingsItem} onNavigate={() => setOpen(false)} />
                 </div>
               )}
             </nav>

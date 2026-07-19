@@ -1,13 +1,9 @@
 import { redirect } from "next/navigation";
 import { getSesionActual } from "@/lib/auth";
-import { TabsNav } from "../tabs-nav";
 
-const SECCIONES = [
-  { href: "/admin/usuarios", label: "Usuarios" },
-  { href: "/admin/clientes", label: "Clientes" },
-  { href: "/admin/etapas", label: "Etapas" },
-];
-
+// La navegación entre secciones de Settings (Usuarios/Clientes/Etapas) vive
+// en el submenú desplegable de la sidebar; acá solo queda el guard de admin
+// y la etiqueta de contexto.
 export default async function AdminLayout({
   children,
 }: {
@@ -24,10 +20,7 @@ export default async function AdminLayout({
       <p className="shrink-0 font-display text-xs tracking-[0.3em] text-dc-pink">
         SETTINGS
       </p>
-      <div className="mt-2 shrink-0 border-b border-dc-line">
-        <TabsNav tabs={SECCIONES} containerClass="" size="sm" />
-      </div>
-      <div className="mt-6 flex min-h-0 flex-1 flex-col">{children}</div>
+      <div className="mt-4 flex min-h-0 flex-1 flex-col">{children}</div>
     </div>
   );
 }
