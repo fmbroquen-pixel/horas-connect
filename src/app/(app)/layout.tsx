@@ -105,7 +105,7 @@ export default async function AppLayout({
           type="submit"
           title="Cerrar sesión"
           aria-label="Cerrar sesión"
-          className="flex items-center rounded-lg p-2 text-dc-muted transition hover:bg-dc-pink/10 hover:text-dc-pink"
+          className="flex items-center rounded-lg p-2 text-dc-muted"
         >
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
