@@ -62,23 +62,35 @@ function NavItems({
   );
 }
 
-// Barra lateral fija (pantallas lg en adelante).
+// Barra lateral fija (pantallas lg en adelante). Es un "dock": el grupo
+// principal arriba y Settings abandonado al fondo, separado por aire y una
+// línea sutil. Usa el tono más oscuro de las capas (bg-dc-sidebar).
 export function SidebarDesktop({
   items,
+  settingsItem,
   marca,
 }: {
   items: ItemSidebar[];
+  settingsItem?: ItemSidebar;
   marca: React.ReactNode;
 }) {
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r border-dc-line bg-dc-deep lg:flex">
-      {/* Misma altura (h-12) que el header del contenido: una sola barra
+    <aside className="hidden w-60 shrink-0 flex-col border-r border-dc-line bg-dc-sidebar lg:flex">
+      {/* Misma altura (h-11) que el header del contenido: una sola barra
           continua en todo el ancho, sin saltos. */}
-      <div className="flex h-12 shrink-0 items-center border-b border-dc-line px-4">
+      <div className="flex h-11 shrink-0 items-center border-b border-dc-line px-4">
         {marca}
       </div>
-      <nav aria-label="Navegación principal" className="min-h-0 flex-1 overflow-y-auto p-3">
+      <nav
+        aria-label="Navegación principal"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3"
+      >
         <NavItems items={items} />
+        {settingsItem && (
+          <div className="mt-auto border-t border-dc-line pt-3">
+            <NavItems items={[settingsItem]} />
+          </div>
+        )}
       </nav>
     </aside>
   );
@@ -88,9 +100,11 @@ export function SidebarDesktop({
 // o tocando el fondo oscurecido.
 export function SidebarMobile({
   items,
+  settingsItem,
   marca,
 }: {
   items: ItemSidebar[];
+  settingsItem?: ItemSidebar;
   marca: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -140,9 +154,9 @@ export function SidebarMobile({
             role="dialog"
             aria-modal="true"
             aria-label="Navegación principal"
-            className="dc-pop-in absolute inset-y-0 left-0 flex w-64 flex-col border-r border-dc-line bg-dc-deep shadow-[0_0_60px_rgba(0,0,0,0.6)]"
+            className="dc-pop-in absolute inset-y-0 left-0 flex w-64 flex-col border-r border-dc-line bg-dc-sidebar shadow-[0_0_60px_rgba(0,0,0,0.6)]"
           >
-            <div className="flex h-12 shrink-0 items-center justify-between border-b border-dc-line px-4">
+            <div className="flex h-11 shrink-0 items-center justify-between border-b border-dc-line px-4">
               {marca}
               <button
                 type="button"
@@ -155,8 +169,13 @@ export function SidebarMobile({
                 </svg>
               </button>
             </div>
-            <nav className="min-h-0 flex-1 overflow-y-auto p-3">
+            <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
               <NavItems items={items} onNavigate={() => setOpen(false)} />
+              {settingsItem && (
+                <div className="mt-auto border-t border-dc-line pt-3">
+                  <NavItems items={[settingsItem]} onNavigate={() => setOpen(false)} />
+                </div>
+              )}
             </nav>
           </aside>
         </div>

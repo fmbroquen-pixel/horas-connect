@@ -10,7 +10,14 @@
   --dc-text: #eceafd;
   --dc-muted: #a5a3d6;
   --dc-line: rgba(139, 140, 255, 0.18);
-  --dc-card: rgba(139, 140, 255, 0.07);
+  --dc-card: rgba(139, 140, 255, 0.09);
+
+  /* Capas de profundidad (diferencias sutiles de luminosidad): la sidebar es
+     lo más oscuro, el header un paso más claro y el área de trabajo otro paso,
+     para que el contenido "flote" sin romper la identidad violeta. */
+  --dc-sidebar: #0b0930;
+  --dc-header: #120f3f;
+  --dc-main: #161247;
 }
 
 @theme inline {
@@ -24,6 +31,9 @@
   --color-dc-muted: var(--dc-muted);
   --color-dc-line: var(--dc-line);
   --color-dc-card: var(--dc-card);
+  --color-dc-sidebar: var(--dc-sidebar);
+  --color-dc-header: var(--dc-header);
+  --color-dc-main: var(--dc-main);
   --font-display: var(--font-silkscreen);
   --font-sans: var(--font-poppins);
 }
@@ -84,10 +94,26 @@ input[type="number"]::-webkit-inner-spin-button {
      bordes de foco, textos de error). */
   --dc-peri: #5a5be0;
   --dc-pink: #c21f9a;
-  background: #f6f5fc;
+  /* Fondo del panel apenas gris; las filas van en blanco (reglas de abajo)
+     para que el contenido gane protagonismo sin contraste extremo. */
+  background: #f4f3fa;
   border: 1px solid rgba(33, 29, 82, 0.14);
   border-radius: 16px;
   color: #211d52;
+}
+/* Filas blancas sobre el panel gris. Cubre tablas <table> (tbody) y las
+   grillas basadas en <div>: tanto el contenedor de filas que sigue al
+   encabezado (.dc-thead + div) como las filas sueltas hermanas del
+   encabezado. Los <form> de edición inline conservan su tinte (--dc-card)
+   para diferenciarse del resto de las filas. */
+.dc-panel tbody tr {
+  background: #ffffff;
+}
+.dc-panel .dc-thead ~ div {
+  background: #ffffff;
+}
+.dc-panel .dc-thead ~ form {
+  background: var(--dc-card);
 }
 /* Encabezados de columna: centrados, en negrita, versalita con leve
    espaciado y una franja de encabezado tenue, tanto en <table> como en las

@@ -102,7 +102,7 @@ export default async function TimetrackerPage({
       )}
 
       {/* Acciones del historial: consultar (filtro) e importar/exportar (⋮). */}
-      <div className="mt-4 flex shrink-0 items-center justify-end gap-2">
+      <div className="mt-6 flex shrink-0 items-center justify-end gap-2">
         <FiltroPopover
           basePath="/timetracker"
           desde={desde}

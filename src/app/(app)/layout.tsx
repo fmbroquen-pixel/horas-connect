@@ -30,22 +30,31 @@ const ITEM_ANALYTICS: ItemSidebar = {
   icono: "analytics",
 };
 
-function itemsParaRol(rol: string): ItemSidebar[] {
+// El dock agrupa la navegación principal; Settings va aparte, anclado al
+// fondo de la sidebar con separación visual.
+function navParaRol(rol: string): {
+  items: ItemSidebar[];
+  settings?: ItemSidebar;
+} {
   if (rol === "guest") {
-    return [
-      ...ITEMS_CARGA,
-      { href: "/mi-perfil", label: "Settings", icono: "settings" },
-    ];
+    return {
+      items: ITEMS_CARGA,
+      settings: { href: "/mi-perfil", label: "Settings", icono: "settings" },
+    };
   }
   if (rol === "admin") {
-    return [
-      ...ITEMS_CARGA,
-      ITEM_ANALYTICS,
-      { href: "/admin/usuarios", label: "Settings", icono: "settings", match: "/admin" },
-    ];
+    return {
+      items: [...ITEMS_CARGA, ITEM_ANALYTICS],
+      settings: {
+        href: "/admin/usuarios",
+        label: "Settings",
+        icono: "settings",
+        match: "/admin",
+      },
+    };
   }
   // reader: solo lectura de la rentabilidad de sus clientes asignados.
-  return [ITEM_ANALYTICS];
+  return { items: [ITEM_ANALYTICS] };
 }
 
 export default async function AppLayout({
@@ -64,19 +73,27 @@ export default async function AppLayout({
 
   const { usuario } = sesion;
   const avatarUrl = urlAvatar(usuario.avatarPath);
-  const items = itemsParaRol(usuario.rol);
+  const { items, settings } = navParaRol(usuario.rol);
 
   return (
     <div className="flex h-dvh overflow-hidden bg-dc-deeper">
-      <SidebarDesktop items={items} marca={<Marca variant="core" />} />
+      <SidebarDesktop
+        items={items}
+        settingsItem={settings}
+        marca={<Marca variant="core" />}
+      />
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {/* Header de una sola altura (h-12), continua con el tope de la
+        {/* Header de una sola altura (h-11), continua con el tope de la
             sidebar: el contenido es el protagonista, no el branding. */}
-        <header className="relative z-50 shrink-0 border-b border-dc-line bg-dc-deep">
-          <div className="flex h-12 items-center justify-between gap-3 px-4 md:px-6">
+        <header className="relative z-50 shrink-0 border-b border-dc-line bg-dc-header">
+          <div className="flex h-11 items-center justify-between gap-3 px-4 md:px-6">
             <div className="flex min-w-0 items-center gap-3">
-              <SidebarMobile items={items} marca={<Marca variant="core" />} />
+              <SidebarMobile
+                items={items}
+                settingsItem={settings}
+                marca={<Marca variant="core" />}
+              />
               {/* En desktop la marca vive en la sidebar; acá solo en mobile. */}
               <Link
                 href="/dashboard"
@@ -112,8 +129,12 @@ export default async function AppLayout({
           </div>
         </header>
 
-        <main className="mx-auto flex min-h-0 w-full max-w-[1440px] flex-1 flex-col overflow-y-auto px-6 py-8 md:px-10">
-          <PageTransition>{children}</PageTransition>
+        {/* Área de trabajo un paso más clara que el header (capas de
+            profundidad) y con más aire alrededor del contenido. */}
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-dc-main">
+          <div className="mx-auto flex min-h-0 w-full max-w-[1440px] flex-1 flex-col px-6 pb-10 pt-9 md:px-10">
+            <PageTransition>{children}</PageTransition>
+          </div>
         </main>
       </div>
     </div>

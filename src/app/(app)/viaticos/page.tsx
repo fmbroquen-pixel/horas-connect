@@ -81,7 +81,7 @@ export default async function ViaticosPage({
         </InfoButton>
       </div>
 
-      <div className="mt-4 flex shrink-0 flex-wrap items-center justify-between gap-2">
+      <div className="mt-6 flex shrink-0 flex-wrap items-center justify-between gap-2">
         <RegistrarViaticoBoton proyectos={opcionesProyecto} />
         <div className="flex items-center gap-2">
           <FiltroPopover
