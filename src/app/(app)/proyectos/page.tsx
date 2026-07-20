@@ -1,15 +1,13 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { getClientesProyectos } from "@/lib/proyecto-acceso";
-import { ETIQUETA_PRODUCTO } from "../admin/clientes/constantes";
 import { GridProyectos, type ProyectoCard } from "./grid-proyectos";
 import { InfoButton } from "@/components/info-button";
 
-// Proyectos como selector rápido de espacios de trabajo: grid de cards con
-// buscador, en orden alfabético. Semáforo, etapa y estado viven dentro de
-// cada proyecto (o en Analytics), no acá. El mentor ve solo sus clientes
-// asignados (misma regla que Time Tracking); el admin ve todos.
+// Proyectos como selector rápido de espacios de trabajo: grid de accesos
+// (ícono + nombre) con buscador, en orden alfabético. Producto, mentores,
+// semáforo y etapa viven dentro de cada proyecto. El mentor ve solo sus
+// clientes asignados (misma regla que Time Tracking); el admin ve todos.
 export default async function ProyectosPage() {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
@@ -18,26 +16,9 @@ export default async function ProyectosPage() {
 
   // getClientesProyectos ya devuelve orden alfabético por nombre.
   const clientes = await getClientesProyectos(usuario);
-  const asignaciones = await prisma.proyectoAsignado.findMany({
-    where: { clienteId: { in: clientes.map((c) => c.id) } },
-    include: { usuario: { select: { nombre: true, activo: true } } },
-  });
-
-  const mentoresPorCliente = new Map<string, string[]>();
-  for (const a of asignaciones) {
-    if (!a.usuario.activo) continue;
-    const lista = mentoresPorCliente.get(a.clienteId) ?? [];
-    lista.push(a.usuario.nombre);
-    mentoresPorCliente.set(a.clienteId, lista);
-  }
-
   const proyectos: ProyectoCard[] = clientes.map((c) => ({
     id: c.id,
     nombre: c.nombre,
-    producto: c.producto ? ETIQUETA_PRODUCTO[c.producto] ?? c.producto : null,
-    mentores: (mentoresPorCliente.get(c.id) ?? []).sort((a, b) =>
-      a.localeCompare(b),
-    ),
   }));
 
   return (
