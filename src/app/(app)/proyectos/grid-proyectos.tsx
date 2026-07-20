@@ -66,18 +66,20 @@ export function GridProyectos({ proyectos }: { proyectos: ProyectoCard[] }) {
           </p>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {/* Cards blancas como las tablas (mismo borde y radio), pero
-                compactas y sin aspecto de registro editable: toda la card es
-                el link y el único indicador de acceso es el chevron. */}
+            {/* Cards en la paleta violeta de CORE: un tono por encima del
+                workspace, con borde definido y sombra sutil para que se
+                perciban como "espacios de trabajo" elevados. El nombre es el
+                foco; producto y mentores acompañan con menos peso. Toda la
+                card es el link; el chevron solo indica acceso. */}
             {filtrados.map((p) => (
               <Link
                 key={p.id}
                 href={`/proyectos/${p.id}`}
                 aria-label={`Abrir proyecto ${p.nombre}`}
-                className="group flex flex-col rounded-2xl border border-[rgba(33,29,82,0.14)] bg-white p-4 outline-none transition hover:border-[#5a5be0] focus-visible:ring-2 focus-visible:ring-dc-peri"
+                className="group flex flex-col rounded-2xl border border-dc-peri/25 bg-[#1c1856] p-5 shadow-[0_6px_18px_rgba(0,0,0,0.35)] outline-none transition hover:-translate-y-0.5 hover:border-dc-peri/50 hover:bg-[#201c60] hover:shadow-[0_10px_24px_rgba(0,0,0,0.45)] focus-visible:ring-2 focus-visible:ring-dc-peri"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <h2 className="font-display text-sm uppercase text-[#211d52]">
+                  <h2 className="font-display text-base uppercase leading-snug text-white">
                     {p.nombre}
                   </h2>
                   <svg
@@ -90,23 +92,23 @@ export function GridProyectos({ proyectos }: { proyectos: ProyectoCard[] }) {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     aria-hidden="true"
-                    className="mt-0.5 shrink-0 text-[#6b679c] transition group-hover:translate-x-0.5 group-hover:text-[#5a5be0]"
+                    className="mt-1 shrink-0 text-dc-muted transition group-hover:translate-x-0.5 group-hover:text-dc-peri"
                   >
                     <path d="M9 18l6-6-6-6" />
                   </svg>
                 </div>
 
-                <div className="mt-2.5">
+                <div className="mt-3">
                   {p.producto ? (
-                    <span className="inline-block rounded-full bg-[#5a5be0]/10 px-2.5 py-0.5 text-xs text-[#5a5be0]">
+                    <span className="inline-block rounded-full bg-dc-peri/10 px-2.5 py-0.5 text-[11px] text-dc-peri/90">
                       {p.producto}
                     </span>
                   ) : (
-                    <span className="text-xs text-[#6b679c]">Sin producto</span>
+                    <span className="text-[11px] text-dc-muted/80">Sin producto</span>
                   )}
                 </div>
 
-                <p className="mt-2 truncate text-xs text-[#6b679c]">
+                <p className="mt-2 truncate text-xs text-dc-muted">
                   {p.mentores.length > 0
                     ? p.mentores.join(", ")
                     : "Sin mentores asignados"}
