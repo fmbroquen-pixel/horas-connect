@@ -7,7 +7,9 @@ import { TabIcono } from "./tabs-nav";
 
 // match: prefijo extra que también marca el ítem como activo (p. ej. Settings
 // del admin apunta a /admin/usuarios pero cubre todo /admin).
-// children: convierte el ítem en una categoría desplegable (submenú).
+// children: convierte el ítem en una categoría desplegable (submenú). Lo
+// puede tener cualquier ítem de la navegación, no solo Settings (p. ej.
+// Proyectos con Activos/Inactivos).
 export type ItemSidebar = {
   href: string;
   label: string;
@@ -16,59 +18,51 @@ export type ItemSidebar = {
   children?: { href: string; label: string }[];
 };
 
-// Lista de ítems compartida entre la barra fija (desktop) y el drawer
-// (mobile). Estados active/hover/focus consistentes con las viejas solapas:
-// activo = texto blanco con glow + barra rosa (acá vertical, a la izquierda).
-function NavItems({
-  items,
+// Contenido de un ítem simple (sin categoría): el <Link> de navegación con
+// sus estados active/hover/focus. Sin wrapper <li> propio para poder
+// reutilizarse tanto dentro de NavItems como en cualquier otro contexto.
+function LinkNav({
+  item,
   onNavigate,
 }: {
-  items: ItemSidebar[];
+  item: ItemSidebar;
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-
+  const activa =
+    pathname === item.href ||
+    pathname.startsWith(item.href + "/") ||
+    (item.match ? pathname.startsWith(item.match) : false);
   return (
-    <ul className="space-y-0.5">
-      {items.map((t) => {
-        const activa =
-          pathname === t.href ||
-          pathname.startsWith(t.href + "/") ||
-          (t.match ? pathname.startsWith(t.match) : false);
-        return (
-          <li key={t.href}>
-            <Link
-              href={t.href}
-              prefetch
-              onClick={onNavigate}
-              aria-current={activa ? "page" : undefined}
-              className={`relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-dc-peri ${
-                activa
-                  ? "bg-dc-peri/10 text-white [text-shadow:0_0_14px_rgba(255,145,255,0.6)]"
-                  : "text-dc-muted hover:bg-dc-line/40 hover:text-dc-text"
-              }`}
-            >
-              {activa && (
-                <span
-                  aria-hidden
-                  className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-dc-pink shadow-[0_0_10px_2px_rgba(255,145,255,0.7)]"
-                />
-              )}
-              <TabIcono id={t.icono} />
-              {t.label}
-            </Link>
-          </li>
-        );
-      })}
-    </ul>
+    <Link
+      href={item.href}
+      prefetch
+      onClick={onNavigate}
+      aria-current={activa ? "page" : undefined}
+      className={`relative flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-dc-peri ${
+        activa
+          ? "bg-dc-peri/10 text-white [text-shadow:0_0_14px_rgba(255,145,255,0.6)]"
+          : "text-dc-muted hover:bg-dc-line/40 hover:text-dc-text"
+      }`}
+    >
+      {activa && (
+        <span
+          aria-hidden
+          className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-dc-pink shadow-[0_0_10px_2px_rgba(255,145,255,0.7)]"
+        />
+      )}
+      <TabIcono id={item.icono} />
+      {item.label}
+    </Link>
   );
 }
 
-// Categoría desplegable (Settings): botón con chevron que abre un submenú
-// debajo, con las mismas convenciones visuales que los ítems de navegación.
-// Se expande solo al entrar a cualquiera de sus rutas y expone estado con
-// aria-expanded/aria-current para mantener la accesibilidad por teclado.
-function SettingsNav({
+// Categoría desplegable: botón con chevron que abre un submenú debajo, con
+// las mismas convenciones visuales que los ítems simples. Se expande sola al
+// entrar a cualquiera de sus rutas y expone estado con aria-expanded/
+// aria-current para mantener la accesibilidad por teclado. La usan tanto
+// Settings (Usuarios/Clientes/Etapas) como Proyectos (Activos/Inactivos).
+function CategoriaNav({
   item,
   onNavigate,
 }: {
@@ -88,9 +82,9 @@ function SettingsNav({
     if (enSeccion) setAbierto(true);
   }, [enSeccion]);
 
-  // Sin hijos (Settings del mentor → Mi perfil): ítem simple.
+  // Sin hijos: se comporta como un ítem simple.
   if (!item.children?.length) {
-    return <NavItems items={[item]} onNavigate={onNavigate} />;
+    return <LinkNav item={item} onNavigate={onNavigate} />;
   }
 
   return (
@@ -158,6 +152,31 @@ function SettingsNav({
   );
 }
 
+// Lista de ítems compartida entre la barra fija (desktop) y el drawer
+// (mobile). Cada ítem con children se renderiza como categoría desplegable;
+// el resto, como link simple.
+function NavItems({
+  items,
+  onNavigate,
+}: {
+  items: ItemSidebar[];
+  onNavigate?: () => void;
+}) {
+  return (
+    <ul className="space-y-0.5">
+      {items.map((t) => (
+        <li key={t.href}>
+          {t.children?.length ? (
+            <CategoriaNav item={t} onNavigate={onNavigate} />
+          ) : (
+            <LinkNav item={t} onNavigate={onNavigate} />
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 // Barra lateral fija (pantallas lg en adelante): una card flotante sobre el
 // fondo de la app, con bordes redondeados, sombra sutil y margen respecto de
 // los bordes (los aporta el layout). Es un "dock": el grupo principal arriba
@@ -185,7 +204,7 @@ export function SidebarDesktop({
         <NavItems items={items} />
         {settingsItem && (
           <div className="mt-1">
-            <SettingsNav item={settingsItem} />
+            <CategoriaNav item={settingsItem} />
           </div>
         )}
         <div className="mt-auto border-t border-dc-line pt-4">{perfil}</div>
@@ -273,7 +292,7 @@ export function SidebarMobile({
               <NavItems items={items} onNavigate={() => setOpen(false)} />
               {settingsItem && (
                 <div className="mt-1">
-                  <SettingsNav item={settingsItem} onNavigate={() => setOpen(false)} />
+                  <CategoriaNav item={settingsItem} onNavigate={() => setOpen(false)} />
                 </div>
               )}
               <div className="mt-auto border-t border-dc-line pt-4">{perfil}</div>

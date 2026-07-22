@@ -24,7 +24,7 @@ export default async function ProyectosPage() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-2">
-        <h1 className="font-display text-lg uppercase text-white">Proyectos</h1>
+        <h1 className="font-display text-lg uppercase text-white">Proyectos activos</h1>
         <InfoButton>
           Elegí un proyecto para entrar a su espacio de trabajo.
           {usuario.rol === "admin"

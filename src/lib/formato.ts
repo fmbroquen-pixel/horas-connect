@@ -44,3 +44,24 @@ export function rangoDefault30(
   const hasta = esISO(hastaParam) ? hastaParam! : hoy;
   return desde > hasta ? { desde: hasta, hasta: desde } : { desde, hasta };
 }
+
+// Los 7 días (Lunes a Domingo) de la semana actual, según la fecha local del
+// sistema. Mismo criterio Lunes=0…Domingo=6 que usa el DatePicker.
+export function semanaActualISO(): string[] {
+  const hoy = hoyISO();
+  const [a, m, d] = hoy.split("-").map(Number);
+  const fecha = new Date(a, m - 1, d);
+  const offsetLunes = (fecha.getDay() + 6) % 7;
+  const lunes = new Date(fecha);
+  lunes.setDate(fecha.getDate() - offsetLunes);
+
+  const dias: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d2 = new Date(lunes);
+    d2.setDate(lunes.getDate() + i);
+    const mm = String(d2.getMonth() + 1).padStart(2, "0");
+    const dd = String(d2.getDate()).padStart(2, "0");
+    dias.push(`${d2.getFullYear()}-${mm}-${dd}`);
+  }
+  return dias;
+}

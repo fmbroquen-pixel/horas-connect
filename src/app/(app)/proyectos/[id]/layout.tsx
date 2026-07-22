@@ -50,9 +50,7 @@ export default async function ProyectoDetalleLayout({
           containerClass=""
           tabs={[
             { href: base, label: "Resumen", exact: true },
-            { href: `${base}/tablero`, label: "Tablero" },
-            { href: `${base}/semaforo`, label: "Semáforo" },
-            { href: `${base}/etapa`, label: "Etapa actual" },
+            { href: `${base}/seguimiento`, label: "Seguimiento" },
             { href: `${base}/horas`, label: "Horas y viáticos" },
             { href: `${base}/gantt`, label: "Gantt" },
             { href: `${base}/equipo`, label: "Equipo" },

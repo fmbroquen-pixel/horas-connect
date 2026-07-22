@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
-import { formatFecha } from "@/lib/formato";
 import {
   ETIQUETA_PRODUCTO,
   sumarMesesISO,
@@ -12,10 +11,12 @@ import { ETIQUETA_SEMAFORO, COLOR_SEMAFORO } from "../constantes";
 
 const CARD = "rounded-2xl border border-dc-line bg-dc-card p-5";
 const K = "text-xs text-dc-muted";
-const V = "mt-1 text-sm text-dc-text";
+const TAG = "inline-block rounded-full bg-dc-peri/15 px-3 py-1 text-xs text-dc-peri";
 
 // Pestaña Resumen: foto general del proyecto. Todo es de solo lectura acá;
-// cada dato se edita en su pestaña o en Settings → Clientes.
+// cada dato se edita en su pestaña (Seguimiento, Equipo) o en Settings →
+// Clientes. Jerarquía: producto/mentores/etapa como tags, semáforo sin texto
+// de estado, fechas de servicio destacadas, equipo reducido a cumpleaños.
 export default async function ProyectoResumenPage({
   params,
 }: {
@@ -26,7 +27,7 @@ export default async function ProyectoResumenPage({
   if (!acceso) notFound();
   const { cliente } = acceso;
 
-  const [asignaciones, semaforo, etapaEvento, equipoCount] = await Promise.all([
+  const [asignaciones, semaforo, etapaEvento, equipo] = await Promise.all([
     prisma.proyectoAsignado.findMany({
       where: { clienteId: id },
       include: { usuario: { select: { nombre: true, activo: true } } },
@@ -34,17 +35,17 @@ export default async function ProyectoResumenPage({
     prisma.semaforoEvento.findFirst({
       where: { clienteId: id },
       orderBy: { createdAt: "desc" },
-      include: { creadoPor: { select: { nombre: true } } },
     }),
     prisma.etapaEvento.findFirst({
       where: { clienteId: id },
       orderBy: { createdAt: "desc" },
-      include: {
-        etapa: { select: { etiqueta: true } },
-        creadoPor: { select: { nombre: true } },
-      },
+      include: { etapa: { select: { etiqueta: true } } },
     }),
-    prisma.miembroEquipo.count({ where: { clienteId: id } }),
+    prisma.miembroEquipo.findMany({
+      where: { clienteId: id },
+      orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+      select: { id: true, nombre: true, apellido: true, cumpleanos: true },
+    }),
   ]);
 
   const mentores = asignaciones
@@ -63,66 +64,111 @@ export default async function ProyectoResumenPage({
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <div className={CARD}>
         <p className={K}>Producto</p>
-        <p className={V}>
-          {cliente.producto
-            ? ETIQUETA_PRODUCTO[cliente.producto] ?? cliente.producto
-            : "Sin definir"}
-        </p>
+        <div className="mt-2">
+          {cliente.producto ? (
+            <span className={TAG}>
+              {ETIQUETA_PRODUCTO[cliente.producto] ?? cliente.producto}
+            </span>
+          ) : (
+            <span className="text-sm text-dc-muted">Sin definir</span>
+          )}
+        </div>
       </div>
 
       <div className={CARD}>
-        <p className={K}>Fechas del servicio</p>
-        <p className={V}>
-          {inicioISO ? mostrarFechaISO(inicioISO) : "Sin fecha de inicio"}
-          {finISO ? ` → ${mostrarFechaISO(finISO)}` : ""}
-        </p>
-        <p className="mt-1 text-xs text-dc-muted">
-          {cliente.duracionMeses
-            ? `Duración: ${cliente.duracionMeses} meses`
-            : "Duración sin definir"}
-        </p>
-      </div>
-
-      <div className={CARD}>
-        <p className={K}>Estado general</p>
-        <p className={V}>{cliente.activo ? "Activo" : "Inactivo"}</p>
-        {semaforo ? (
-          <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-dc-muted">
-            <span
-              aria-hidden
-              className="h-2.5 w-2.5 rounded-full"
-              style={{ backgroundColor: COLOR_SEMAFORO[semaforo.estado] }}
-            />
-            Semáforo {ETIQUETA_SEMAFORO[semaforo.estado]} ·{" "}
-            {formatFecha(semaforo.createdAt)} · {semaforo.creadoPor.nombre}
-          </p>
-        ) : (
-          <p className="mt-1 text-xs text-dc-muted">Semáforo sin registrar</p>
-        )}
-      </div>
-
-      <div className={CARD}>
-        <p className={K}>Mentores asignados</p>
-        <p className={V}>{mentores.length > 0 ? mentores.join(", ") : "Sin mentores"}</p>
+        <p className={K}>Estado</p>
+        <div className="mt-2">
+          {semaforo ? (
+            <span className="inline-flex items-center gap-2 text-sm text-dc-text">
+              <span
+                aria-hidden
+                className="h-3 w-3 rounded-full"
+                style={{
+                  backgroundColor: COLOR_SEMAFORO[semaforo.estado],
+                  boxShadow: `0 0 8px ${COLOR_SEMAFORO[semaforo.estado]}`,
+                }}
+              />
+              {ETIQUETA_SEMAFORO[semaforo.estado]}
+            </span>
+          ) : (
+            <span className="text-sm text-dc-muted">Sin registrar</span>
+          )}
+        </div>
       </div>
 
       <div className={CARD}>
         <p className={K}>Etapa actual</p>
-        <p className={V}>{etapaEvento ? etapaEvento.etapa.etiqueta : "Sin registrar"}</p>
-        {etapaEvento && (
-          <p className="mt-1 text-xs text-dc-muted">
-            Desde {formatFecha(etapaEvento.createdAt)} · {etapaEvento.creadoPor.nombre}
-          </p>
-        )}
+        <div className="mt-2">
+          {etapaEvento ? (
+            <span className={TAG}>{etapaEvento.etapa.etiqueta}</span>
+          ) : (
+            <span className="text-sm text-dc-muted">Sin registrar</span>
+          )}
+        </div>
       </div>
 
-      <div className={CARD}>
-        <p className={K}>Equipo del cliente</p>
-        <p className={V}>
-          {equipoCount > 0
-            ? `${equipoCount} integrante${equipoCount === 1 ? "" : "s"}`
-            : "Sin integrantes cargados"}
-        </p>
+      <div className={`${CARD} sm:col-span-2 lg:col-span-3`}>
+        <p className={K}>Fechas del servicio</p>
+        <div className="mt-2 grid grid-cols-3 gap-4 sm:max-w-md">
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-dc-muted">Cuotas</p>
+            <p className="mt-0.5 font-display text-base text-white">
+              {cliente.duracionMeses ?? "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-dc-muted">Inicio</p>
+            <p className="mt-0.5 font-display text-base text-white">
+              {inicioISO ? mostrarFechaISO(inicioISO) : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wide text-dc-muted">Fin</p>
+            <p className="mt-0.5 font-display text-base text-white">
+              {finISO ? mostrarFechaISO(finISO) : "—"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className={`${CARD} sm:col-span-2 lg:col-span-3`}>
+        <p className={K}>Mentores asignados</p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {mentores.length > 0 ? (
+            mentores.map((m) => (
+              <span key={m} className={TAG}>
+                {m}
+              </span>
+            ))
+          ) : (
+            <span className="text-sm text-dc-muted">Sin mentores</span>
+          )}
+        </div>
+      </div>
+
+      <div className={`${CARD} sm:col-span-2 lg:col-span-3`}>
+        <p className={K}>Equipo</p>
+        {equipo.length > 0 ? (
+          <ul className="mt-2 divide-y divide-dc-line">
+            {equipo.map((m) => (
+              <li
+                key={m.id}
+                className="flex items-center justify-between gap-3 py-2 text-sm first:pt-0 last:pb-0"
+              >
+                <span className="text-dc-text">
+                  {m.nombre} {m.apellido}
+                </span>
+                <span className="tabular-nums text-dc-muted">
+                  {m.cumpleanos
+                    ? mostrarFechaISO(m.cumpleanos.toISOString().slice(0, 10))
+                    : "—"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-dc-muted">Sin integrantes cargados</p>
+        )}
       </div>
 
       <div className={`${CARD} sm:col-span-2 lg:col-span-3`}>
@@ -145,10 +191,10 @@ export default async function ProyectoResumenPage({
           <p className="mt-1 text-sm text-dc-muted">
             Sin enlace cargado.{" "}
             <Link
-              href={`/proyectos/${id}/tablero`}
+              href={`/proyectos/${id}/seguimiento`}
               className="text-dc-peri transition hover:text-dc-pink"
             >
-              Cargarlo en Tablero →
+              Cargarlo en Seguimiento →
             </Link>
           </p>
         )}

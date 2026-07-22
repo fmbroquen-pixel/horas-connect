@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
 import { formatHorasHsMin } from "@/lib/horas";
-import { formatMonto, hoyISO } from "@/lib/formato";
+import { formatMonto, hoyISO, semanaActualISO } from "@/lib/formato";
 import { FiltroPopover } from "@/components/filtro-popover";
 import { BarrasHoras } from "./charts";
 
@@ -84,6 +84,42 @@ export default async function DashboardPage({
 
   const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
 
+  // Cumpleaños de la semana (lunes a domingo, fecha del sistema): solo entre
+  // los clientes visibles para este usuario (mismo alcance que "proyectos").
+  const semana = semanaActualISO();
+  const diasSemanaMD = new Set(semana.map((iso) => iso.slice(5))); // "MM-DD"
+  const miembrosEquipo = await prisma.miembroEquipo.findMany({
+    where: {
+      clienteId: { in: proyectos.map((p) => p.id) },
+      cumpleanos: { not: null },
+    },
+    include: { cliente: { select: { nombre: true } } },
+  });
+  const cumpleanosSemana = miembrosEquipo
+    .filter((m) => {
+      const md = `${String(m.cumpleanos!.getUTCMonth() + 1).padStart(2, "0")}-${String(
+        m.cumpleanos!.getUTCDate(),
+      ).padStart(2, "0")}`;
+      return diasSemanaMD.has(md);
+    })
+    .map((m) => ({
+      id: m.id,
+      nombre: `${m.nombre} ${m.apellido}`,
+      fecha: `${String(m.cumpleanos!.getUTCDate()).padStart(2, "0")}/${String(
+        m.cumpleanos!.getUTCMonth() + 1,
+      ).padStart(2, "0")}`,
+      // Posición dentro de la semana (0=lunes…6=domingo) para orden cronológico.
+      posicion: semana.findIndex(
+        (iso) =>
+          iso.slice(5) ===
+          `${String(m.cumpleanos!.getUTCMonth() + 1).padStart(2, "0")}-${String(
+            m.cumpleanos!.getUTCDate(),
+          ).padStart(2, "0")}`,
+      ),
+      proyecto: m.cliente.nombre,
+    }))
+    .sort((a, b) => a.posicion - b.posicion || a.nombre.localeCompare(b.nombre));
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -124,6 +160,30 @@ export default async function DashboardPage({
             color="#ff91ff"
           />
         </div>
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-dc-line bg-dc-card p-5">
+        <h2 className="mb-3 text-sm text-white">Cumpleaños de la semana</h2>
+        {cumpleanosSemana.length === 0 ? (
+          <p className="text-sm text-dc-muted">
+            No hay cumpleaños esta semana.
+          </p>
+        ) : (
+          <ul className="divide-y divide-dc-line">
+            {cumpleanosSemana.map((c) => (
+              <li
+                key={c.id}
+                className="flex items-center justify-between gap-3 py-2.5 text-sm first:pt-0 last:pb-0"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-dc-text">{c.nombre}</p>
+                  <p className="truncate text-xs text-dc-muted">{c.proyecto}</p>
+                </div>
+                <span className="shrink-0 tabular-nums text-dc-peri">{c.fecha}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

@@ -1,14 +1,15 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
-import { GRID_EQUIPO, type MiembroFila } from "../../../admin/clientes/constantes";
-import { NuevoMiembroBoton } from "../../../admin/clientes/[id]/equipo/nuevo-miembro-form";
-import { FilaMiembro } from "../../../admin/clientes/[id]/equipo/fila-miembro";
-import { InfoButton } from "@/components/info-button";
+import {
+  ETIQUETA_ROL_EQUIPO,
+  mostrarFechaISO,
+} from "../../../admin/clientes/constantes";
+import { IconoCandado, SoloLecturaBadge } from "@/components/ui/solo-lectura-badge";
 
-// Pestaña Equipo de trabajo: MISMOS componentes, actions y tabla que la
-// pestaña Equipo de Settings → Clientes (única fuente de datos). Acá pueden
-// gestionarlo también los mentores asignados al proyecto.
+// Pestaña Equipo de trabajo: SOLO LECTURA. La administración (alta, edición,
+// baja) se hace exclusivamente desde Settings → Clientes → Equipo; acá se
+// integra y muestra la misma fuente de datos.
 export default async function ProyectoEquipoPage({
   params,
 }: {
@@ -23,53 +24,47 @@ export default async function ProyectoEquipoPage({
     orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
   });
 
-  const filas: MiembroFila[] = miembros.map((m) => ({
-    id: m.id,
-    nombre: m.nombre,
-    apellido: m.apellido,
-    rol: m.rol,
-    cumpleanos: m.cumpleanos ? m.cumpleanos.toISOString().slice(0, 10) : "",
-  }));
-
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <h2 className="font-display text-sm uppercase text-white">
-            Equipo de trabajo
-          </h2>
-          <InfoButton>
-            Integrantes del equipo del cliente: quién es quién en el proyecto
-            y su cumpleaños. Es la misma lista que se ve en Settings →
-            Clientes.
-          </InfoButton>
-        </div>
-        <NuevoMiembroBoton clienteId={id} />
+    <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-dc-peri">
+          <IconoCandado />
+        </span>
+        <h2 className="font-display text-sm uppercase text-white">Equipo</h2>
+        <SoloLecturaBadge />
       </div>
+      <p className="mt-1 text-xs text-dc-muted">
+        La administración del equipo se hace desde Settings → Clientes.
+      </p>
 
-      <div className="mt-4 flex min-h-0 flex-1 overflow-x-auto dc-panel">
-        <div className="flex min-h-0 min-w-[780px] flex-1 flex-col">
-          <div className={`dc-thead ${GRID_EQUIPO} shrink-0 border-b border-dc-line px-3`}>
-            <span>Nombre</span>
-            <span>Apellido</span>
-            <span>Rol</span>
-            <span>Cumpleaños</span>
-            <span />
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {filas.map((f) => (
-              <FilaMiembro key={f.id} miembro={f} />
-            ))}
-
-            {filas.length === 0 && (
-              <p className="px-4 py-6 text-center text-sm text-dc-muted">
-                Todavía no hay integrantes cargados.
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
+      {miembros.length > 0 ? (
+        <ul className="mt-4 divide-y divide-dc-line">
+          {miembros.map((m) => (
+            <li
+              key={m.id}
+              className="flex items-center justify-between gap-3 py-3 text-sm first:pt-0 last:pb-0"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-dc-text">
+                  {m.nombre} {m.apellido}
+                </p>
+                <p className="truncate text-xs text-dc-muted">
+                  {ETIQUETA_ROL_EQUIPO[m.rol] ?? m.rol}
+                </p>
+              </div>
+              <span className="shrink-0 tabular-nums text-dc-muted">
+                {m.cumpleanos
+                  ? mostrarFechaISO(m.cumpleanos.toISOString().slice(0, 10))
+                  : "—"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-4 text-sm text-dc-muted">
+          Todavía no hay integrantes cargados.
+        </p>
+      )}
     </div>
   );
 }
