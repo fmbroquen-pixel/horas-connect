@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
-import { ProyectosForm } from "../admin/usuarios/[id]/proyectos-form";
 import { TarifaReadOnly } from "@/components/perfil/tarifa-read-only";
 import { HistorialTarifas } from "@/components/perfil/historial-tarifas";
 import { SeccionDatosUsuario } from "@/components/perfil/seccion-datos";
+import { IconoCandado, SoloLecturaBadge } from "@/components/ui/solo-lectura-badge";
 
-// Perfil propio del guest (mentor): sus datos y tarifa son de solo lectura;
-// solo puede editar sus proyectos asignados.
+// Perfil propio del guest (mentor): todo es de solo lectura. Sus datos,
+// tarifa y clientes asignados los gestiona un admin desde Settings.
 export default async function MiPerfilPage() {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
@@ -16,13 +16,15 @@ export default async function MiPerfilPage() {
   if (usuario.rol === "admin") redirect("/admin/usuarios");
   if (usuario.rol !== "guest") redirect("/rentabilidad");
 
-  const [tarifas, clientes, asignados, admins] = await Promise.all([
+  const [tarifas, asignados, admins] = await Promise.all([
     prisma.tarifa.findMany({
       where: { usuarioId: usuario.id },
       orderBy: { vigenteDesde: "desc" },
     }),
-    prisma.cliente.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } }),
-    prisma.proyectoAsignado.findMany({ where: { usuarioId: usuario.id } }),
+    prisma.proyectoAsignado.findMany({
+      where: { usuarioId: usuario.id },
+      include: { cliente: { select: { nombre: true, activo: true } } },
+    }),
     prisma.usuario.findMany({
       where: { rol: "admin", activo: true },
       select: { email: true },
@@ -41,7 +43,10 @@ export default async function MiPerfilPage() {
       vigenteDesde: t.vigenteDesde,
       vigenteHasta: t.vigenteHasta,
     }));
-  const asignadosIds = new Set(asignados.map((a) => a.clienteId));
+  const clientesAsignados = asignados
+    .filter((a) => a.cliente.activo)
+    .map((a) => a.cliente.nombre)
+    .sort((a, b) => a.localeCompare(b));
 
   const buscarValor = (modalidad: string, ownership: string) => {
     const t = vigentes.find((v) => v.modalidad === modalidad && v.ownership === ownership);
@@ -68,21 +73,38 @@ export default async function MiPerfilPage() {
         adminsEmails={admins.map((a) => a.email)}
       />
 
-      {/* Único bloque editable por el propio guest. */}
+      {/* Solo lectura: los clientes asignados los gestiona un admin. */}
       <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
-        <h2 className="font-display text-sm uppercase text-white">
-          Clientes asignados
-        </h2>
-        <p className="mt-1 text-xs text-dc-muted">
-          Elegí en qué clientes cargás horas.
-        </p>
-        <div className="mt-4">
-          <ProyectosForm
-            usuarioId={usuario.id}
-            clientes={clientes}
-            asignadosIds={asignadosIds}
-          />
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-dc-peri">
+            <IconoCandado />
+          </span>
+          <h2 className="font-display text-sm uppercase text-white">
+            Clientes asignados
+          </h2>
+          <SoloLecturaBadge />
         </div>
+        <p className="mt-1 text-xs text-dc-muted">
+          Son los clientes en los que podés cargar horas. Los gestiona un
+          administrador.
+        </p>
+        {clientesAsignados.length > 0 ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {clientesAsignados.map((nombre) => (
+              <span
+                key={nombre}
+                className="rounded-full bg-dc-line px-3 py-1 text-sm text-dc-text"
+              >
+                {nombre}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-4 text-sm text-dc-muted">
+            Todavía no tenés clientes asignados. Pedile a un administrador que
+            te asigne.
+          </p>
+        )}
       </div>
 
       <HistorialTarifas historial={historial} />

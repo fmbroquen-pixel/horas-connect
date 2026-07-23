@@ -76,6 +76,17 @@ function CategoriaNav({
     : pathname === item.href || pathname.startsWith(item.href + "/");
   const [abierto, setAbierto] = useState(enSeccion);
 
+  // Cuál de los hijos está activo. Regla "el más específico gana": un hijo
+  // coincide por match exacto o por prefijo (para que las páginas de detalle
+  // mantengan resaltado su padre, p. ej. /admin/usuarios/[id] → Usuarios),
+  // pero solo se activa el de href más largo entre los que coinciden. Así
+  // Activos (/proyectos) e Inactivos (/proyectos/inactivos) nunca quedan
+  // ambos resaltados: en /proyectos/inactivos gana Inactivos por ser más
+  // largo.
+  const hijoActivoHref = (item.children ?? [])
+    .filter((c) => pathname === c.href || pathname.startsWith(c.href + "/"))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+
   // Si se entra a una ruta de la sección (por link directo o navegación),
   // el submenú se expande solo.
   useEffect(() => {
@@ -121,7 +132,7 @@ function CategoriaNav({
       {abierto && (
         <ul id={submenuId} className="mt-0.5 space-y-0.5 pl-9">
           {item.children.map((c) => {
-            const activa = pathname === c.href || pathname.startsWith(c.href + "/");
+            const activa = c.href === hijoActivoHref;
             return (
               <li key={c.href}>
                 <Link
