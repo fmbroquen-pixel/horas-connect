@@ -126,7 +126,6 @@ export default async function DashboardPage({
       </div>
 
       <div className="mt-6">
-        <h2 className="mb-3 text-sm text-white">Estado de Proyectos</h2>
         <EstadoProyectos usuario={usuario} />
       </div>
 

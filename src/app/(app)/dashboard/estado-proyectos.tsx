@@ -1,14 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { getClientesProyectos } from "@/lib/proyecto-acceso";
 import type { Usuario } from "@/generated/prisma/client";
-import { CardProyectoEstado } from "./card-proyecto-estado";
+import { FilaProyectoEstado } from "./fila-proyecto-estado";
 
-// Widget de Home: estado editable del portafolio en formato cards (no
-// tabla). Mismo alcance de visibilidad que la sección Proyectos: admin ve
-// todos los clientes activos, un mentor ve los suyos asignados. Semáforo y
-// etapa son editables tanto por admin como por el mentor con acceso al
-// proyecto (mismo permiso que ya aplica en Seguimiento vía cambiarSemaforo/
-// cambiarEtapa); no se muestran mentores acá.
+// Widget único de Home: lista ejecutiva dentro de una card (sin tabla, sin
+// grid, sin dropdowns permanentes). Mismo alcance de visibilidad que la
+// sección Proyectos: admin ve todos los clientes activos, un mentor ve los
+// suyos asignados. Semáforo y etapa son editables tanto por admin como por
+// el mentor con acceso al proyecto (mismo permiso que ya aplica en
+// Seguimiento vía cambiarSemaforo/cambiarEtapa); no se muestran mentores.
 export async function EstadoProyectos({ usuario }: { usuario: Usuario }) {
   const clientes = await getClientesProyectos(usuario);
   const ids = clientes.map((c) => c.id);
@@ -34,35 +34,34 @@ export async function EstadoProyectos({ usuario }: { usuario: Usuario }) {
   for (const s of semaforos) {
     if (!semaforoPorCliente.has(s.clienteId)) semaforoPorCliente.set(s.clienteId, s.estado);
   }
-  const etapaPorCliente = new Map<string, { id: string; etiqueta: string }>();
+  const etapaPorCliente = new Map<string, string>();
   for (const e of etapaEventos) {
-    if (!etapaPorCliente.has(e.clienteId)) {
-      etapaPorCliente.set(e.clienteId, { id: e.etapaId, etiqueta: e.etapa.etiqueta });
-    }
+    if (!etapaPorCliente.has(e.clienteId)) etapaPorCliente.set(e.clienteId, e.etapaId);
   }
 
   const opcionesEtapa = etapas.map((e) => ({ value: e.id, label: e.etiqueta }));
 
-  if (clientes.length === 0) {
-    return (
-      <p className="rounded-2xl border border-dc-line bg-dc-card px-4 py-6 text-center text-sm text-dc-muted">
-        Todavía no tenés proyectos asignados.
-      </p>
-    );
-  }
-
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {clientes.map((c) => (
-        <CardProyectoEstado
-          key={c.id}
-          id={c.id}
-          nombre={c.nombre}
-          semaforo={semaforoPorCliente.get(c.id) ?? ""}
-          etapaId={etapaPorCliente.get(c.id)?.id ?? ""}
-          etapas={opcionesEtapa}
-        />
-      ))}
+    <div className="rounded-2xl border border-dc-line bg-dc-card p-5">
+      <h2 className="mb-1 text-sm text-white">Estado de Proyectos</h2>
+      {clientes.length === 0 ? (
+        <p className="mt-2 text-sm text-dc-muted">
+          Todavía no tenés proyectos asignados.
+        </p>
+      ) : (
+        <div className="divide-y divide-dc-line">
+          {clientes.map((c) => (
+            <FilaProyectoEstado
+              key={c.id}
+              id={c.id}
+              nombre={c.nombre}
+              semaforo={semaforoPorCliente.get(c.id) ?? ""}
+              etapaId={etapaPorCliente.get(c.id) ?? ""}
+              etapas={opcionesEtapa}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
