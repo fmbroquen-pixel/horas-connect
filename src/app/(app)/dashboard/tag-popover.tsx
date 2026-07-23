@@ -1,28 +1,47 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export type OpcionTag = { value: string; label: string; dot?: string };
+
+// Altura máxima del listado (debe coincidir con max-h-60 más abajo): se usa
+// para decidir si conviene abrir el popover hacia arriba.
+const MAX_ALTURA_MENU = 240;
 
 // Tag clickeable que abre un popover chico con las opciones disponibles.
 // A diferencia de Dropdown (components/dropdown.tsx), el trigger no se ve
 // como un input con borde: es una pastilla, pensada para vivir dentro de una
 // lista ejecutiva sin parecer un formulario. Guarda al elegir y cierra solo.
+// Se reposiciona hacia arriba solo si no hay espacio debajo (filas al pie
+// del widget), para no quedar cortado por el borde de la ventana.
 export function TagPopover({
   valor,
   opciones,
   placeholder,
   onElegir,
   ariaLabel,
+  anchoMenu = "w-48",
 }: {
   valor: string;
   opciones: OpcionTag[];
   placeholder: string;
   onElegir: (v: string) => void;
   ariaLabel: string;
+  anchoMenu?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [abrirArriba, setAbrirArriba] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Decide la dirección ANTES de pintar, para que no se vea un salto.
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const espacioAbajo = window.innerHeight - rect.bottom;
+    const espacioArriba = rect.top;
+    setAbrirArriba(espacioAbajo < MAX_ALTURA_MENU && espacioArriba > espacioAbajo);
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -43,14 +62,15 @@ export function TagPopover({
   const seleccionada = opciones.find((o) => o.value === valor);
 
   return (
-    <div className="relative inline-block" ref={ref}>
+    <div className="relative inline-block w-full" ref={ref}>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
-        className={`inline-flex w-full items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-left text-xs outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
+        className={`inline-flex w-full items-center justify-center gap-1.5 truncate rounded-full px-2.5 py-1 text-xs outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
           seleccionada
             ? "bg-dc-peri/15 text-dc-peri hover:bg-dc-peri/25"
             : "bg-dc-line text-dc-muted hover:bg-dc-line/70"
@@ -69,7 +89,9 @@ export function TagPopover({
       {open && (
         <ul
           role="listbox"
-          className="dc-menu dc-pop-in absolute left-0 top-full z-40 mt-1.5 min-w-[9rem] overflow-hidden rounded-xl border border-dc-line bg-dc-deep p-1 shadow-[0_12px_32px_rgba(0,0,0,0.45)]"
+          className={`dc-menu dc-pop-in absolute left-1/2 z-40 max-h-60 -translate-x-1/2 space-y-1 overflow-y-auto rounded-xl border border-dc-line bg-dc-deep p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.45)] ${anchoMenu} ${
+            abrirArriba ? "bottom-full mb-1.5" : "top-full mt-1.5"
+          }`}
         >
           {opciones.map((o) => {
             const activa = o.value === valor;
@@ -81,10 +103,10 @@ export function TagPopover({
                     onElegir(o.value);
                     setOpen(false);
                   }}
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm transition ${
+                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
                     activa
                       ? "bg-dc-peri/20 text-white"
-                      : "text-dc-muted hover:bg-dc-line/50 hover:text-dc-text"
+                      : "text-dc-muted hover:bg-dc-line/60 hover:text-dc-text"
                   }`}
                 >
                   {o.dot && (
@@ -94,7 +116,7 @@ export function TagPopover({
                       style={{ backgroundColor: o.dot }}
                     />
                   )}
-                  {o.label}
+                  <span className="truncate">{o.label}</span>
                 </button>
               </li>
             );
