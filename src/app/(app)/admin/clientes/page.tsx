@@ -1,12 +1,12 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { crearCliente } from "./actions";
 import { ETIQUETA_PRODUCTO } from "./constantes";
 import { AgregarModal } from "@/components/admin/agregar-modal";
-import { BTN_SECONDARY_SM, TAG_ON, TAG_OFF } from "@/lib/ui";
+import { TAG_ON, TAG_OFF } from "@/lib/ui";
 import { InfoButton } from "@/components/info-button";
 import { FiltroEstado, parseEstadoFiltro } from "@/components/admin/filtro-estado";
+import { EditarLink } from "@/components/admin/editar-link";
 
 // Lista de clientes con el mismo patrón que Usuarios: tabla + "Editar" que
 // lleva al detalle (/admin/clientes/[id]) donde viven los datos y el equipo.
@@ -49,20 +49,20 @@ export default async function ClientesPage({
       </div>
 
       <div className="mt-4 min-h-0 flex-1 overflow-auto dc-panel">
-        <table className="w-full min-w-[720px] text-sm">
+        <table className="w-full min-w-[640px] table-fixed text-sm">
           <thead className="sticky top-0 z-10">
             <tr className="border-b border-dc-line">
-              <th className="px-4">Nombre del cliente</th>
-              <th className="w-[180px] px-4">Producto</th>
-              <th className="w-[110px] px-4">Estado</th>
-              <th className="w-[110px] border-l border-dc-line px-4">Acciones</th>
+              <th className="w-[42%] px-4">Nombre del cliente</th>
+              <th className="w-[28%] px-4">Producto</th>
+              <th className="w-[18%] px-4">Estado</th>
+              <th className="w-[12%] px-4" />
             </tr>
           </thead>
           <tbody>
             {clientes.map((c) => (
               <tr key={c.id} className="border-b border-dc-line last:border-0">
                 <td className="px-4 py-3 text-center">
-                  <p className="text-dc-text">{c.nombre}</p>
+                  <p className="truncate text-dc-text">{c.nombre}</p>
                 </td>
                 <td className="px-4 py-3 text-center">
                   {c.producto ? (
@@ -78,10 +78,10 @@ export default async function ClientesPage({
                     {c.activo ? "Activo" : "Inactivo"}
                   </span>
                 </td>
-                <td className="border-l border-dc-line px-4 py-3 text-center">
-                  <Link href={`/admin/clientes/${c.id}`} className={BTN_SECONDARY_SM}>
-                    Editar
-                  </Link>
+                <td className="px-4 py-3">
+                  <span className="flex justify-center">
+                    <EditarLink href={`/admin/clientes/${c.id}`} label="Editar cliente" />
+                  </span>
                 </td>
               </tr>
             ))}

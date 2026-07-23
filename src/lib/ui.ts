@@ -11,6 +11,10 @@ export const BTN_PRIMARY_SM = `${BASE} rounded-lg bg-dc-purple px-3 py-1.5 text-
 export const BTN_SECONDARY = `${BASE} rounded-xl border border-dc-line px-4 py-2 text-sm text-dc-muted hover:border-dc-peri hover:bg-dc-peri/10 hover:text-dc-text`;
 export const BTN_SECONDARY_SM = `${BASE} rounded-lg border border-dc-line px-2 py-1 text-xs text-dc-muted hover:border-dc-peri hover:bg-dc-peri/10 hover:text-dc-text`;
 
+// Botón de solo ícono (acciones de tabla): mismo lenguaje que BTN_SECONDARY_SM
+// pero cuadrado, para alojar un SVG de ~15px. Siempre con title/aria-label.
+export const BTN_ICON_SM = `${BASE} rounded-lg border border-dc-line p-1.5 text-dc-muted hover:border-dc-peri hover:bg-dc-peri/10 hover:text-dc-text`;
+
 // Acción destructiva (Borrar) y su confirmación.
 export const BTN_DANGER_SM = `${BASE} rounded-lg border border-dc-line px-2 py-1 text-xs text-dc-muted hover:border-dc-pink hover:bg-dc-pink/10 hover:text-dc-pink`;
 export const BTN_DANGER_CONFIRM_SM = `${BASE} rounded-lg bg-dc-pink/20 px-2 py-1 text-xs text-dc-pink hover:bg-dc-pink/30`;

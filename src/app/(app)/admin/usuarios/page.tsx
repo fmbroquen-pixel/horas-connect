@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { NuevoUsuarioBoton } from "./nuevo-usuario-form";
-import { BTN_SECONDARY_SM, TAG_ON, TAG_OFF } from "@/lib/ui";
+import { TAG_ON, TAG_OFF } from "@/lib/ui";
 import { InfoButton } from "@/components/info-button";
 import { FiltroEstado, parseEstadoFiltro } from "@/components/admin/filtro-estado";
+import { EditarLink } from "@/components/admin/editar-link";
 
 const ETIQUETA_ROL: Record<string, string> = {
   admin: "Admin",
@@ -51,22 +51,22 @@ export default async function UsuariosPage({
       </div>
 
       <div className="mt-4 min-h-0 flex-1 overflow-auto dc-panel">
-        <table className="w-full min-w-[760px] text-sm">
+        <table className="w-full min-w-[760px] table-fixed text-sm">
           <thead className="sticky top-0 z-10">
             <tr className="border-b border-dc-line">
-              <th className="px-4">Nombre de usuario</th>
-              <th className="w-[150px] px-4">Tipo de usuario</th>
-              <th className="w-[180px] px-4">Tarifa</th>
-              <th className="w-[110px] px-4">Estado</th>
-              <th className="w-[110px] border-l border-dc-line px-4">Acciones</th>
+              <th className="w-[30%] px-4">Nombre de usuario</th>
+              <th className="w-[20%] px-4">Tipo de usuario</th>
+              <th className="w-[24%] px-4">Tarifa</th>
+              <th className="w-[16%] px-4">Estado</th>
+              <th className="w-[10%] px-4" />
             </tr>
           </thead>
           <tbody>
             {usuarios.map((u) => (
               <tr key={u.id} className="border-b border-dc-line last:border-0">
                 <td className="px-4 py-3 text-center">
-                  <p className="text-dc-text">{u.nombre}</p>
-                  <p className="text-xs text-dc-muted">{u.email}</p>
+                  <p className="truncate text-dc-text">{u.nombre}</p>
+                  <p className="truncate text-xs text-dc-muted">{u.email}</p>
                 </td>
                 <td className="px-4 py-3 text-center">
                   <span className="rounded-full bg-dc-line px-3 py-1 text-xs text-dc-text">
@@ -93,10 +93,10 @@ export default async function UsuariosPage({
                     {u.activo ? "Activo" : "Bloqueado"}
                   </span>
                 </td>
-                <td className="border-l border-dc-line px-4 py-3 text-center">
-                  <Link href={`/admin/usuarios/${u.id}`} className={BTN_SECONDARY_SM}>
-                    Editar
-                  </Link>
+                <td className="px-4 py-3">
+                  <span className="flex justify-center">
+                    <EditarLink href={`/admin/usuarios/${u.id}`} label="Editar usuario" />
+                  </span>
                 </td>
               </tr>
             ))}

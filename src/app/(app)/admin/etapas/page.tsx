@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { actualizarEtapa, alternarActivoEtapa, crearEtapa } from "./actions";
 import { AgregarModal } from "@/components/admin/agregar-modal";
-import { BTN_SECONDARY_SM, BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
+import { BTN_ICON_SM, BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
 import { InfoButton } from "@/components/info-button";
 import { FiltroEstado, parseEstadoFiltro } from "@/components/admin/filtro-estado";
 
@@ -50,13 +50,13 @@ export default async function EtapasPage({
       </div>
 
       <div className="mt-4 min-h-0 flex-1 overflow-auto dc-panel">
-        <table className="w-full min-w-[720px] text-sm">
+        <table className="w-full min-w-[640px] table-fixed text-sm">
           <thead className="sticky top-0 z-10">
             <tr className="border-b border-dc-line">
-              <th className="px-4">Etiqueta</th>
-              <th className="px-4">Grupo</th>
-              <th className="w-[120px] px-4">Estado</th>
-              <th className="w-[110px] border-l border-dc-line px-4">Acciones</th>
+              <th className="w-[34%] px-4">Etiqueta</th>
+              <th className="w-[34%] px-4">Grupo</th>
+              <th className="w-[18%] px-4">Estado</th>
+              <th className="w-[14%] px-4" />
             </tr>
           </thead>
           <tbody>
@@ -86,10 +86,22 @@ export default async function EtapasPage({
                     </button>
                   </form>
                 </td>
-                <td className="border-l border-dc-line px-4 py-3 text-center">
-                  <button type="submit" form={`etapa-${e.id}`} className={BTN_SECONDARY_SM}>
-                    Guardar
-                  </button>
+                <td className="px-4 py-3">
+                  <span className="flex justify-center">
+                    <button
+                      type="submit"
+                      form={`etapa-${e.id}`}
+                      className={BTN_ICON_SM}
+                      title="Guardar cambios"
+                      aria-label="Guardar cambios"
+                    >
+                      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                        <path d="M17 21v-8H7v8" />
+                        <path d="M7 3v5h8" />
+                      </svg>
+                    </button>
+                  </span>
                 </td>
               </tr>
             ))}
