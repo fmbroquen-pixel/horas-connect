@@ -13,10 +13,10 @@ const CARD = "rounded-2xl border border-dc-line bg-dc-card p-5";
 const K = "text-xs text-dc-muted";
 const TAG = "inline-block rounded-full bg-dc-peri/15 px-3 py-1 text-xs text-dc-peri";
 
-// Pestaña Resumen: foto general del proyecto. Todo es de solo lectura acá;
-// cada dato se edita en su pestaña (Seguimiento, Equipo) o en Settings →
-// Clientes. Jerarquía: producto/mentores/etapa como tags, semáforo sin texto
-// de estado, fechas de servicio destacadas, equipo reducido a cumpleaños.
+// Pestaña Resumen: información general del proyecto únicamente. Todo es de
+// solo lectura acá; cada dato se edita en su pestaña (Seguimiento, Equipo) o
+// en Settings → Clientes. Jerarquía: producto/mentores/etapa como tags,
+// semáforo sin texto de estado, fechas de servicio destacadas.
 export default async function ProyectoResumenPage({
   params,
 }: {
@@ -27,7 +27,7 @@ export default async function ProyectoResumenPage({
   if (!acceso) notFound();
   const { cliente } = acceso;
 
-  const [asignaciones, semaforo, etapaEvento, equipo] = await Promise.all([
+  const [asignaciones, semaforo, etapaEvento] = await Promise.all([
     prisma.proyectoAsignado.findMany({
       where: { clienteId: id },
       include: { usuario: { select: { nombre: true, activo: true } } },
@@ -40,11 +40,6 @@ export default async function ProyectoResumenPage({
       where: { clienteId: id },
       orderBy: { createdAt: "desc" },
       include: { etapa: { select: { etiqueta: true } } },
-    }),
-    prisma.miembroEquipo.findMany({
-      where: { clienteId: id },
-      orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
-      select: { id: true, nombre: true, apellido: true, cumpleanos: true },
     }),
   ]);
 
@@ -144,31 +139,6 @@ export default async function ProyectoResumenPage({
             <span className="text-sm text-dc-muted">Sin mentores</span>
           )}
         </div>
-      </div>
-
-      <div className={`${CARD} sm:col-span-2 lg:col-span-3`}>
-        <p className={K}>Equipo</p>
-        {equipo.length > 0 ? (
-          <ul className="mt-2 divide-y divide-dc-line">
-            {equipo.map((m) => (
-              <li
-                key={m.id}
-                className="flex items-center justify-between gap-3 py-2 text-sm first:pt-0 last:pb-0"
-              >
-                <span className="text-dc-text">
-                  {m.nombre} {m.apellido}
-                </span>
-                <span className="tabular-nums text-dc-muted">
-                  {m.cumpleanos
-                    ? mostrarFechaISO(m.cumpleanos.toISOString().slice(0, 10))
-                    : "—"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-2 text-sm text-dc-muted">Sin integrantes cargados</p>
-        )}
       </div>
 
       <div className={`${CARD} sm:col-span-2 lg:col-span-3`}>
