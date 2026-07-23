@@ -46,20 +46,27 @@ export async function EstadoProyectos({ usuario }: { usuario: Usuario }) {
   const opcionesEtapa = etapas.map((e) => ({ value: e.id, label: e.etiqueta }));
 
   return (
-    <div className="rounded-2xl border border-dc-line bg-dc-card p-5">
-      <h2 className="mb-4 text-base font-semibold text-white">Estado de Proyectos</h2>
+    // flex-1 min-h-0: ocupa el espacio que le deja Cumpleaños dentro del
+    // Home. Título y header de columnas son shrink-0 (siempre visibles);
+    // solo la lista de proyectos scrollea.
+    <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-dc-line bg-dc-card p-5">
+      <h2 className="mb-4 shrink-0 text-base font-semibold text-white">
+        Estado de Proyectos
+      </h2>
       {clientes.length === 0 ? (
-        <p className="text-sm text-dc-muted">Todavía no tenés proyectos asignados.</p>
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-sm text-dc-muted">Todavía no tenés proyectos asignados.</p>
+        </div>
       ) : (
-        <>
+        <div className="flex min-h-0 flex-1 flex-col">
           {/* Header de columnas: no es <table><thead>, pero cumple la misma
               función visual gracias al borde y la tipografía en mayúscula. */}
-          <div className="flex items-center gap-3 border-b border-dc-line pb-2 text-xs font-medium uppercase tracking-wide text-dc-muted">
+          <div className="flex shrink-0 items-center gap-3 border-b border-dc-line pb-2 text-xs font-medium uppercase tracking-wide text-dc-muted">
             <span className="min-w-0 flex-1 text-center">Proyecto</span>
             <span className={`${COL_SEMAFORO_W} shrink-0 text-center`}>Semáforo</span>
             <span className={`${COL_ETAPA_W} shrink-0 text-center`}>Etapa actual</span>
           </div>
-          <div className="divide-y divide-dc-line">
+          <div className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
             {clientes.map((c) => (
               <FilaProyectoEstado
                 key={c.id}
@@ -71,7 +78,7 @@ export async function EstadoProyectos({ usuario }: { usuario: Usuario }) {
               />
             ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );

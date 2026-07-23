@@ -103,8 +103,11 @@ export default async function DashboardPage({
     .sort((a, b) => a.posicion - b.posicion || a.nombre.localeCompare(b.nombre));
 
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    // Dashboard de una sola pantalla: sin scroll general. Header y KPIs son
+    // shrink-0 (siempre visibles enteros); Estado de Proyectos y Cumpleaños
+    // se reparten el espacio restante y scrollean cada uno por su cuenta.
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-xl uppercase text-white">
           Hola, {usuario.nombre.split(" ")[0]}
         </h1>
@@ -118,39 +121,39 @@ export default async function DashboardPage({
         />
       </div>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-6 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
         <Kpi etiqueta="Horas reportadas" valor={`${formatHorasHsMin(totalHoras)} hs`} />
         <Kpi etiqueta="A cobrar" valor={formatMonto(totalMonto)} destacado />
         <Kpi etiqueta="Proyectos Mentor Owner" valor={String(clientesOwner.size)} />
         <Kpi etiqueta="Proyectos Mentor Backup" valor={String(clientesBackup.size)} />
       </div>
 
-      <div className="mt-6">
+      <div className="mt-6 flex min-h-0 flex-1 flex-col gap-4">
         <EstadoProyectos usuario={usuario} />
-      </div>
 
-      <div className="mt-6 rounded-2xl border border-dc-line bg-dc-card p-5">
-        <h2 className="mb-3 text-sm text-white">Cumpleaños de la semana</h2>
-        {cumpleanosSemana.length === 0 ? (
-          <p className="text-sm text-dc-muted">
-            No hay cumpleaños esta semana.
-          </p>
-        ) : (
-          <ul className="divide-y divide-dc-line">
-            {cumpleanosSemana.map((c) => (
-              <li
-                key={c.id}
-                className="flex items-center justify-between gap-3 py-2.5 text-sm first:pt-0 last:pb-0"
-              >
-                <div className="min-w-0">
-                  <p className="truncate text-dc-text">{c.nombre}</p>
-                  <p className="truncate text-xs text-dc-muted">{c.proyecto}</p>
-                </div>
-                <span className="shrink-0 tabular-nums text-dc-peri">{c.fecha}</span>
-              </li>
-            ))}
-          </ul>
-        )}
+        {/* Cumpleaños: se achica a su contenido hasta un máximo (max-h-64);
+            si hay más, scrollea internamente en vez de crecer la sección. */}
+        <div className="flex max-h-64 shrink-0 flex-col rounded-2xl border border-dc-line bg-dc-card p-5">
+          <h2 className="mb-3 shrink-0 text-sm text-white">Cumpleaños de la semana</h2>
+          {cumpleanosSemana.length === 0 ? (
+            <p className="text-sm text-dc-muted">No hay cumpleaños esta semana.</p>
+          ) : (
+            <ul className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
+              {cumpleanosSemana.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex items-center justify-between gap-3 py-2.5 text-sm first:pt-0 last:pb-0"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-dc-text">{c.nombre}</p>
+                    <p className="truncate text-xs text-dc-muted">{c.proyecto}</p>
+                  </div>
+                  <span className="shrink-0 tabular-nums text-dc-peri">{c.fecha}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );
