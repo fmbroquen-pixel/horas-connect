@@ -134,8 +134,8 @@ input[type="number"]::-webkit-inner-spin-button {
   background: #ece9f8;
 }
 .dc-panel thead th {
-  padding-top: 0.95rem;
-  padding-bottom: 0.95rem;
+  padding-top: 1.15rem;
+  padding-bottom: 1.15rem;
 }
 .dc-panel .dc-thead {
   padding-top: 0.85rem;

@@ -19,5 +19,11 @@ export const BTN_DANGER_CONFIRM_SM = `${BASE} rounded-lg bg-dc-pink/20 px-2 py-1
 export const BTN_PILL_ON = `${BASE} rounded-full bg-dc-peri/20 px-3 py-1 text-xs text-dc-peri hover:bg-dc-peri/35`;
 export const BTN_PILL_OFF = `${BASE} rounded-full bg-dc-line px-3 py-1 text-xs text-dc-muted hover:bg-dc-peri/20 hover:text-dc-text`;
 
+// Mismas pastillas, pero informativas (sin afordancias de botón): para
+// mostrar Activo/Inactivo en una tabla sin sugerir que se puede tocar ahí
+// mismo. El cambio de estado real vive en Editar.
+export const TAG_ON = "inline-flex items-center rounded-full bg-dc-peri/20 px-3 py-1 text-xs text-dc-peri";
+export const TAG_OFF = "inline-flex items-center rounded-full bg-dc-line px-3 py-1 text-xs text-dc-muted";
+
 // Botón claro sobre fondo oscuro (Continuar con Google).
 export const BTN_LIGHT = `${BASE} rounded-xl border border-dc-line bg-white/95 px-4 py-2.5 text-sm text-dc-deep hover:bg-white`;

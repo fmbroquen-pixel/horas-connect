@@ -46,6 +46,9 @@ export async function alternarActivoCliente(id: string, activo: boolean) {
   await requireAdmin();
   await prisma.cliente.update({ where: { id }, data: { activo } });
   revalidatePath("/admin/clientes");
+  // Proyectos (Activos/Inactivos) y Analytics filtran clientes por activo.
+  revalidatePath("/proyectos", "layout");
+  revalidatePath("/rentabilidad", "layout");
 }
 
 // Datos del servicio del cliente (pestaña Datos del detalle). La fecha de

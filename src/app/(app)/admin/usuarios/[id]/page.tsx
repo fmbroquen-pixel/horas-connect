@@ -2,11 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
-import { actualizarUsuario, guardarTarifa } from "../actions";
+import { actualizarUsuario, guardarTarifa, alternarActivoUsuario } from "../actions";
 import { TarifaForm } from "./tarifa-form";
 import { ProyectosForm } from "./proyectos-form";
 import { HistorialTarifas } from "@/components/perfil/historial-tarifas";
 import { SeccionDatosUsuario } from "@/components/perfil/seccion-datos";
+import { BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
 
 export default async function UsuarioDetallePage({
   params,
@@ -62,9 +63,18 @@ export default async function UsuarioDetallePage({
           </svg>
           Volver a Usuarios
         </Link>
-        <h1 className="mt-2 font-display text-lg uppercase text-white">
-          {usuario.nombre}
-        </h1>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <h1 className="font-display text-lg uppercase text-white">
+            {usuario.nombre}
+          </h1>
+          {/* Único lugar donde se cambia el estado: en la tabla es solo tag
+              informativo. */}
+          <form action={alternarActivoUsuario.bind(null, usuario.id, !usuario.activo)}>
+            <button type="submit" className={usuario.activo ? BTN_PILL_ON : BTN_PILL_OFF}>
+              {usuario.activo ? "Activo" : "Bloqueado"}
+            </button>
+          </form>
+        </div>
       </div>
 
       <SeccionDatosUsuario

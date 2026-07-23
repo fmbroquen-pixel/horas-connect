@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
+import { alternarActivoCliente } from "../actions";
+import { BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
 import { TabsNav } from "../../../tabs-nav";
 
 // Cabecera común del detalle de cliente (Volver + nombre) con sub-solapas
@@ -17,7 +19,7 @@ export default async function ClienteDetalleLayout({
   const { id } = await params;
   const cliente = await prisma.cliente.findUnique({
     where: { id },
-    select: { nombre: true },
+    select: { nombre: true, activo: true },
   });
   if (!cliente) notFound();
 
@@ -33,9 +35,18 @@ export default async function ClienteDetalleLayout({
           </svg>
           Volver a Clientes
         </Link>
-        <h1 className="mt-2 font-display text-lg uppercase text-white">
-          {cliente.nombre}
-        </h1>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          <h1 className="font-display text-lg uppercase text-white">
+            {cliente.nombre}
+          </h1>
+          {/* Único lugar donde se cambia el estado: en la tabla es solo tag
+              informativo. */}
+          <form action={alternarActivoCliente.bind(null, id, !cliente.activo)}>
+            <button type="submit" className={cliente.activo ? BTN_PILL_ON : BTN_PILL_OFF}>
+              {cliente.activo ? "Activo" : "Inactivo"}
+            </button>
+          </form>
+        </div>
       </div>
 
       <div className="mt-4 shrink-0 border-b border-dc-line">

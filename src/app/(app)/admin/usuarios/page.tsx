@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
-import { alternarActivoUsuario } from "./actions";
 import { NuevoUsuarioBoton } from "./nuevo-usuario-form";
-import { BTN_PILL_ON, BTN_PILL_OFF, BTN_SECONDARY_SM } from "@/lib/ui";
+import { BTN_SECONDARY_SM, TAG_ON, TAG_OFF } from "@/lib/ui";
 import { InfoButton } from "@/components/info-button";
+import { FiltroEstado, parseEstadoFiltro } from "@/components/admin/filtro-estado";
 
 const ETIQUETA_ROL: Record<string, string> = {
   admin: "Admin",
@@ -17,9 +17,19 @@ const ETIQUETA_TIPO_TARIFA: Record<string, string> = {
   variable: "Tarifa variable",
 };
 
-export default async function UsuariosPage() {
+export default async function UsuariosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ estado?: string }>;
+}) {
   await requireAdmin();
-  const usuarios = await prisma.usuario.findMany({ orderBy: { nombre: "asc" } });
+  const { estado: estadoParam } = await searchParams;
+  const estado = parseEstadoFiltro(estadoParam);
+
+  const usuarios = await prisma.usuario.findMany({
+    where: estado === "todos" ? {} : { activo: estado === "activos" },
+    orderBy: { nombre: "asc" },
+  });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -36,21 +46,25 @@ export default async function UsuariosPage() {
         <NuevoUsuarioBoton />
       </div>
 
-      <div className="mt-6 min-h-0 flex-1 overflow-auto dc-panel">
-        <table className="w-full min-w-[720px] text-sm">
+      <div className="mt-4 flex shrink-0 justify-end">
+        <FiltroEstado basePath="/admin/usuarios" actual={estado} />
+      </div>
+
+      <div className="mt-4 min-h-0 flex-1 overflow-auto dc-panel">
+        <table className="w-full min-w-[760px] text-sm">
           <thead className="sticky top-0 z-10">
             <tr className="border-b border-dc-line">
-              <th className="px-4 py-2 text-left">Nombre de usuario</th>
-              <th className="px-4 py-2">Tipo de usuario</th>
-              <th className="px-4 py-2">Tarifa</th>
-              <th className="px-4 py-2">Activo</th>
-              <th className="px-4 py-2" />
+              <th className="px-4">Nombre de usuario</th>
+              <th className="w-[150px] px-4">Tipo de usuario</th>
+              <th className="w-[180px] px-4">Tarifa</th>
+              <th className="w-[110px] px-4">Estado</th>
+              <th className="w-[110px] border-l border-dc-line px-4">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {usuarios.map((u) => (
               <tr key={u.id} className="border-b border-dc-line last:border-0">
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 text-center">
                   <p className="text-dc-text">{u.nombre}</p>
                   <p className="text-xs text-dc-muted">{u.email}</p>
                 </td>
@@ -64,8 +78,8 @@ export default async function UsuariosPage() {
                     <span
                       className={
                         u.tipoTarifa
-                          ? BTN_PILL_ON
-                          : "rounded-full bg-dc-pink/15 px-3 py-1 text-xs text-dc-pink"
+                          ? TAG_ON
+                          : "inline-flex items-center rounded-full bg-dc-pink/15 px-3 py-1 text-xs text-dc-pink"
                       }
                     >
                       {u.tipoTarifa
@@ -75,13 +89,11 @@ export default async function UsuariosPage() {
                   )}
                 </td>
                 <td className="px-4 py-3 text-center">
-                  <form action={alternarActivoUsuario.bind(null, u.id, !u.activo)}>
-                    <button type="submit" className={u.activo ? BTN_PILL_ON : BTN_PILL_OFF}>
-                      {u.activo ? "Activo" : "Bloqueado"}
-                    </button>
-                  </form>
+                  <span className={u.activo ? TAG_ON : TAG_OFF}>
+                    {u.activo ? "Activo" : "Bloqueado"}
+                  </span>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="border-l border-dc-line px-4 py-3 text-center">
                   <Link href={`/admin/usuarios/${u.id}`} className={BTN_SECONDARY_SM}>
                     Editar
                   </Link>
@@ -91,7 +103,9 @@ export default async function UsuariosPage() {
             {usuarios.length === 0 && (
               <tr>
                 <td className="px-4 py-6 text-center text-dc-muted" colSpan={5}>
-                  Todavía no hay usuarios cargados.
+                  {estado === "todos"
+                    ? "Todavía no hay usuarios cargados."
+                    : "No hay usuarios que coincidan con este filtro."}
                 </td>
               </tr>
             )}
