@@ -80,7 +80,11 @@ export function TagPopover({
           <span
             aria-hidden
             className="h-2 w-2 shrink-0 rounded-full"
-            style={{ backgroundColor: seleccionada.dot }}
+            style={{
+              backgroundColor: seleccionada.dot,
+              // Glow suave del color del estado, sin llegar a neón.
+              boxShadow: `0 0 6px ${seleccionada.dot}`,
+            }}
           />
         )}
         <span className="truncate">{seleccionada?.label ?? placeholder}</span>
@@ -113,7 +117,10 @@ export function TagPopover({
                     <span
                       aria-hidden
                       className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: o.dot }}
+                      style={{
+                        backgroundColor: o.dot,
+                        boxShadow: `0 0 6px ${o.dot}`,
+                      }}
                     />
                   )}
                   <span className="truncate">{o.label}</span>

@@ -1,11 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getClientesProyectos } from "@/lib/proyecto-acceso";
 import type { Usuario } from "@/generated/prisma/client";
-import {
-  FilaProyectoEstado,
-  COL_SEMAFORO_W,
-  COL_ETAPA_W,
-} from "./fila-proyecto-estado";
+import { FilaProyectoEstado } from "./fila-proyecto-estado";
 
 // Widget único de Home: lista ejecutiva dentro de una card (sin tabla, sin
 // grid, sin dropdowns permanentes). Mismo alcance de visibilidad que la
@@ -60,11 +56,12 @@ export async function EstadoProyectos({ usuario }: { usuario: Usuario }) {
       ) : (
         <div className="flex min-h-0 flex-1 flex-col">
           {/* Header de columnas: no es <table><thead>, pero cumple la misma
-              función visual gracias al borde y la tipografía en mayúscula. */}
+              función visual. Tres columnas equivalentes (min-w-0 flex-1),
+              espejo exacto de las filas (fila-proyecto-estado.tsx). */}
           <div className="flex shrink-0 items-center gap-3 border-b border-dc-line pb-2 text-xs font-medium uppercase tracking-wide text-dc-muted">
             <span className="min-w-0 flex-1 text-center">Proyecto</span>
-            <span className={`${COL_SEMAFORO_W} shrink-0 text-center`}>Semáforo</span>
-            <span className={`${COL_ETAPA_W} shrink-0 text-center`}>Etapa actual</span>
+            <span className="min-w-0 flex-1 text-center">Semáforo</span>
+            <span className="min-w-0 flex-1 text-center">Etapa actual</span>
           </div>
           <div className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
             {clientes.map((c) => (
