@@ -13,11 +13,12 @@ const CARD = "rounded-2xl border border-dc-line bg-dc-card p-5";
 const K = "text-xs text-dc-muted";
 const TAG = "inline-block rounded-full bg-dc-peri/15 px-3 py-1 text-xs text-dc-peri";
 
-// Pestaña Resumen: información general del proyecto únicamente. Todo es de
-// solo lectura acá; cada dato se edita en su pestaña (Seguimiento, Equipo) o
-// en Settings → Clientes. Jerarquía: producto/mentores/etapa como tags,
-// semáforo sin texto de estado, fechas de servicio destacadas.
-export default async function ProyectoResumenPage({
+// Pestaña Home: pantalla principal del proyecto y punto de entrada al resto
+// de las secciones. Información general únicamente, de solo lectura; cada
+// dato se edita en su pestaña (Seguimiento, Equipo) o en Settings →
+// Clientes. Jerarquía: producto/mentores/etapa como tags, semáforo sin texto
+// de estado, fechas de servicio destacadas.
+export default async function ProyectoHomePage({
   params,
 }: {
   params: Promise<{ id: string }>;
