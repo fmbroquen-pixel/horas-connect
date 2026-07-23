@@ -128,13 +128,21 @@ export default async function DashboardPage({
         <Kpi etiqueta="Proyectos Mentor Backup" valor={String(clientesBackup.size)} />
       </div>
 
-      <div className="mt-6 flex min-h-0 flex-1 flex-col gap-4">
-        <EstadoProyectos usuario={usuario} />
+      {/* Dos columnas 70/30 en desktop; apiladas en pantallas chicas. Ambas
+          comparten el alto disponible (items-stretch por defecto) y scrollean
+          por dentro de forma independiente. */}
+      <div className="mt-6 flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+        <div className="flex min-h-0 flex-1 flex-col lg:flex-none lg:w-[70%]">
+          <EstadoProyectos usuario={usuario} />
+        </div>
 
-        {/* Cumpleaños: se achica a su contenido hasta un máximo (max-h-64);
-            si hay más, scrollea internamente en vez de crecer la sección. */}
-        <div className="flex max-h-64 shrink-0 flex-col rounded-2xl border border-dc-line bg-dc-card p-5">
-          <h2 className="mb-3 shrink-0 text-sm text-white">Cumpleaños de la semana</h2>
+        {/* Cumpleaños: título fijo; si hay más cumpleaños que alto, scrollea
+            solo la lista. En mobile queda con un tope de altura para no
+            empujar el resto fuera de pantalla. */}
+        <div className="flex max-h-64 min-h-0 flex-col rounded-2xl border border-dc-line bg-dc-card p-5 lg:max-h-none lg:w-[30%]">
+          <h2 className="mb-3 shrink-0 text-base font-semibold text-white">
+            Cumpleaños de la semana
+          </h2>
           {cumpleanosSemana.length === 0 ? (
             <p className="text-sm text-dc-muted">No hay cumpleaños esta semana.</p>
           ) : (
