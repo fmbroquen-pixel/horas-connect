@@ -10,10 +10,10 @@ import type { SemaforoEstado, EstadoTarea } from "@/generated/prisma/client";
 type Resultado = { error?: string };
 
 // Un solo revalidate cubre el listado, todas las pestañas del detalle y el
-// tablero "Estado de Proyectos" de Analytics (misma fuente de datos).
+// widget "Estado de Proyectos" del Home (misma fuente de datos).
 function revalidarProyectos() {
   revalidatePath("/proyectos", "layout");
-  revalidatePath("/rentabilidad", "layout");
+  revalidatePath("/dashboard");
 }
 
 async function requireAcceso(clienteId: string) {

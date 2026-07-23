@@ -5,10 +5,12 @@ import { getProyectosPermitidos } from "@/lib/require-guest";
 import { formatHorasHsMin } from "@/lib/horas";
 import { formatMonto, hoyISO, semanaActualISO } from "@/lib/formato";
 import { FiltroPopover } from "@/components/filtro-popover";
-import { BarrasHoras } from "./charts";
+import { EstadoProyectos } from "./estado-proyectos";
 
 const MAX_DIAS_FILTRO = 90;
 
+// Home: centro operativo de CORE. KPIs personales del rango filtrado,
+// estado editable del portafolio (cards) y cumpleaños de la semana.
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -37,50 +39,30 @@ export default async function DashboardPage({
     ? params.proyecto
     : undefined;
 
-  const [registros, vacaciones] = await Promise.all([
-    prisma.registroHoras.findMany({
-      where: {
-        usuarioId: usuario.id,
-        eliminadoEn: null,
-        fecha: {
-          gte: new Date(desde + "T00:00:00Z"),
-          lte: new Date(hasta + "T00:00:00Z"),
-        },
-        ...(proyectoId ? { clienteId: proyectoId } : {}),
+  const registros = await prisma.registroHoras.findMany({
+    where: {
+      usuarioId: usuario.id,
+      eliminadoEn: null,
+      fecha: {
+        gte: new Date(desde + "T00:00:00Z"),
+        lte: new Date(hasta + "T00:00:00Z"),
       },
-      include: { cliente: true, etapa: true },
-    }),
-    prisma.vacacion.findMany({
-      where: { usuarioId: usuario.id, eliminadoEn: null },
-    }),
-  ]);
+      ...(proyectoId ? { clienteId: proyectoId } : {}),
+    },
+  });
 
-  // Horas y monto por proyecto.
-  const porProyecto = new Map<string, { nombre: string; horas: number; monto: number }>();
-  // Horas por etapa.
-  const porEtapa = new Map<string, number>();
+  // Horas y monto totales del rango, y clientes distintos por ownership
+  // (en cuántos proyectos actuó como Owner vs. Backup en el período).
+  let totalHoras = 0;
+  let totalMonto = 0;
+  const clientesOwner = new Set<string>();
+  const clientesBackup = new Set<string>();
   for (const r of registros) {
-    const p = porProyecto.get(r.clienteId) ?? { nombre: r.cliente.nombre, horas: 0, monto: 0 };
-    p.horas += Number(r.horas);
-    p.monto += Number(r.montoUsd);
-    porProyecto.set(r.clienteId, p);
-
-    const etapa = r.etapa?.etiqueta ?? "Sin etapa";
-    porEtapa.set(etapa, (porEtapa.get(etapa) ?? 0) + Number(r.horas));
+    totalHoras += Number(r.horas);
+    totalMonto += Number(r.montoUsd);
+    if (r.ownership === "owner") clientesOwner.add(r.clienteId);
+    else if (r.ownership === "backup") clientesBackup.add(r.clienteId);
   }
-
-  const proyectosOrden = [...porProyecto.values()].sort((a, b) => b.horas - a.horas);
-  const totalHoras = proyectosOrden.reduce((a, f) => a + f.horas, 0);
-  const totalMonto = proyectosOrden.reduce((a, f) => a + f.monto, 0);
-
-  const etapasTop5 = [...porEtapa.entries()]
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
-
-  const anioActual = new Date().getFullYear();
-  const diasVacaciones = vacaciones
-    .filter((v) => v.fechaInicio.getUTCFullYear() === anioActual)
-    .reduce((acc, v) => acc + v.dias, 0);
 
   const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
 
@@ -137,29 +119,15 @@ export default async function DashboardPage({
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Kpi etiqueta="Horas" valor={`${formatHorasHsMin(totalHoras)} hs`} />
-        <Kpi etiqueta="A cobrar (USD)" valor={formatMonto(totalMonto)} destacado />
-        <Kpi etiqueta="Clientes" valor={String(proyectosOrden.length)} />
-        <Kpi etiqueta={`Vacaciones ${anioActual}`} valor={`${diasVacaciones} días`} />
+        <Kpi etiqueta="Horas reportadas" valor={`${formatHorasHsMin(totalHoras)} hs`} />
+        <Kpi etiqueta="A cobrar" valor={formatMonto(totalMonto)} destacado />
+        <Kpi etiqueta="Proyectos Mentor Owner" valor={String(clientesOwner.size)} />
+        <Kpi etiqueta="Proyectos Mentor Backup" valor={String(clientesBackup.size)} />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-dc-line bg-dc-card p-5">
-          <h2 className="mb-3 text-sm text-white">Horas por cliente</h2>
-          <BarrasHoras
-            labels={proyectosOrden.map((p) => p.nombre)}
-            horas={proyectosOrden.map((p) => p.horas)}
-            color="#8b8cff"
-          />
-        </div>
-        <div className="rounded-2xl border border-dc-line bg-dc-card p-5">
-          <h2 className="mb-3 text-sm text-white">Top 5 etapas por horas</h2>
-          <BarrasHoras
-            labels={etapasTop5.map(([nombre]) => nombre)}
-            horas={etapasTop5.map(([, horas]) => horas)}
-            color="#ff91ff"
-          />
-        </div>
+      <div className="mt-6">
+        <h2 className="mb-3 text-sm text-white">Estado de Proyectos</h2>
+        <EstadoProyectos usuario={usuario} />
       </div>
 
       <div className="mt-6 rounded-2xl border border-dc-line bg-dc-card p-5">
