@@ -29,8 +29,7 @@ export default async function EtapasPage({
         <div className="flex items-center gap-2">
           <h1 className="font-display text-lg uppercase text-white">Etapas</h1>
           <InfoButton>
-            Opciones del desplegable de Etapa al cargar horas y viáticos,
-            agrupadas.
+            Opciones del desplegable de Etapa al cargar horas, agrupadas.
           </InfoButton>
         </div>
         <AgregarModal

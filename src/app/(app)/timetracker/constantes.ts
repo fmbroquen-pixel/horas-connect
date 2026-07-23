@@ -4,6 +4,4 @@ import { DIAS_VENTANA_CARGA } from "@/lib/ventana-carga";
 // pueden cargar o modificar registros. Vive fuera de actions.ts porque un
 // módulo "use server" solo puede exportar funciones async (no constantes), y
 // la usan también la página y los componentes de cliente (DatePicker).
-// Re-exporta la constante compartida con Expenses para que ambos módulos
-// apliquen la misma regla sin duplicar el número.
 export const DIAS_VENTANA_EDICION = DIAS_VENTANA_CARGA;

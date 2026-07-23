@@ -30,9 +30,8 @@ export default async function ClientesPage({
         <div className="flex items-center gap-2">
           <h1 className="font-display text-lg uppercase text-white">Clientes</h1>
           <InfoButton>
-            Clientes disponibles al cargar horas y viáticos. Desde Editar se
-            configuran los datos del servicio, el estado y el equipo de cada
-            cliente.
+            Clientes disponibles al cargar horas. Desde Editar se configuran
+            los datos del servicio, el estado y el equipo de cada cliente.
           </InfoButton>
         </div>
         <AgregarModal

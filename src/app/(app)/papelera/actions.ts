@@ -4,10 +4,9 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireGuest } from "@/lib/require-guest";
 import { formatHorasHsMin } from "@/lib/horas";
-import { formatMonto } from "@/lib/formato";
 import { RETENCION_DIAS } from "./constantes";
 
-export type TipoEliminado = "hora" | "viatico" | "vacacion";
+export type TipoEliminado = "hora" | "vacacion";
 
 export type ItemEliminado = {
   tipo: TipoEliminado;
@@ -55,23 +54,6 @@ export async function listarEliminados(
     }));
   }
 
-  if (tipo === "viatico") {
-    const viaticos = await prisma.viatico.findMany({
-      where: { eliminadoEn: { not: null }, ...scope },
-      include: { cliente: true },
-      orderBy: { eliminadoEn: "desc" },
-      take: 100,
-    });
-    return viaticos.map((v) => ({
-      tipo: "viatico" as const,
-      seccion: "Expenses",
-      id: v.id,
-      resumen: `${fmt(v.fecha)} · ${v.cliente.nombre} · ${v.moneda} ${formatMonto(Number(v.monto))}`,
-      eliminadoEn: v.eliminadoEn!.toISOString(),
-      diasRestantes: diasRestantes(v.eliminadoEn!),
-    }));
-  }
-
   const vacaciones = await prisma.vacacion.findMany({
     where: { eliminadoEn: { not: null }, ...scope },
     orderBy: { eliminadoEn: "desc" },
@@ -100,10 +82,6 @@ export async function restaurarItem(
     await prisma.registroHoras.updateMany({ where: { id, ...scope }, data });
     revalidatePath("/timetracker");
     revalidatePath("/dashboard");
-    revalidatePath("/proyectos", "layout");
-  } else if (tipo === "viatico") {
-    await prisma.viatico.updateMany({ where: { id, ...scope }, data });
-    revalidatePath("/viaticos");
     revalidatePath("/proyectos", "layout");
   } else {
     await prisma.vacacion.updateMany({ where: { id, ...scope }, data });

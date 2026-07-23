@@ -20,7 +20,7 @@ export default async function VacacionesPage({
   if (usuario.rol === "reader") redirect("/rentabilidad");
 
   const params = await searchParams;
-  // A diferencia de Time Tracking/Expenses (que miran hacia atrás), las
+  // A diferencia de Time Tracking (que mira hacia atrás), las
   // vacaciones se cargan a futuro: el DatePicker solo permite fechas de hoy
   // en adelante. Por eso el rango por defecto llega hasta un año adelante;
   // si no, una solicitud recién creada quedaba fuera del filtro y "desaparecía".

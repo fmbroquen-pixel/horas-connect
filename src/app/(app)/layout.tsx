@@ -15,7 +15,7 @@ const ETIQUETA_ROL: Record<string, string> = {
 };
 
 // Navegación única y persistente en la sidebar. Orden: Home · Proyectos ·
-// Time Tracking · Expenses · Time Off · Analytics · Settings (desplegable).
+// Time Tracking · Time Off · Analytics · Settings (desplegable).
 const ITEM_PROYECTOS: ItemSidebar = {
   href: "/proyectos",
   label: "Proyectos",
@@ -30,7 +30,6 @@ const ITEMS_CARGA: ItemSidebar[] = [
   { href: "/dashboard", label: "Home", icono: "home" },
   ITEM_PROYECTOS,
   { href: "/timetracker", label: "Time Tracking", icono: "reloj" },
-  { href: "/viaticos", label: "Expenses", icono: "auto" },
   { href: "/vacaciones", label: "Time Off", icono: "sombrilla" },
 ];
 

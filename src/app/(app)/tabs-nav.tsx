@@ -54,16 +54,6 @@ export const ICONOS: Record<string, React.ReactNode> = {
       <path d="M12 7v5l3 2" />
     </>
   ),
-  // Viáticos: auto en movimiento.
-  auto: (
-    <>
-      <path d="M5 11l1.5-4h8L16 11" />
-      <path d="M3 11h16v5H3z" />
-      <circle cx="7" cy="17" r="1.6" />
-      <circle cx="15" cy="17" r="1.6" />
-      <path d="M20 9h3M20 12h3" />
-    </>
-  ),
   // Vacaciones: sombrilla.
   sombrilla: (
     <>

@@ -22,7 +22,7 @@ const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
 
 // Fila del equipo con edición inline, mismo patrón que las tablas de carga
-// (Time Off / Expenses): ver → Editar abre el formulario en la propia fila.
+// (Time Off): ver → Editar abre el formulario en la propia fila.
 export function FilaMiembro({ miembro }: { miembro: MiembroFila }) {
   const [editando, setEditando] = useState(false);
 
