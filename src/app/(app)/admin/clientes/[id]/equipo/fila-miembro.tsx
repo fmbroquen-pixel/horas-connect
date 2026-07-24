@@ -12,11 +12,11 @@ import {
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import {
-  BTN_PRIMARY_SM,
-  BTN_SECONDARY_SM,
-  BTN_DANGER_SM,
-  BTN_DANGER_CONFIRM_SM,
-} from "@/lib/ui";
+  BotonEditarIcono,
+  BotonEliminarIcono,
+  BotonGuardarIcono,
+  BotonCancelarIcono,
+} from "@/components/tabla/acciones-fila";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -39,14 +39,11 @@ export function FilaMiembro({ miembro }: { miembro: MiembroFila }) {
             {miembro.cumpleanos ? mostrarFechaISO(miembro.cumpleanos) : "—"}
           </span>
           <span className="flex justify-center gap-1">
-            <button
-              type="button"
-              onClick={() => setEditando(true)}
-              className={BTN_SECONDARY_SM}
-            >
-              Editar
-            </button>
-            <BotonEliminar id={miembro.id} />
+            <BotonEditarIcono onClick={() => setEditando(true)} label="Editar integrante" />
+            <BotonEliminarIcono
+              onConfirm={() => eliminarMiembro(miembro.id)}
+              label="Eliminar integrante"
+            />
           </span>
         </div>
       </div>
@@ -112,40 +109,11 @@ function FormEdicion({
           ariaLabel="Fecha de cumpleaños"
         />
         <span className="flex justify-end gap-1">
-          <button type="submit" disabled={pending} className={BTN_PRIMARY_SM}>
-            {pending ? "…" : "Guardar"}
-          </button>
-          <button type="button" onClick={onCerrar} className={BTN_SECONDARY_SM}>
-            ✕
-          </button>
+          <BotonGuardarIcono pending={pending} />
+          <BotonCancelarIcono onClick={onCerrar} />
         </span>
       </div>
       {state?.error && <p className="mt-2 text-xs text-dc-pink">{state.error}</p>}
     </form>
-  );
-}
-
-function BotonEliminar({ id }: { id: string }) {
-  const [confirmando, setConfirmando] = useState(false);
-
-  if (!confirmando) {
-    return (
-      <button
-        type="button"
-        onClick={() => setConfirmando(true)}
-        className={BTN_DANGER_SM}
-      >
-        Borrar
-      </button>
-    );
-  }
-  return (
-    <button
-      type="button"
-      onClick={() => eliminarMiembro(id)}
-      className={BTN_DANGER_CONFIRM_SM}
-    >
-      ¿Seguro?
-    </button>
   );
 }

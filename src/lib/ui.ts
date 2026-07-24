@@ -19,6 +19,11 @@ export const BTN_ICON_SM = `${BASE} rounded-lg border border-dc-line p-1.5 text-
 export const BTN_DANGER_SM = `${BASE} rounded-lg border border-dc-line px-2 py-1 text-xs text-dc-muted hover:border-dc-pink hover:bg-dc-pink/10 hover:text-dc-pink`;
 export const BTN_DANGER_CONFIRM_SM = `${BASE} rounded-lg bg-dc-pink/20 px-2 py-1 text-xs text-dc-pink hover:bg-dc-pink/30`;
 
+// Versiones de solo ícono de las acciones destructivas (cuadradas, mismo
+// tamaño que BTN_ICON_SM). Danger = tacho; confirm = check en rosa lleno.
+export const BTN_ICON_DANGER_SM = `${BASE} rounded-lg border border-dc-line p-1.5 text-dc-muted hover:border-dc-pink hover:bg-dc-pink/10 hover:text-dc-pink`;
+export const BTN_ICON_CONFIRM_SM = `${BASE} rounded-lg bg-dc-pink/20 p-1.5 text-dc-pink hover:bg-dc-pink/30`;
+
 // Pastillas de estado clickeables (Activo/Inactivo, Bloqueado).
 export const BTN_PILL_ON = `${BASE} rounded-full bg-dc-peri/20 px-3 py-1 text-xs text-dc-peri hover:bg-dc-peri/35`;
 export const BTN_PILL_OFF = `${BASE} rounded-full bg-dc-line px-3 py-1 text-xs text-dc-muted hover:bg-dc-peri/20 hover:text-dc-text`;
