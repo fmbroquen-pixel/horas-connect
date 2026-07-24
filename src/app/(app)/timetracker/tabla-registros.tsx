@@ -168,7 +168,7 @@ export function TablaRegistros({
       <div className="flex min-h-0 flex-1 overflow-x-auto dc-panel">
         <div className="flex min-h-0 min-w-[940px] flex-1 flex-col">
           {/* Encabezado fijo; solo el cuerpo scrollea. */}
-          <div className={`dc-thead ${GRID_TIMETRACKER} shrink-0 border-b border-dc-line px-3`}>
+          <div className={`dc-thead ${GRID_TIMETRACKER} shrink-0 border-b border-dc-line px-4`}>
             <input
               type="checkbox"
               checked={todasSel}

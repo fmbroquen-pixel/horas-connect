@@ -25,20 +25,21 @@ export default async function ProyectoEquipoPage({
   });
 
   return (
-    <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
-      <div className="flex flex-wrap items-center gap-2">
+    // Título y nota fijos; solo la lista de integrantes scrollea.
+    <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-dc-line bg-dc-card p-6">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         <span className="text-dc-peri">
           <IconoCandado />
         </span>
         <h2 className="font-display text-sm uppercase text-white">Equipo</h2>
         <SoloLecturaBadge />
       </div>
-      <p className="mt-1 text-xs text-dc-muted">
+      <p className="mt-1 shrink-0 text-xs text-dc-muted">
         La administración del equipo se hace desde Settings → Clientes.
       </p>
 
       {miembros.length > 0 ? (
-        <ul className="mt-4 divide-y divide-dc-line">
+        <ul className="mt-4 min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
           {miembros.map((m) => (
             <li
               key={m.id}

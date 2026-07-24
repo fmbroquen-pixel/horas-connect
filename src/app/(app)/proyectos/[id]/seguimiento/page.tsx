@@ -67,7 +67,7 @@ export default async function ProyectoSeguimientoPage({
             </p>
           )}
           {semaforoEventos.length > 1 && (
-            <ul className="mt-4 space-y-2 border-t border-dc-line pt-3">
+            <ul className="mt-4 max-h-40 space-y-2 overflow-y-auto border-t border-dc-line pt-3">
               {semaforoEventos.slice(1).map((e) => (
                 <li
                   key={e.id}
@@ -108,7 +108,7 @@ export default async function ProyectoSeguimientoPage({
             </p>
           )}
           {etapaEventos.length > 1 && (
-            <ul className="mt-4 space-y-2 border-t border-dc-line pt-3">
+            <ul className="mt-4 max-h-40 space-y-2 overflow-y-auto border-t border-dc-line pt-3">
               {etapaEventos.slice(1).map((e) => (
                 <li key={e.id} className="flex items-center gap-2.5 text-sm text-dc-muted">
                   <span>{e.etapa.etiqueta}</span>

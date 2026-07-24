@@ -63,8 +63,10 @@ export default async function ProyectoGanttPage({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+    // Layout fijo: título y gráfico no scrollean; el cronograma (barras) y
+    // las filas de la tabla tienen cada uno su propio scroll interno.
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-sm uppercase text-white">Cronograma</h2>
           <InfoButton>
@@ -75,14 +77,15 @@ export default async function ProyectoGanttPage({
         <NuevaTareaBoton clienteId={id} />
       </div>
 
-      {/* Vista de barras */}
+      {/* Vista de barras: las fechas y la leyenda quedan fijas; solo la
+          lista de barras scrollea si hay muchas tareas. */}
       {timeline.length > 0 && (
-        <div className="rounded-2xl border border-dc-line bg-dc-card p-5">
+        <div className="shrink-0 rounded-2xl border border-dc-line bg-dc-card p-5">
           <div className="mb-3 flex items-center justify-between text-xs text-dc-muted">
             <span>{mostrarFechaISO(desdeISO)}</span>
             <span>{mostrarFechaISO(hastaISO)}</span>
           </div>
-          <div className="space-y-2">
+          <div className="max-h-48 space-y-2 overflow-y-auto">
             {timeline.map(({ fila, left, width }) => (
               <div key={fila.id} className="grid grid-cols-[160px_1fr] items-center gap-3">
                 <span className="truncate text-xs text-dc-text" title={fila.titulo}>
@@ -118,10 +121,11 @@ export default async function ProyectoGanttPage({
         </div>
       )}
 
-      {/* Tabla editable */}
-      <div className="overflow-x-auto dc-panel">
-        <div className="min-w-[880px]">
-          <div className={`dc-thead ${GRID_TAREAS} border-b border-dc-line px-3`}>
+      {/* Tabla editable: mismo patrón que Time Tracking / Time Off — el
+          encabezado queda fijo y solo el cuerpo scrollea. */}
+      <div className="flex min-h-0 flex-1 overflow-x-auto dc-panel">
+        <div className="flex min-h-0 min-w-[880px] flex-1 flex-col">
+          <div className={`dc-thead ${GRID_TAREAS} shrink-0 border-b border-dc-line px-4`}>
             <span>Título</span>
             <span>Inicio</span>
             <span>Fin</span>
@@ -130,15 +134,17 @@ export default async function ProyectoGanttPage({
             <span />
           </div>
 
-          {filas.map((f) => (
-            <FilaTarea key={f.id} tarea={f} />
-          ))}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            {filas.map((f) => (
+              <FilaTarea key={f.id} tarea={f} />
+            ))}
 
-          {filas.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-dc-muted">
-              Todavía no hay tareas en el cronograma.
-            </p>
-          )}
+            {filas.length === 0 && (
+              <p className="px-4 py-6 text-center text-sm text-dc-muted">
+                Todavía no hay tareas en el cronograma.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -28,7 +28,7 @@ export function FilaMiembro({ miembro }: { miembro: MiembroFila }) {
 
   if (!editando) {
     return (
-      <div className="border-b border-dc-line px-3 py-2 last:border-0">
+      <div className="border-b border-dc-line px-4 py-3 last:border-0">
         <div className={GRID_EQUIPO}>
           <span className="truncate text-center text-sm text-dc-text">{miembro.nombre}</span>
           <span className="truncate text-center text-sm text-dc-text">{miembro.apellido}</span>
@@ -75,7 +75,7 @@ function FormEdicion({
   return (
     <form
       action={formAction}
-      className="border-b border-dc-line bg-dc-card px-3 py-2 last:border-0"
+      className="border-b border-dc-line bg-dc-card px-4 py-3 last:border-0"
     >
       <div className={GRID_EQUIPO}>
         <input
@@ -108,7 +108,7 @@ function FormEdicion({
           className="w-full"
           ariaLabel="Fecha de cumpleaños"
         />
-        <span className="flex justify-end gap-1">
+        <span className="flex justify-center gap-1">
           <BotonGuardarIcono pending={pending} />
           <BotonCancelarIcono onClick={onCerrar} />
         </span>

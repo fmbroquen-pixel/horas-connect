@@ -29,7 +29,7 @@ export function FilaTarea({ tarea }: { tarea: TareaFila }) {
 
   if (!editando) {
     return (
-      <div className="border-b border-dc-line px-3 py-2 last:border-0">
+      <div className="border-b border-dc-line px-4 py-3 last:border-0">
         <div className={GRID_TAREAS}>
           <span className="truncate text-center text-sm text-dc-text" title={tarea.titulo}>
             {tarea.titulo}
@@ -91,7 +91,7 @@ function FormEdicion({
   return (
     <form
       action={formAction}
-      className="border-b border-dc-line bg-dc-card px-3 py-2 last:border-0"
+      className="border-b border-dc-line bg-dc-card px-4 py-3 last:border-0"
     >
       <div className={GRID_TAREAS}>
         <input
@@ -135,7 +135,7 @@ function FormEdicion({
           autoComplete="off"
           className={INPUT}
         />
-        <span className="flex justify-end gap-1">
+        <span className="flex justify-center gap-1">
           <BotonGuardarIcono pending={pending} />
           <BotonCancelarIcono onClick={onCerrar} />
         </span>

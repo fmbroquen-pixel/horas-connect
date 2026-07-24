@@ -117,7 +117,12 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 /* Encabezados de columna: centrados, en negrita, versalita con leve
    espaciado y una franja de encabezado tenue, tanto en <table> como en las
-   grillas basadas en <div> (marcadas con .dc-thead). */
+   grillas basadas en <div> (marcadas con .dc-thead).
+   IMPORTANTE: el padding vertical se declara UNA sola vez y con el mismo
+   valor en ambas variantes (el <th> de la tabla y el contenedor .dc-thead
+   de la grilla), nunca en las celdas de la grilla: si se acumulan, los
+   headers de grilla quedan más altos que los de tabla y las tablas dejan de
+   verse como una sola familia. */
 .dc-panel thead th,
 .dc-panel .dc-thead > * {
   text-align: center;
@@ -126,20 +131,15 @@ input[type="number"]::-webkit-inner-spin-button {
   letter-spacing: 0.07em;
   font-size: 13px;
   color: #4b477a;
-  padding-top: 0.75rem;
-  padding-bottom: 0.75rem;
 }
 .dc-panel thead tr,
 .dc-panel .dc-thead {
   background: #ece9f8;
 }
-.dc-panel thead th {
+.dc-panel thead th,
+.dc-panel .dc-thead {
   padding-top: 1.15rem;
   padding-bottom: 1.15rem;
-}
-.dc-panel .dc-thead {
-  padding-top: 0.85rem;
-  padding-bottom: 0.85rem;
 }
 
 /* Menú flotante (dropdowns, popovers, tooltips): superficie oscura elegante.

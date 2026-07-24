@@ -46,7 +46,7 @@ export function FilaRegistro({
     const proyecto = proyectos.find((p) => p.id === registro.clienteId);
     const etapa = etapas.find((e) => e.id === registro.etapaId);
     return (
-      <div className="border-b border-dc-line px-3 py-2 last:border-0">
+      <div className="border-b border-dc-line px-4 py-3 last:border-0">
         <div className={GRID_TIMETRACKER}>
           {registro.editable ? (
             <input
@@ -153,7 +153,7 @@ function FormEdicion({
   return (
     <form
       action={formAction}
-      className="border-b border-dc-line bg-dc-card px-3 py-2 last:border-0"
+      className="border-b border-dc-line bg-dc-card px-4 py-3 last:border-0"
     >
       <div className={GRID_TIMETRACKER}>
         <span />
@@ -221,7 +221,7 @@ function FormEdicion({
         <span className="text-right text-sm tabular-nums text-dc-text">
           {total !== null ? formatMonto(total) : "—"}
         </span>
-        <span className="flex justify-end gap-1">
+        <span className="flex justify-center gap-1">
           <BotonGuardarIcono pending={pending} />
           <BotonCancelarIcono onClick={onCerrar} />
         </span>
