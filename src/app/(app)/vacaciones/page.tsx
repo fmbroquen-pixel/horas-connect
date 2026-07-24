@@ -1,7 +1,8 @@
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { esISO, hoyISO, restarDiasISO } from "@/lib/formato";
+import { MODULOS } from "@/lib/modulos";
 import { FiltroPopover } from "@/components/filtro-popover";
 import { InfoButton } from "@/components/info-button";
 import { RegistrarVacacionesBoton } from "./registrar-boton";
@@ -14,6 +15,10 @@ export default async function VacacionesPage({
 }: {
   searchParams: Promise<{ desde?: string; hasta?: string }>;
 }) {
+  // Módulo oculto: la ruta no responde aunque se escriba la URL a mano.
+  // Para reactivarlo alcanza con poner MODULOS.timeOff en true.
+  if (!MODULOS.timeOff) notFound();
+
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
   const { usuario } = sesion;

@@ -7,6 +7,7 @@ import { PageTransition } from "./page-transition";
 import { Marca } from "@/components/marca";
 import { PerfilBoton } from "./perfil/perfil-boton";
 import { urlAvatar } from "@/lib/supabase/admin";
+import { MODULOS } from "@/lib/modulos";
 
 const ETIQUETA_ROL: Record<string, string> = {
   admin: "Admin",
@@ -16,6 +17,7 @@ const ETIQUETA_ROL: Record<string, string> = {
 
 // Navegación única y persistente en la sidebar. Orden: Home · Proyectos ·
 // Time Tracking · Time Off · Analytics · Settings (desplegable).
+// Time Off aparece solo si MODULOS.timeOff está habilitado (ver lib/modulos).
 const ITEM_PROYECTOS: ItemSidebar = {
   href: "/proyectos",
   label: "Proyectos",
@@ -30,7 +32,9 @@ const ITEMS_CARGA: ItemSidebar[] = [
   { href: "/dashboard", label: "Home", icono: "home" },
   ITEM_PROYECTOS,
   { href: "/timetracker", label: "Time Tracking", icono: "reloj" },
-  { href: "/vacaciones", label: "Time Off", icono: "sombrilla" },
+  ...(MODULOS.timeOff
+    ? [{ href: "/vacaciones", label: "Time Off", icono: "sombrilla" }]
+    : []),
 ];
 
 const ITEM_ANALYTICS: ItemSidebar = {
