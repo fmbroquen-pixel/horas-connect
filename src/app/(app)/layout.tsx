@@ -150,17 +150,20 @@ export default async function AppLayout({
           {logo}
         </div>
 
-        {/* main es la card (recorta las esquinas redondeadas con
-            overflow-hidden). El scroll vive en un contenedor de BLOQUE
-            interno, no en un flex column: así el padding-bottom del
-            contenido se respeta siempre al final del scroll (un flex column
-            scrollable descarta el padding del último hijo en Chrome/Firefox,
-            que dejaba Analytics y Settings guest pegados al borde). El
-            wrapper min-h-full + flex-col conserva el comportamiento
-            full-height de las pantallas con scroll interno (tablas, Home). */}
+        {/* main es la card (recorta las esquinas redondeadas). Adentro:
+            1) un contenedor de BLOQUE con el scroll y el padding — al ser
+               bloque (no flex column) respeta el padding-bottom al final del
+               scroll, cosa que Chrome/Firefox descartan en un flex column;
+            2) un wrapper de ALTURA EXACTA (h-full, nunca min-h-full): así
+               las pantallas cuyo contenido raíz es `flex min-h-0 flex-1`
+               (todas las tablas y el Home) quedan acotadas al viewport y
+               scrollean por componente. Con min-h-full el wrapper podía
+               crecer sin límite y el scroll se iba a la pantalla entera.
+               Las pantallas de contenido largo (Analytics, perfiles)
+               desbordan ese h-full y las scrollea el contenedor de arriba. */}
         <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-dc-line bg-dc-main shadow-[0_8px_28px_rgba(0,0,0,0.28)]">
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <div className="mx-auto flex min-h-full w-full max-w-[1440px] flex-col px-6 pb-10 pt-8 md:px-10">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-10 pt-8 md:px-10">
+            <div className="mx-auto flex h-full w-full max-w-[1440px] flex-col">
               <PageTransition>{children}</PageTransition>
             </div>
           </div>
