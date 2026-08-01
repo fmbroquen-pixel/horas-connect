@@ -2,6 +2,10 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
+import {
+  getUsuariosQueReportan,
+  resolverUsuarioDestino,
+} from "@/lib/registrar-para";
 import { formatHorasHsMin } from "@/lib/horas";
 import { hoyISO, rangoDefault30 } from "@/lib/formato";
 import { FiltroPopover } from "@/components/filtro-popover";
@@ -9,39 +13,56 @@ import { InfoButton } from "@/components/info-button";
 import { TablaRegistros } from "./tabla-registros";
 import { AccionesMenu } from "./acciones-menu";
 import { BarraCaptura } from "./barra-captura";
+import { SelectorUsuario } from "./selector-usuario";
 import { DIAS_VENTANA_EDICION } from "./constantes";
 import type { MapaTarifas, RegistroFila } from "./tipos";
 
 export default async function TimetrackerPage({
   searchParams,
 }: {
-  searchParams: Promise<{ desde?: string; hasta?: string; proyecto?: string }>;
+  searchParams: Promise<{
+    desde?: string;
+    hasta?: string;
+    proyecto?: string;
+    usuario?: string;
+  }>;
 }) {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
-  const { usuario } = sesion;
-  if (usuario.rol === "reader") redirect("/rentabilidad");
+  const { usuario: actor } = sesion;
+  if (actor.rol === "reader") redirect("/rentabilidad");
 
   const params = await searchParams;
   // Por defecto, últimos 30 días.
   const { desde, hasta } = rangoDefault30(params.desde, params.hasta);
 
-  const proyectos = await getProyectosPermitidos(usuario.id);
+  const esAdmin = actor.rol === "admin";
+
+  // Usuario dueño de las horas. Solo un admin puede elegir otro; para el
+  // resto resolverUsuarioDestino devuelve siempre el propio actor (y si el
+  // param es inválido, se cae al actor sin romper la pantalla).
+  const destinoRes = await resolverUsuarioDestino(actor, params.usuario);
+  const destino = destinoRes.ok ? destinoRes.destino : actor;
+
+  // Todo el contexto de la pantalla (clientes, tarifa e historial) es el del
+  // usuario destino: si el admin carga para otro, ve exactamente lo que ese
+  // mentor vería.
+  const proyectos = await getProyectosPermitidos(destino.id);
   const proyectoId = proyectos.some((p) => p.id === params.proyecto)
     ? params.proyecto
     : undefined;
 
-  const [etapas, tarifasVigentes, registros] = await Promise.all([
+  const [etapas, tarifasVigentes, registros, usuariosQueReportan] = await Promise.all([
     prisma.etapa.findMany({
       where: { activo: true },
       orderBy: [{ grupo: "asc" }, { orden: "asc" }],
     }),
     prisma.tarifa.findMany({
-      where: { usuarioId: usuario.id, vigenteHasta: null },
+      where: { usuarioId: destino.id, vigenteHasta: null },
     }),
     prisma.registroHoras.findMany({
       where: {
-        usuarioId: usuario.id,
+        usuarioId: destino.id,
         eliminadoEn: null,
         fecha: {
           gte: new Date(desde + "T00:00:00Z"),
@@ -52,6 +73,7 @@ export default async function TimetrackerPage({
       orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
       take: 500,
     }),
+    esAdmin ? getUsuariosQueReportan() : Promise.resolve([]),
   ]);
 
   const tarifas: MapaTarifas = {};
@@ -79,6 +101,7 @@ export default async function TimetrackerPage({
     }));
 
   const sinTarifa = Object.keys(tarifas).length === 0;
+  const esOtroUsuario = destino.id !== actor.id;
 
   const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
   const opcionesEtapa = etapas.map((e) => ({ id: e.id, nombre: e.etiqueta }));
@@ -96,39 +119,63 @@ export default async function TimetrackerPage({
 
       {sinTarifa && (
         <p className="mt-4 shrink-0 rounded-xl border border-dc-pink/40 bg-dc-pink/10 px-4 py-3 text-sm text-dc-pink">
-          Todavía no tenés una tarifa configurada, así que no podés cargar
-          horas. Pedile al administrador que la configure.
+          {esOtroUsuario
+            ? `${destino.nombre} no tiene una tarifa configurada, así que no se le pueden cargar horas.`
+            : "Todavía no tenés una tarifa configurada, así que no podés cargar horas. Pedile al administrador que la configure."}
         </p>
       )}
 
-      {/* Acciones del historial: consultar (filtro) e importar/exportar (⋮). */}
-      <div className="mt-6 flex shrink-0 items-center justify-end gap-2">
-        <FiltroPopover
-          basePath="/timetracker"
-          desde={desde}
-          hasta={hasta}
-          proyectoId={proyectoId ?? ""}
-          proyectos={opcionesProyecto}
-          maxHoy={hoyISO()}
-        />
-        {!sinTarifa && (
-          <AccionesMenu desde={desde} hasta={hasta} proyecto={proyectoId ?? ""} />
+      {/* Acciones del historial: selector de usuario (admin), consultar
+          (filtro) e importar/exportar (⋮). */}
+      <div className="mt-6 flex shrink-0 flex-wrap items-center justify-between gap-2">
+        {esAdmin ? (
+          <SelectorUsuario
+            usuarios={usuariosQueReportan.map((u) => ({ id: u.id, nombre: u.nombre }))}
+            actual={destino.id}
+            actorId={actor.id}
+          />
+        ) : (
+          <span />
         )}
+        <div className="flex items-center gap-2">
+          <FiltroPopover
+            basePath="/timetracker"
+            desde={desde}
+            hasta={hasta}
+            proyectoId={proyectoId ?? ""}
+            proyectos={opcionesProyecto}
+            maxHoy={hoyISO()}
+          />
+          {!sinTarifa && (
+            <AccionesMenu
+              desde={desde}
+              hasta={hasta}
+              proyecto={proyectoId ?? ""}
+              usuarioId={esOtroUsuario ? destino.id : ""}
+            />
+          )}
+        </div>
       </div>
 
       {/* Barra de captura permanente, inmediatamente encima del historial. */}
       {!sinTarifa && (
         <div className="mt-4">
+          {/* key por usuario: al cambiar de mentor se remonta la barra y no
+              quedan cargados el cliente ni la etapa del anterior. */}
           <BarraCaptura
+            key={destino.id}
             proyectos={opcionesProyecto}
             etapas={opcionesEtapa}
             tarifas={tarifas}
+            usuarioId={esOtroUsuario ? destino.id : ""}
           />
         </div>
       )}
 
       <div className="mt-3 flex min-h-0 flex-1 flex-col">
+        {/* key por usuario: limpia la selección múltiple al cambiar de mentor. */}
         <TablaRegistros
+          key={destino.id}
           filas={filas}
           proyectos={opcionesProyecto}
           etapas={opcionesEtapa}

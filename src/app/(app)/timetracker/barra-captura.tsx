@@ -39,10 +39,14 @@ export function BarraCaptura({
   proyectos,
   etapas,
   tarifas,
+  usuarioId = "",
 }: {
   proyectos: OpcionSelect[];
   etapas: OpcionSelect[];
   tarifas: MapaTarifas;
+  // Usuario dueño de las horas cuando un admin carga en nombre de otro.
+  // Vacío = el propio usuario. El servidor revalida el permiso igual.
+  usuarioId?: string;
 }) {
   const [valores, setValores] = useState(VALORES_INICIALES);
   const [estado, setEstado] = useState<{ error?: string; campo?: CampoRegistro }>();
@@ -110,6 +114,8 @@ export function BarraCaptura({
       className="shrink-0 rounded-xl border border-dc-peri/25 bg-dc-card p-3"
       aria-label="Barra de captura de horas"
     >
+      {/* Dueño de las horas cuando un admin carga para otro mentor. */}
+      {usuarioId && <input type="hidden" name="usuarioId" value={usuarioId} />}
       <div className="flex flex-wrap items-end gap-2">
         <div className="w-36" data-campo="fecha">
           <span className={LABEL}>Fecha</span>

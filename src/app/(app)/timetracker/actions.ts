@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
+import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { parseHorasHsMin } from "@/lib/horas";
 import { DIAS_VENTANA_EDICION } from "./constantes";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
@@ -116,9 +117,21 @@ export async function crearRegistro(
   _prevState: unknown,
   formData: FormData,
 ): Promise<Resultado> {
-  const usuario = await requireGuest();
+  const actor = await requireGuest();
 
-  const r = await validarEntrada(usuario.id, formData);
+  // A quién pertenecen las horas. Un admin puede cargar en nombre de otro
+  // mentor; cualquier otro rol queda atado a sí mismo (se valida acá, en el
+  // servidor, no solo escondiendo el selector en la UI).
+  const destinoRes = await resolverUsuarioDestino(
+    actor,
+    formData.get("usuarioId") as string | null,
+  );
+  if (!destinoRes.ok) return { error: destinoRes.error };
+  const destino = destinoRes.destino;
+
+  // Cliente asignado y tarifa se validan contra el usuario dueño de las
+  // horas, no contra quien las está cargando.
+  const r = await validarEntrada(destino.id, formData);
   if (r.error || !r.datos) return { error: r.error, campo: r.campo };
   const d = r.datos;
 
@@ -127,13 +140,13 @@ export async function crearRegistro(
       fecha: d.fecha,
       clienteId: d.clienteId,
       etapaId: d.etapaId,
-      usuarioId: usuario.id,
+      usuarioId: destino.id, // worked_by
       horas: d.horas,
       modalidad: d.modalidad,
       ownership: d.ownership,
       tarifaUsdAplicada: d.tarifa,
       montoUsd: Math.round(d.horas * d.tarifa * 100) / 100,
-      creadoPorId: usuario.id,
+      creadoPorId: actor.id, // reported_by
     },
   });
 
@@ -256,9 +269,20 @@ export async function editarRegistros(
 
   // Validaciones del valor según el campo.
   if (campo === "clienteId") {
-    const permitidos = await getProyectosPermitidos(usuario.id);
-    if (!permitidos.some((c) => c.id === valor)) {
-      return { error: "No tenés asignado ese cliente." };
+    // El cliente se valida contra el DUEÑO de cada fila, no contra quien
+    // ejecuta la edición: si un admin edita en masa las horas de otro
+    // mentor, el cliente tiene que estar asignado a ese mentor.
+    const duenos = new Set(filas.map((f) => f.usuarioId));
+    for (const duenoId of duenos) {
+      const permitidos = await getProyectosPermitidos(duenoId);
+      if (!permitidos.some((c) => c.id === valor)) {
+        return {
+          error:
+            duenoId === usuario.id
+              ? "No tenés asignado ese cliente."
+              : "Ese cliente no está asignado al usuario dueño de las horas.",
+        };
+      }
     }
   }
   if (campo === "ownership" && valor !== "owner" && valor !== "backup") {

@@ -8,7 +8,15 @@ import {
 } from "./importar/actions";
 import { BTN_PRIMARY, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 
-export function ImportarModal({ onCerrar }: { onCerrar: () => void }) {
+export function ImportarModal({
+  onCerrar,
+  usuarioId = "",
+}: {
+  onCerrar: () => void;
+  // Usuario dueño de las horas importadas cuando un admin importa en
+  // nombre de otro mentor. Vacío = el propio usuario.
+  usuarioId?: string;
+}) {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [resultado, setResultado] = useState<{ importadas: number; omitidas: number } | null>(null);
@@ -34,6 +42,7 @@ export function ImportarModal({ onCerrar }: { onCerrar: () => void }) {
     if (f) {
       const fd = new FormData();
       fd.set("archivo", f);
+      if (usuarioId) fd.set("usuarioId", usuarioId);
       startAnalizar(async () => {
         const p = await analizarImportacion(undefined, fd);
         if (p.error) setError(p.error);
@@ -46,6 +55,7 @@ export function ImportarModal({ onCerrar }: { onCerrar: () => void }) {
     if (!archivo) return;
     const fd = new FormData();
     fd.set("archivo", archivo);
+    if (usuarioId) fd.set("usuarioId", usuarioId);
     startImportar(async () => {
       const r = await confirmarImportacion(undefined, fd);
       if (r.error) setError(r.error);
@@ -111,7 +121,11 @@ export function ImportarModal({ onCerrar }: { onCerrar: () => void }) {
                 </li>
               </ul>
               <a
-                href="/timetracker/plantilla"
+                href={
+                  usuarioId
+                    ? `/timetracker/plantilla?usuario=${usuarioId}`
+                    : "/timetracker/plantilla"
+                }
                 className="mt-4 inline-flex items-center gap-2 rounded-lg border border-dc-peri/50 bg-dc-peri/10 px-3 py-2 text-sm font-medium text-dc-peri transition hover:border-dc-peri hover:bg-dc-peri/20 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri focus-visible:ring-offset-2 focus-visible:ring-offset-dc-deep"
               >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

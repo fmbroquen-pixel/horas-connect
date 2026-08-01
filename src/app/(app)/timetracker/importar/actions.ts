@@ -3,6 +3,7 @@
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
+import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { parseHorasHsMin } from "@/lib/horas";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
@@ -265,12 +266,22 @@ export async function analizarImportacion(
   _prev: unknown,
   formData: FormData,
 ): Promise<Preview> {
-  const usuario = await requireGuest();
+  const actor = await requireGuest();
+  // La previsualización se calcula contra el usuario dueño de las horas
+  // (clientes asignados y tarifas), no contra quien importa.
+  const destinoRes = await resolverUsuarioDestino(
+    actor,
+    formData.get("usuarioId") as string | null,
+  );
+  if (!destinoRes.ok) {
+    return { error: destinoRes.error, columnasFaltantes: [], columnasDesconocidas: [], filas: [], validas: 0, conError: 0 };
+  }
+
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) {
     return { error: "Elegí un archivo.", columnasFaltantes: [], columnasDesconocidas: [], filas: [], validas: 0, conError: 0 };
   }
-  const r = await procesar(usuario.id, archivo);
+  const r = await procesar(destinoRes.destino.id, archivo);
   if (!r) {
     return { error: "No se pudo leer el archivo.", columnasFaltantes: [], columnasDesconocidas: [], filas: [], validas: 0, conError: 0 };
   }
@@ -289,12 +300,19 @@ export async function confirmarImportacion(
   formData: FormData,
 ): Promise<{ error?: string; importadas?: number; omitidas?: number }> {
   const { revalidatePath } = await import("next/cache");
-  const usuario = await requireGuest();
+  const actor = await requireGuest();
+  const destinoRes = await resolverUsuarioDestino(
+    actor,
+    formData.get("usuarioId") as string | null,
+  );
+  if (!destinoRes.ok) return { error: destinoRes.error };
+  const destino = destinoRes.destino;
+
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) {
     return { error: "Elegí un archivo." };
   }
-  const r = await procesar(usuario.id, archivo);
+  const r = await procesar(destino.id, archivo);
   if (!r) return { error: "No se pudo leer el archivo." };
   if (r.columnasFaltantes.length > 0) {
     return { error: `Faltan columnas: ${r.columnasFaltantes.join(", ")}` };
@@ -308,13 +326,13 @@ export async function confirmarImportacion(
       fecha: v.fecha,
       clienteId: v.clienteId,
       etapaId: v.etapaId,
-      usuarioId: usuario.id,
+      usuarioId: destino.id, // worked_by
       horas: v.horas,
       modalidad: v.modalidad,
       ownership: v.ownership,
       tarifaUsdAplicada: v.tarifa,
       montoUsd: Math.round(v.horas * v.tarifa * 100) / 100,
-      creadoPorId: usuario.id,
+      creadoPorId: actor.id, // reported_by
     })),
   });
 

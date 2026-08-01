@@ -11,10 +11,14 @@ export function AccionesMenu({
   desde,
   hasta,
   proyecto,
+  usuarioId = "",
 }: {
   desde: string;
   hasta: string;
   proyecto: string;
+  // Usuario dueño de las horas cuando un admin opera para otro mentor:
+  // se propaga a la importación y a la exportación.
+  usuarioId?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [vista, setVista] = useState<"main" | "export">("main");
@@ -45,6 +49,7 @@ export function AccionesMenu({
 
   const params = new URLSearchParams({ desde, hasta });
   if (proyecto) params.set("proyecto", proyecto);
+  if (usuarioId) params.set("usuario", usuarioId);
   const url = (formato: string) =>
     `/timetracker/export?${params.toString()}&formato=${formato}`;
 
@@ -148,7 +153,9 @@ export function AccionesMenu({
         </div>
       )}
 
-      {importOpen && <ImportarModal onCerrar={() => setImportOpen(false)} />}
+      {importOpen && (
+        <ImportarModal onCerrar={() => setImportOpen(false)} usuarioId={usuarioId} />
+      )}
       <PapeleraModal tipo="hora" open={papeleraOpen} onClose={() => setPapeleraOpen(false)} />
     </div>
   );

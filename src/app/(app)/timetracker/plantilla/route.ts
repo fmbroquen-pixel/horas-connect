@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import ExcelJS from "exceljs";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
+import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { prisma } from "@/lib/prisma";
 import { hoyISO } from "@/lib/formato";
 
@@ -13,7 +14,7 @@ const OWNERSHIP = ["Owner", "Backup"];
 const MODALIDAD = ["Presencial", "Virtual"];
 const FILAS_VALIDACION = 200; // filas donde se ofrecen los desplegables
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -22,8 +23,18 @@ export async function GET() {
     return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   }
 
+  // Si un admin va a importar para otro mentor, la plantilla trae los
+  // clientes de ese mentor. Para el resto, siempre los propios.
+  const destinoRes = await resolverUsuarioDestino(
+    sesion.usuario,
+    request.nextUrl.searchParams.get("usuario"),
+  );
+  if (!destinoRes.ok) {
+    return NextResponse.json({ error: destinoRes.error }, { status: 403 });
+  }
+
   const [proyectos, etapas] = await Promise.all([
-    getProyectosPermitidos(sesion.usuario.id),
+    getProyectosPermitidos(destinoRes.destino.id),
     prisma.etapa.findMany({
       where: { activo: true },
       orderBy: [{ grupo: "asc" }, { orden: "asc" }],

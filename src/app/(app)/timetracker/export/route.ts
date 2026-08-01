@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
+import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { rangoDefault30, esISO } from "@/lib/formato";
 
 const ETIQUETA_OWNERSHIP: Record<string, string> = {
@@ -49,9 +50,17 @@ export async function GET(request: NextRequest) {
   );
   const proyectoParam = sp.get("proyecto") ?? "";
 
+  // Un admin puede exportar el historial de otro mentor; el resto siempre
+  // exporta el suyo, aunque manipule el query param.
+  const destinoRes = await resolverUsuarioDestino(usuario, sp.get("usuario"));
+  if (!destinoRes.ok) {
+    return NextResponse.json({ error: destinoRes.error }, { status: 403 });
+  }
+  const destino = destinoRes.destino;
+
   const registros = await prisma.registroHoras.findMany({
     where: {
-      usuarioId: usuario.id,
+      usuarioId: destino.id,
       eliminadoEn: null,
       ownership: { not: "valor_cero" },
       fecha: {
