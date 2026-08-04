@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { duplicarLista, eliminarLista, moverLista, renombrarLista } from "./actions";
+import { useActionState, useId, useState } from "react";
+import { duplicarLista, eliminarLista, renombrarLista } from "./actions";
 import { GRID_ROADMAP, type ListaRoadmapVista } from "./constantes";
 import { FilaTareaRoadmap } from "./fila-tarea";
 import { NuevaTareaBoton } from "./nueva-tarea-boton";
@@ -14,30 +14,52 @@ import {
   BotonCancelarIcono,
 } from "@/components/tabla/acciones-fila";
 
-// Una lista del plan: cabecera con nombre editable y acciones, subtotal de
-// horas y la tabla de tareas. La tabla no lleva scroll propio — el scroll es
-// de la columna de listas, para que el plan se lea de corrido.
-export function ListaRoadmapCard({
-  lista,
-  primera,
-  ultima,
-}: {
-  lista: ListaRoadmapVista;
-  primera: boolean;
-  ultima: boolean;
-}) {
+// Una lista del plan sobre la superficie clara del Design System (.dc-panel),
+// igual que las tablas de Time Tracking o Equipo: de ahí salen el encabezado
+// centrado y las filas blancas. Se pliega para poder recorrer un roadmap
+// largo viendo solo los títulos; arranca abierta.
+export function ListaRoadmapCard({ lista }: { lista: ListaRoadmapVista }) {
+  const [abierta, setAbierta] = useState(true);
   const [renombrando, setRenombrando] = useState(false);
+  const idContenido = useId();
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-dc-line bg-dc-card">
+    <section className="dc-panel overflow-hidden">
       <header className="flex flex-wrap items-center gap-2 border-b border-dc-line px-4 py-3">
         {renombrando ? (
           <FormNombre lista={lista} onCerrar={() => setRenombrando(false)} />
         ) : (
           <>
-            <h3 className="font-display text-sm uppercase text-white">
-              {lista.nombre}
-            </h3>
+            {/* El plegado es el propio título: objetivo de clic grande y con
+                el estado anunciado para lectores de pantalla. */}
+            <button
+              type="button"
+              onClick={() => setAbierta((v) => !v)}
+              aria-expanded={abierta}
+              aria-controls={idContenido}
+              className="flex items-center gap-2 rounded-lg py-0.5 pr-2 text-left transition hover:text-dc-peri focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                className={`shrink-0 transition-transform duration-150 ${abierta ? "" : "-rotate-90"}`}
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+              <h3 className="font-display text-sm uppercase text-dc-text">
+                {lista.nombre}
+              </h3>
+            </button>
+            <span className="text-xs text-dc-muted">
+              {lista.tareas.length} tarea(s)
+            </span>
             <BotonEditarIcono
               onClick={() => setRenombrando(true)}
               label="Renombrar lista"
@@ -56,18 +78,6 @@ export function ListaRoadmapCard({
 
         <span className="flex items-center gap-1">
           <BotonIcono
-            label="Subir lista"
-            disabled={primera}
-            onClick={() => moverLista(lista.id, -1)}
-            path="M18 15l-6-6-6 6"
-          />
-          <BotonIcono
-            label="Bajar lista"
-            disabled={ultima}
-            onClick={() => moverLista(lista.id, 1)}
-            path="M6 9l6 6 6-6"
-          />
-          <BotonIcono
             label="Duplicar lista"
             onClick={() => duplicarLista(lista.id)}
             path="M9 9h10v10H9zM5 15V5h10"
@@ -76,38 +86,40 @@ export function ListaRoadmapCard({
             onConfirm={() => eliminarLista(lista.id)}
             label="Eliminar lista"
           />
-          <NuevaTareaBoton listaId={lista.id} />
         </span>
       </header>
 
-      <div className="overflow-x-auto">
-        <div className="min-w-[900px]">
-          <div className={`dc-thead ${GRID_ROADMAP} border-b border-dc-line px-4`}>
-            <span>Tarea</span>
-            <span>Inicio</span>
-            <span>Fin</span>
-            <span>Duración</span>
-            <span>Horas est.</span>
-            <span>Estado</span>
-            <span />
+      {abierta && (
+        <div id={idContenido}>
+          <div className="overflow-x-auto">
+            <div className="min-w-[900px]">
+              <div className={`dc-thead ${GRID_ROADMAP} border-b border-dc-line px-4`}>
+                <span className="dc-col-izq">Tarea</span>
+                <span>Inicio</span>
+                <span>Fin</span>
+                <span>Duración</span>
+                <span>Horas est.</span>
+                <span>Estado</span>
+                <span />
+              </div>
+
+              {lista.tareas.map((t) => (
+                <FilaTareaRoadmap key={t.id} tarea={t} />
+              ))}
+
+              {lista.tareas.length === 0 && (
+                <div className="px-4 py-6 text-center text-sm text-dc-muted">
+                  Esta lista todavía no tiene tareas.
+                </div>
+              )}
+            </div>
           </div>
 
-          {lista.tareas.map((t, i) => (
-            <FilaTareaRoadmap
-              key={t.id}
-              tarea={t}
-              primera={i === 0}
-              ultima={i === lista.tareas.length - 1}
-            />
-          ))}
-
-          {lista.tareas.length === 0 && (
-            <p className="px-4 py-6 text-center text-sm text-dc-muted">
-              Esta lista todavía no tiene tareas.
-            </p>
-          )}
+          {/* Alta al pie de la lista, fuera del scroll horizontal para que
+              ocupe siempre el ancho visible de la card. */}
+          <NuevaTareaBoton listaId={lista.id} />
         </div>
-      </div>
+      )}
     </section>
   );
 }
@@ -151,19 +163,16 @@ function BotonIcono({
   label,
   onClick,
   path,
-  disabled = false,
 }: {
   label: string;
   onClick: () => void;
   path: string;
-  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={disabled}
-      className={`${BTN_ICON_SM} disabled:cursor-not-allowed disabled:opacity-35`}
+      className={BTN_ICON_SM}
       title={label}
       aria-label={label}
     >

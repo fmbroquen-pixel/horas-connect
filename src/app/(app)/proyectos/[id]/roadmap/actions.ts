@@ -217,30 +217,6 @@ export async function duplicarLista(listaId: string): Promise<void> {
   revalidar();
 }
 
-// Mover una lista reordena bloques enteros del plan, así que se replanifica
-// todo desde el arranque del proyecto en lugar de intentar conservar fechas
-// fijadas a mano que ya no tendrían sentido en la nueva secuencia.
-export async function moverLista(listaId: string, delta: number): Promise<void> {
-  const lista = await listaConAcceso(listaId);
-  if (!lista) return;
-
-  const listas = await prisma.listaRoadmap.findMany({
-    where: { clienteId: lista.clienteId },
-    orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
-  });
-  const i = listas.findIndex((l) => l.id === listaId);
-  const j = i + delta;
-  if (i < 0 || j < 0 || j >= listas.length) return;
-
-  await prisma.$transaction([
-    prisma.listaRoadmap.update({ where: { id: listas[i].id }, data: { orden: j } }),
-    prisma.listaRoadmap.update({ where: { id: listas[j].id }, data: { orden: i } }),
-  ]);
-
-  await resecuenciar(lista.clienteId);
-  revalidar();
-}
-
 // ── Tareas ────────────────────────────────────────────────────────────────
 
 const TareaSchema = z.object({
@@ -376,33 +352,6 @@ export async function eliminarTarea(tareaId: string): Promise<void> {
     data: { tareaId: null },
   });
   await prisma.tareaRoadmap.delete({ where: { id: tareaId } });
-
-  await resecuenciar(clienteId, ancla);
-  revalidar();
-}
-
-// Reordena una tarea dentro de su lista (las listas se mueven aparte).
-export async function moverTarea(tareaId: string, delta: number): Promise<void> {
-  const tarea = await tareaConAcceso(tareaId);
-  if (!tarea) return;
-
-  const tareas = await prisma.tareaRoadmap.findMany({
-    where: { listaId: tarea.listaId },
-    orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
-  });
-  const i = tareas.findIndex((t) => t.id === tareaId);
-  const j = i + delta;
-  if (i < 0 || j < 0 || j >= tareas.length) return;
-
-  const clienteId = tarea.lista.clienteId;
-  // Ancla previa al primero de los dos lugares que se intercambian: todo lo
-  // anterior mantiene sus fechas.
-  const ancla = await anclaPrevia(clienteId, tareas[Math.min(i, j)].id);
-
-  await prisma.$transaction([
-    prisma.tareaRoadmap.update({ where: { id: tareas[i].id }, data: { orden: j } }),
-    prisma.tareaRoadmap.update({ where: { id: tareas[j].id }, data: { orden: i } }),
-  ]);
 
   await resecuenciar(clienteId, ancla);
   revalidar();

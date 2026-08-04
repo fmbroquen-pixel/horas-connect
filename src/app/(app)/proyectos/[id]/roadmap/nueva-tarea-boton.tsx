@@ -7,7 +7,7 @@ import { Modal } from "@/components/ui/modal";
 import { ToastOk } from "@/components/ui/toast-ok";
 import { Dropdown } from "@/components/dropdown";
 import { reformatEntradaHoras } from "@/lib/horas";
-import { BTN_PRIMARY_SM, BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
+import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -56,8 +56,17 @@ export function NuevaTareaBoton({ listaId }: { listaId: string }) {
 
   return (
     <>
-      <button type="button" onClick={abrir} className={BTN_PRIMARY_SM}>
-        + Tarea
+      {/* Fila de alta al pie de la lista (patrón ClickUp): discreta en
+          reposo, se enciende al pasar por encima. */}
+      <button
+        type="button"
+        onClick={abrir}
+        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-dc-muted transition hover:bg-dc-card hover:text-dc-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dc-peri/40"
+      >
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Agregar tarea
       </button>
 
       <Modal open={open} onClose={() => setOpen(false)} labelledBy="titulo-nueva-tarea-roadmap">

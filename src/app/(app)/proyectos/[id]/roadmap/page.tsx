@@ -87,16 +87,10 @@ export default async function ProyectoRoadmapPage({
             Plan de trabajo
           </h2>
           <InfoButton>
-            Las tareas son secuenciales: cada una arranca el día hábil
-            siguiente al fin de la anterior. Al cambiar la fecha de inicio o la
-            duración de una tarea se recalculan todas las posteriores; las
-            anteriores no se tocan. Las horas estimadas son el presupuesto de
-            entrega y, al marcar una tarea como Finalizada, cuentan como horas
-            planificadas entregadas. Las horas reales se cargan solo desde Time
-            Tracking.
+            Las tareas son estimativas y secuenciales. Una edición de fecha
+            modifica las tareas siguientes.
           </InfoButton>
         </div>
-        <NuevaListaBoton clienteId={id} />
       </div>
 
       <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -120,36 +114,32 @@ export default async function ProyectoRoadmapPage({
           nota="Cargadas en Time Tracking"
         />
         <Kpi
-          titulo="Ventana del plan"
+          titulo="Fecha estimada de fin de proceso"
           valor={
-            arranque && cierre
-              ? mostrarFechaISO(arranque.toISOString().slice(0, 10))
-              : "—"
+            cierre ? mostrarFechaISO(cierre.toISOString().slice(0, 10)) : "—"
           }
           nota={
-            cierre
-              ? `hasta ${mostrarFechaISO(cierre.toISOString().slice(0, 10))}`
+            arranque
+              ? `Arranca el ${mostrarFechaISO(arranque.toISOString().slice(0, 10))}`
               : "Sin tareas"
           }
         />
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-2">
-        {vistas.map((lista, i) => (
-          <ListaRoadmapCard
-            key={lista.id}
-            lista={lista}
-            primera={i === 0}
-            ultima={i === vistas.length - 1}
-          />
+        {vistas.map((lista) => (
+          <ListaRoadmapCard key={lista.id} lista={lista} />
         ))}
 
         {vistas.length === 0 && (
-          <p className="rounded-2xl border border-dc-line bg-dc-card px-4 py-8 text-center text-sm text-dc-muted">
+          <p className="px-4 py-6 text-center text-sm text-dc-muted">
             Este proyecto no tiene listas en el Roadmap. Agregá una para armar
             el plan de trabajo.
           </p>
         )}
+
+        {/* Agregar va siempre al final del plan, después de la última lista. */}
+        <NuevaListaBoton clienteId={id} />
       </div>
     </div>
   );

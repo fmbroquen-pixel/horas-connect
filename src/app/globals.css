@@ -141,6 +141,13 @@ input[type="number"]::-webkit-inner-spin-button {
   padding-top: 1.15rem;
   padding-bottom: 1.15rem;
 }
+/* Excepción de alineación: una columna de texto largo (el nombre de una
+   tarea, por ejemplo) se lee mejor alineada a la izquierda. Marcar la celda
+   del encabezado con .dc-col-izq conserva todo el formato de header y solo
+   cambia la alineación; el cuerpo se alinea con las clases de la fila. */
+.dc-panel .dc-thead > .dc-col-izq {
+  text-align: left;
+}
 
 /* Menú flotante (dropdowns, popovers, tooltips): superficie oscura elegante.
    Re-declara las variables de la paleta para que, aunque el menú esté dentro

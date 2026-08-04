@@ -59,8 +59,17 @@ export function NuevaListaBoton({ clienteId }: { clienteId: string }) {
 
   return (
     <>
-      <button type="button" onClick={abrir} className={BTN_PRIMARY}>
-        + Agregar lista
+      {/* Cierra la columna de listas: mismo lenguaje que "Agregar tarea",
+          un escalón más marcado por ser el alta de un bloque entero. */}
+      <button
+        type="button"
+        onClick={abrir}
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-dc-line px-4 py-3 text-sm text-dc-muted transition hover:border-dc-peri/60 hover:text-dc-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40"
+      >
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Agregar lista
       </button>
 
       <Modal open={open} onClose={() => setOpen(false)} labelledBy="titulo-nueva-lista">

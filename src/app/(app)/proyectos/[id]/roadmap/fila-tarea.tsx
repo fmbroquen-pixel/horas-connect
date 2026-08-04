@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { actualizarTarea, eliminarTarea, moverTarea } from "./actions";
+import { actualizarTarea, eliminarTarea } from "./actions";
 import {
   GRID_ROADMAP,
   ETIQUETA_ESTADO,
@@ -19,7 +19,6 @@ import {
   isoDesdeFecha,
 } from "@/lib/dias-habiles";
 import { reformatEntradaHoras } from "@/lib/horas";
-import { BTN_ICON_SM } from "@/lib/ui";
 import {
   BotonEditarIcono,
   BotonEliminarIcono,
@@ -30,15 +29,7 @@ import {
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
 
-export function FilaTareaRoadmap({
-  tarea,
-  primera,
-  ultima,
-}: {
-  tarea: TareaRoadmapFila;
-  primera: boolean;
-  ultima: boolean;
-}) {
+export function FilaTareaRoadmap({ tarea }: { tarea: TareaRoadmapFila }) {
   const [editando, setEditando] = useState(false);
 
   if (editando) {
@@ -48,7 +39,9 @@ export function FilaTareaRoadmap({
   return (
     <div className="border-b border-dc-line px-4 py-3 last:border-0">
       <div className={GRID_ROADMAP}>
-        <span className="truncate text-center text-sm text-dc-text" title={tarea.nombre}>
+        {/* El nombre alineado a la izquierda: es la columna de texto largo y
+            así se recorre la lista leyendo por el borde. El resto, centrado. */}
+        <span className="truncate text-left text-sm text-dc-text" title={tarea.nombre}>
           {tarea.nombre}
         </span>
         <span className="text-center text-sm tabular-nums text-dc-text">
@@ -72,16 +65,6 @@ export function FilaTareaRoadmap({
           {ETIQUETA_ESTADO[tarea.estado] ?? tarea.estado}
         </span>
         <span className="flex justify-center gap-1">
-          <BotonMover
-            direccion="arriba"
-            disabled={primera}
-            onClick={() => moverTarea(tarea.id, -1)}
-          />
-          <BotonMover
-            direccion="abajo"
-            disabled={ultima}
-            onClick={() => moverTarea(tarea.id, 1)}
-          />
           <BotonEditarIcono onClick={() => setEditando(true)} label="Editar tarea" />
           <BotonEliminarIcono
             onConfirm={() => eliminarTarea(tarea.id)}
@@ -90,33 +73,6 @@ export function FilaTareaRoadmap({
         </span>
       </div>
     </div>
-  );
-}
-
-// Subir/bajar una tarea dentro de su lista. Deshabilitado en los extremos.
-function BotonMover({
-  direccion,
-  disabled,
-  onClick,
-}: {
-  direccion: "arriba" | "abajo";
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  const label = direccion === "arriba" ? "Subir tarea" : "Bajar tarea";
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`${BTN_ICON_SM} disabled:cursor-not-allowed disabled:opacity-35`}
-      title={label}
-      aria-label={label}
-    >
-      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <path d={direccion === "arriba" ? "M18 15l-6-6-6 6" : "M6 9l6 6 6-6"} />
-      </svg>
-    </button>
   );
 }
 
