@@ -1,250 +1,147 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { actualizarRegistro, eliminarRegistro } from "./actions";
-import { parseHorasHsMin, reformatEntradaHoras } from "@/lib/horas";
+import { actualizarCampoRegistro, eliminarRegistro } from "./actions";
 import { formatMonto, hoyISO, restarDiasISO } from "@/lib/formato";
 import { DIAS_VENTANA_EDICION } from "./constantes";
 import { GRID_TIMETRACKER } from "./grid";
-import { Dropdown } from "@/components/dropdown";
-import { DatePicker } from "@/components/date-picker";
 import {
-  ETIQUETA_MODALIDAD,
-  ETIQUETA_OWNERSHIP,
-  type MapaTarifas,
-  type OpcionSelect,
-  type RegistroFila,
-  type TareasPorCliente,
-} from "./tipos";
-import {
-  BotonEditarIcono,
-  BotonEliminarIcono,
-  BotonGuardarIcono,
-  BotonCancelarIcono,
-} from "@/components/tabla/acciones-fila";
+  CeldaFecha,
+  CeldaHoras,
+  CeldaOpciones,
+  CeldaSoloLectura,
+} from "@/components/tabla/celda-editable";
+import type { OpcionSelect, RegistroFila, TareasPorCliente } from "./tipos";
+import { BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 
-const INPUT =
-  "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
+const OPCIONES_OWNERSHIP = [
+  { value: "owner", label: "Owner" },
+  { value: "backup", label: "Backup" },
+];
+const OPCIONES_MODALIDAD = [
+  { value: "presencial", label: "Presencial" },
+  { value: "virtual", label: "Virtual" },
+];
 
+function mostrarFecha(iso: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "—";
+  const [a, m, d] = iso.split("-");
+  return `${d}/${m}/${a}`;
+}
+
+// Fila del historial con edición inline: cada celda se edita en el lugar y se
+// guarda sola al salir del campo o con Enter. No hay modo edición de fila ni
+// botón de guardar; la única acción explícita es eliminar.
 export function FilaRegistro({
   registro,
   proyectos,
   tareasPorCliente,
-  tarifas,
   seleccionado,
   onToggle,
 }: {
   registro: RegistroFila;
   proyectos: OpcionSelect[];
   tareasPorCliente: TareasPorCliente;
-  tarifas: MapaTarifas;
   seleccionado: boolean;
   onToggle: (id: string) => void;
 }) {
-  const [editando, setEditando] = useState(false);
+  const editable = registro.editable;
+  const tareas = tareasPorCliente[registro.clienteId] ?? [];
 
-  if (!editando) {
-    const proyecto = proyectos.find((p) => p.id === registro.clienteId);
-    return (
-      <div className="border-b border-dc-line px-4 py-3 last:border-0">
-        <div className={GRID_TIMETRACKER}>
-          {registro.editable ? (
-            <input
-              type="checkbox"
-              checked={seleccionado}
-              onChange={() => onToggle(registro.id)}
-              className="h-4 w-4 accent-dc-purple"
-              aria-label="Seleccionar fila"
-            />
-          ) : (
-            <span />
-          )}
-          <span className="text-center text-sm text-dc-text">{mostrarFecha(registro.fecha)}</span>
-          <span className="truncate text-center text-sm text-dc-text">
-            {proyecto?.nombre ?? "—"}
-          </span>
-          <span
-            className="truncate text-center text-sm text-dc-muted"
-            title={registro.tareaNombre}
-          >
-            {registro.tareaNombre}
-          </span>
-          <span className="text-center text-sm text-dc-muted">
-            {ETIQUETA_OWNERSHIP[registro.ownership]}
-          </span>
-          <span className="text-center text-sm tabular-nums text-dc-text">{registro.horas}</span>
-          <span className="text-center text-sm text-dc-muted">
-            {ETIQUETA_MODALIDAD[registro.modalidad]}
-          </span>
-          <span className="text-center text-sm tabular-nums text-dc-muted">
-            {formatMonto(registro.tarifaUsd)}
-          </span>
-          <span className="text-center text-sm tabular-nums text-dc-text">
-            {formatMonto(registro.montoUsd)}
-          </span>
-          <span className="flex justify-center gap-1">
-            {registro.editable ? (
-              <>
-                <BotonEditarIcono onClick={() => setEditando(true)} label="Editar registro" />
-                <BotonEliminarIcono
-                  onConfirm={() => eliminarRegistro(registro.id)}
-                  label="Eliminar registro"
-                />
-              </>
-            ) : (
-              <span
-                className="text-xs text-dc-muted"
-                title={`Pasados ${DIAS_VENTANA_EDICION} días el registro queda fijo`}
-              >
-                Cerrado
-              </span>
-            )}
-          </span>
-        </div>
-      </div>
-    );
-  }
+  const guardar = (campo: Parameters<typeof actualizarCampoRegistro>[1]) =>
+    async (valor: string) => actualizarCampoRegistro(registro.id, campo, valor);
 
   return (
-    <FormEdicion
-      registro={registro}
-      proyectos={proyectos}
-      tareasPorCliente={tareasPorCliente}
-      tarifas={tarifas}
-      onCerrar={() => setEditando(false)}
-    />
-  );
-}
-
-function FormEdicion({
-  registro,
-  proyectos,
-  tareasPorCliente,
-  tarifas,
-  onCerrar,
-}: {
-  registro: RegistroFila;
-  proyectos: OpcionSelect[];
-  tareasPorCliente: TareasPorCliente;
-  tarifas: MapaTarifas;
-  onCerrar: () => void;
-}) {
-  const [fecha, setFecha] = useState(registro.fecha);
-  const [clienteId, setClienteId] = useState(registro.clienteId);
-  const [tareaId, setTareaId] = useState(registro.tareaId);
-  const [modalidad, setModalidad] = useState<string>(registro.modalidad);
-  const [ownership, setOwnership] = useState<string>(registro.ownership);
-  const [horas, setHoras] = useState(registro.horas);
-
-  const accion = actualizarRegistro.bind(null, registro.id);
-  const [state, formAction, pending] = useActionState(
-    async (prev: { error?: string } | undefined, formData: FormData) => {
-      const result = await accion(prev, formData);
-      if (!result.error) onCerrar();
-      return result;
-    },
-    undefined,
-  );
-
-  const tarifa = tarifas[`${modalidad}-${ownership}`];
-  const horasDecimal = parseHorasHsMin(horas);
-  const total =
-    tarifa !== undefined && horasDecimal !== null && horasDecimal > 0
-      ? tarifa * horasDecimal
-      : null;
-
-  const tareas = tareasPorCliente[clienteId] ?? [];
-
-  // Al mover el registro a otro cliente, la tarea deja de aplicar: cada
-  // proyecto tiene su propio Roadmap.
-  const cambiarCliente = (v: string) => {
-    setClienteId(v);
-    setTareaId("");
-  };
-
-  return (
-    <form
-      action={formAction}
-      className="border-b border-dc-line bg-dc-card px-4 py-3 last:border-0"
-    >
+    <div className="border-b border-dc-line px-4 py-2 last:border-0">
       <div className={GRID_TIMETRACKER}>
-        <span />
-        <DatePicker
-          name="fecha"
-          value={fecha}
-          onChange={setFecha}
+        {editable ? (
+          <input
+            type="checkbox"
+            checked={seleccionado}
+            onChange={() => onToggle(registro.id)}
+            className="h-4 w-4 accent-dc-purple"
+            aria-label="Seleccionar fila"
+          />
+        ) : (
+          <span />
+        )}
+
+        <CeldaFecha
+          valor={registro.fecha}
+          onGuardar={guardar("fecha")}
+          ariaLabel="Fecha"
+          mostrar={mostrarFecha}
           max={hoyISO()}
           min={restarDiasISO(hoyISO(), DIAS_VENTANA_EDICION)}
-          className="w-full"
-          ariaLabel="Fecha"
+          editable={editable}
         />
-        <Dropdown
-          name="clienteId"
-          value={clienteId}
-          onChange={cambiarCliente}
-          options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
+
+        <CeldaOpciones
+          valor={registro.clienteId}
+          opciones={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
+          onGuardar={guardar("clienteId")}
           ariaLabel="Cliente"
+          editable={editable}
         />
-        <Dropdown
-          name="tareaId"
-          value={tareaId}
-          onChange={setTareaId}
-          options={tareas.map((t) => ({ value: t.id, label: t.nombre }))}
-          placeholder={tareas.length === 0 ? "Sin tareas en el Roadmap" : "Tarea"}
+
+        <CeldaOpciones
+          valor={registro.tareaId}
+          opciones={tareas.map((t) => ({ value: t.id, label: t.nombre }))}
+          onGuardar={guardar("tareaId")}
           ariaLabel="Tarea"
+          // Registros anteriores al Roadmap: sin tareaId, pero con la etiqueta
+          // de su etapa vieja para que el historial se siga leyendo.
+          etiqueta={registro.tareaId ? undefined : registro.tareaNombre}
+          placeholder={tareas.length === 0 ? "Sin tareas" : "Elegí una tarea"}
+          editable={editable}
         />
-        <Dropdown
-          name="ownership"
-          value={ownership}
-          onChange={setOwnership}
-          options={[
-            { value: "owner", label: "Owner" },
-            { value: "backup", label: "Backup" },
-          ]}
+
+        <CeldaOpciones
+          valor={registro.ownership}
+          opciones={OPCIONES_OWNERSHIP}
+          onGuardar={guardar("ownership")}
           ariaLabel="Ownership"
+          editable={editable}
         />
-        <input
-          name="horas"
-          value={horas}
-          inputMode="decimal"
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          onChange={(e) => setHoras(e.target.value)}
-          onBlur={() => {
-            const f = reformatEntradaHoras(horas);
-            if (f) setHoras(f);
-          }}
-          required
-          className={INPUT}
+
+        <CeldaHoras
+          valor={registro.horas}
+          onGuardar={guardar("horas")}
+          ariaLabel="Horas"
+          editable={editable}
         />
-        <Dropdown
-          name="modalidad"
-          value={modalidad}
-          onChange={setModalidad}
-          options={[
-            { value: "presencial", label: "Presencial" },
-            { value: "virtual", label: "Virtual" },
-          ]}
+
+        <CeldaOpciones
+          valor={registro.modalidad}
+          opciones={OPCIONES_MODALIDAD}
+          onGuardar={guardar("modalidad")}
           ariaLabel="Modalidad"
+          editable={editable}
         />
-        <span className="text-right text-sm tabular-nums text-dc-muted">
-          {tarifa !== undefined ? formatMonto(tarifa) : "—"}
-        </span>
-        <span className="text-right text-sm tabular-nums text-dc-text">
-          {total !== null ? formatMonto(total) : "—"}
-        </span>
-        <span className="flex justify-center gap-1">
-          <BotonGuardarIcono pending={pending} />
-          <BotonCancelarIcono onClick={onCerrar} />
+
+        {/* Calculados a partir de la tarifa vigente: no se editan. */}
+        <CeldaSoloLectura tenue>
+          <span className="tabular-nums">{formatMonto(registro.tarifaUsd)}</span>
+        </CeldaSoloLectura>
+        <CeldaSoloLectura>
+          <span className="tabular-nums">{formatMonto(registro.montoUsd)}</span>
+        </CeldaSoloLectura>
+
+        <span className="flex justify-center">
+          {editable ? (
+            <BotonEliminarIcono
+              onConfirm={() => eliminarRegistro(registro.id)}
+              label="Eliminar registro"
+            />
+          ) : (
+            <span
+              className="text-xs text-dc-muted"
+              title={`Pasados ${DIAS_VENTANA_EDICION} días el registro queda fijo`}
+            >
+              Cerrado
+            </span>
+          )}
         </span>
       </div>
-      {state?.error && <p className="mt-2 text-xs text-dc-pink">{state.error}</p>}
-    </form>
+    </div>
   );
-}
-
-function mostrarFecha(iso: string): string {
-  const [a, m, d] = iso.split("-");
-  return `${d}/${m}/${a}`;
 }

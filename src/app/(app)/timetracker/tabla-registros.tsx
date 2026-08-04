@@ -1,28 +1,21 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { eliminarRegistros, editarRegistros, type CampoMasivo } from "./actions";
 import { FilaRegistro } from "./fila-registro";
 import { GRID_TIMETRACKER } from "./grid";
 import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 import { Dropdown } from "@/components/dropdown";
-import type {
-  MapaTarifas,
-  OpcionSelect,
-  RegistroFila,
-  TareasPorCliente,
-} from "./tipos";
+import type { OpcionSelect, RegistroFila, TareasPorCliente } from "./tipos";
 
 export function TablaRegistros({
   filas,
   proyectos,
   tareasPorCliente,
-  tarifas,
 }: {
   filas: RegistroFila[];
   proyectos: OpcionSelect[];
   tareasPorCliente: TareasPorCliente;
-  tarifas: MapaTarifas;
 }) {
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirmar, setConfirmar] = useState(false);
@@ -45,13 +38,12 @@ export function TablaRegistros({
   const tareasSel = clienteUnico ? (tareasPorCliente[clienteUnico] ?? []) : [];
 
   // Si la selección pasa a mezclar clientes con "Tarea" ya elegida, el campo
-  // deja de ser aplicable y vuelve a Cliente.
-  useEffect(() => {
-    if (!clienteUnico) {
-      setCampo((c) => (c === "tareaId" ? "clienteId" : c));
-      setValor((v) => (campo === "tareaId" ? "" : v));
-    }
-  }, [clienteUnico, campo]);
+  // deja de ser aplicable. Se deriva en el render en vez de corregir el estado
+  // desde un efecto, que dispararía un render en cascada.
+  const campoEfectivo: CampoMasivo =
+    campo === "tareaId" && !clienteUnico ? "clienteId" : campo;
+  const valorEfectivo =
+    campoEfectivo === campo ? valor : (proyectos[0]?.id ?? "");
 
   const toggle = (id: string) =>
     setSel((s) => {
@@ -87,7 +79,7 @@ export function TablaRegistros({
 
   const aplicarEdicion = () =>
     start(async () => {
-      const r = await editarRegistros([...sel], campo, valor);
+      const r = await editarRegistros([...sel], campoEfectivo, valorEfectivo);
       if (!r.error) limpiar();
     });
 
@@ -125,7 +117,7 @@ export function TablaRegistros({
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <span className="text-xs text-dc-muted">Cambiar</span>
               <Dropdown
-                value={campo}
+                value={campoEfectivo}
                 onChange={(v) => cambiarCampo(v as CampoMasivo)}
                 options={[
                   { value: "clienteId", label: "Cliente" },
@@ -138,27 +130,27 @@ export function TablaRegistros({
                 ariaLabel="Campo a cambiar"
               />
               <span className="text-xs text-dc-muted">a</span>
-              {campo === "clienteId" && (
+              {campoEfectivo === "clienteId" && (
                 <Dropdown
-                  value={valor}
+                  value={valorEfectivo}
                   onChange={setValor}
                   options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
                   className="w-44"
                   ariaLabel="Cliente"
                 />
               )}
-              {campo === "tareaId" && (
+              {campoEfectivo === "tareaId" && (
                 <Dropdown
-                  value={valor}
+                  value={valorEfectivo}
                   onChange={setValor}
                   options={tareasSel.map((t) => ({ value: t.id, label: t.nombre }))}
                   className="w-56"
                   ariaLabel="Tarea"
                 />
               )}
-              {campo === "ownership" && (
+              {campoEfectivo === "ownership" && (
                 <Dropdown
-                  value={valor}
+                  value={valorEfectivo}
                   onChange={setValor}
                   options={[
                     { value: "owner", label: "Owner" },
@@ -168,9 +160,9 @@ export function TablaRegistros({
                   ariaLabel="Ownership"
                 />
               )}
-              {campo === "modalidad" && (
+              {campoEfectivo === "modalidad" && (
                 <Dropdown
-                  value={valor}
+                  value={valorEfectivo}
                   onChange={setValor}
                   options={[
                     { value: "presencial", label: "Presencial" },
@@ -180,7 +172,7 @@ export function TablaRegistros({
                   ariaLabel="Modalidad"
                 />
               )}
-              <button type="button" onClick={aplicarEdicion} disabled={pending || !valor} className={BTN_PRIMARY_SM}>
+              <button type="button" onClick={aplicarEdicion} disabled={pending || !valorEfectivo} className={BTN_PRIMARY_SM}>
                 {pending ? "Aplicando…" : "Aplicar a seleccionadas"}
               </button>
             </div>
@@ -218,7 +210,6 @@ export function TablaRegistros({
                 registro={f}
                 proyectos={proyectos}
                 tareasPorCliente={tareasPorCliente}
-                tarifas={tarifas}
                 seleccionado={sel.has(f.id)}
                 onToggle={toggle}
               />

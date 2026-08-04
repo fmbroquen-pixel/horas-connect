@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
-import { parseHorasHsMin } from "@/lib/horas";
+import { formatHorasHsMin, parseHorasHsMin } from "@/lib/horas";
 import { DIAS_VENTANA_EDICION } from "./constantes";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
@@ -29,6 +29,14 @@ export type CampoRegistro =
   | "horas";
 
 type Resultado = { error?: string; campo?: CampoRegistro };
+
+// Las horas alimentan el historial, los KPIs del Home y el contraste contra
+// el presupuesto del Roadmap: un cambio invalida las tres vistas.
+function revalidarHoras() {
+  revalidatePath("/timetracker");
+  revalidatePath("/dashboard");
+  revalidatePath("/proyectos", "layout");
+}
 
 function limiteVentana(): Date {
   const limite = new Date();
@@ -163,9 +171,7 @@ export async function crearRegistro(
     },
   });
 
-  revalidatePath("/timetracker");
-  revalidatePath("/dashboard");
-  revalidatePath("/proyectos", "layout");
+  revalidarHoras();
   return {};
 }
 
@@ -185,18 +191,48 @@ async function registroEditable(id: string, usuarioId: string, esAdmin: boolean)
   return { registro };
 }
 
-export async function actualizarRegistro(
+// Guardado de UN campo, disparado por la edición inline de la tabla. El resto
+// de los valores se leen del registro guardado y se vuelven a validar en
+// conjunto: así las reglas cruzadas (la tarifa depende de modalidad +
+// ownership, la tarea depende del cliente) siguen valiendo aunque el usuario
+// haya tocado una sola celda.
+export async function actualizarCampoRegistro(
   id: string,
-  _prevState: unknown,
-  formData: FormData,
+  campo: CampoRegistro,
+  valor: string,
 ): Promise<Resultado> {
   const usuario = await requireGuest();
   const esAdmin = usuario.rol === "admin";
 
   const check = await registroEditable(id, usuario.id, esAdmin);
   if (check.error || !check.registro) return { error: check.error };
+  const registro = check.registro;
 
-  const r = await validarEntrada(check.registro.usuarioId, formData);
+  // Cambiar de cliente deja huérfana la tarea: pertenece al Roadmap del
+  // proyecto anterior. Se limpia y la celda Tarea queda vacía esperando una
+  // del proyecto nuevo, en vez de rechazar el cambio.
+  if (campo === "clienteId") {
+    const permitidos = await getProyectosPermitidos(registro.usuarioId);
+    if (!permitidos.some((c) => c.id === valor)) {
+      return { error: "No tenés asignado ese cliente.", campo: "clienteId" };
+    }
+    await prisma.registroHoras.update({
+      where: { id },
+      data: { clienteId: valor, tareaId: null },
+    });
+    revalidarHoras();
+    return {};
+  }
+
+  const fd = new FormData();
+  fd.set("fecha", campo === "fecha" ? valor : registro.fecha.toISOString().slice(0, 10));
+  fd.set("clienteId", registro.clienteId);
+  fd.set("tareaId", campo === "tareaId" ? valor : (registro.tareaId ?? ""));
+  fd.set("ownership", campo === "ownership" ? valor : registro.ownership);
+  fd.set("modalidad", campo === "modalidad" ? valor : registro.modalidad);
+  fd.set("horas", campo === "horas" ? valor : formatHorasHsMin(Number(registro.horas)));
+
+  const r = await validarEntrada(registro.usuarioId, fd);
   if (r.error || !r.datos) return { error: r.error, campo: r.campo };
   const d = r.datos;
 
@@ -217,9 +253,7 @@ export async function actualizarRegistro(
     },
   });
 
-  revalidatePath("/timetracker");
-  revalidatePath("/dashboard");
-  revalidatePath("/proyectos", "layout");
+  revalidarHoras();
   return {};
 }
 
@@ -235,9 +269,7 @@ export async function eliminarRegistro(id: string): Promise<void> {
     where: { id },
     data: { eliminadoEn: new Date() },
   });
-  revalidatePath("/timetracker");
-  revalidatePath("/dashboard");
-  revalidatePath("/proyectos", "layout");
+  revalidarHoras();
 }
 
 // Borrado masivo de las filas seleccionadas (solo las propias, o cualquiera
@@ -255,9 +287,7 @@ export async function eliminarRegistros(ids: string[]): Promise<void> {
     },
     data: { eliminadoEn: new Date() },
   });
-  revalidatePath("/timetracker");
-  revalidatePath("/dashboard");
-  revalidatePath("/proyectos", "layout");
+  revalidarHoras();
 }
 
 export type CampoMasivo = "clienteId" | "tareaId" | "ownership" | "modalidad";
@@ -360,8 +390,6 @@ export async function editarRegistros(
     actualizados += 1;
   }
 
-  revalidatePath("/timetracker");
-  revalidatePath("/dashboard");
-  revalidatePath("/proyectos", "layout");
+  revalidarHoras();
   return { actualizados };
 }

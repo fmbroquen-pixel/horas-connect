@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { duplicarLista, eliminarLista, renombrarLista } from "./actions";
 import { GRID_ROADMAP, type ListaRoadmapVista } from "./constantes";
 import { FilaTareaRoadmap } from "./fila-tarea";
@@ -10,18 +10,31 @@ import { BTN_ICON_SM } from "@/lib/ui";
 import {
   BotonEditarIcono,
   BotonEliminarIcono,
-  BotonGuardarIcono,
-  BotonCancelarIcono,
 } from "@/components/tabla/acciones-fila";
 
 // Una lista del plan sobre la superficie clara del Design System (.dc-panel),
 // igual que las tablas de Time Tracking o Equipo: de ahí salen el encabezado
-// centrado y las filas blancas. Se pliega para poder recorrer un roadmap
-// largo viendo solo los títulos; arranca abierta.
-export function ListaRoadmapCard({ lista }: { lista: ListaRoadmapVista }) {
-  const [abierta, setAbierta] = useState(true);
+// centrado y las filas blancas. Arranca plegada: un roadmap largo se recorre
+// primero por sus listas y se abre la que interesa.
+export function ListaRoadmapCard({
+  lista,
+  sel,
+  onToggle,
+  onToggleLista,
+}: {
+  lista: ListaRoadmapVista;
+  sel: Set<string>;
+  onToggle: (id: string) => void;
+  onToggleLista: (ids: string[], marcar: boolean) => void;
+}) {
+  // Plegadas por defecto: un roadmap largo se recorre primero por sus listas.
+  const [abierta, setAbierta] = useState(false);
   const [renombrando, setRenombrando] = useState(false);
   const idContenido = useId();
+
+  const ids = lista.tareas.map((t) => t.id);
+  const seleccionadas = ids.filter((id) => sel.has(id)).length;
+  const todasSel = ids.length > 0 && seleccionadas === ids.length;
 
   return (
     <section className="dc-panel overflow-hidden">
@@ -59,6 +72,7 @@ export function ListaRoadmapCard({ lista }: { lista: ListaRoadmapVista }) {
             </button>
             <span className="text-xs text-dc-muted">
               {lista.tareas.length} tarea(s)
+              {seleccionadas > 0 && ` · ${seleccionadas} seleccionada(s)`}
             </span>
             <BotonEditarIcono
               onClick={() => setRenombrando(true)}
@@ -92,19 +106,31 @@ export function ListaRoadmapCard({ lista }: { lista: ListaRoadmapVista }) {
       {abierta && (
         <div id={idContenido}>
           <div className="overflow-x-auto">
-            <div className="min-w-[900px]">
+            <div className="min-w-[840px]">
               <div className={`dc-thead ${GRID_ROADMAP} border-b border-dc-line px-4`}>
+                <input
+                  type="checkbox"
+                  checked={todasSel}
+                  onChange={() => onToggleLista(ids, !todasSel)}
+                  disabled={ids.length === 0}
+                  className="h-4 w-4 accent-dc-purple"
+                  aria-label={`Seleccionar todas las tareas de ${lista.nombre}`}
+                />
                 <span className="dc-col-izq">Tarea</span>
                 <span>Inicio</span>
                 <span>Fin</span>
-                <span>Duración</span>
                 <span>Horas est.</span>
                 <span>Estado</span>
                 <span />
               </div>
 
               {lista.tareas.map((t) => (
-                <FilaTareaRoadmap key={t.id} tarea={t} />
+                <FilaTareaRoadmap
+                  key={t.id}
+                  tarea={t}
+                  seleccionada={sel.has(t.id)}
+                  onToggle={onToggle}
+                />
               ))}
 
               {lista.tareas.length === 0 && (
@@ -124,6 +150,8 @@ export function ListaRoadmapCard({ lista }: { lista: ListaRoadmapVista }) {
   );
 }
 
+// El nombre de la lista sigue la misma regla que las celdas de la tabla:
+// se guarda al salir del campo o con Enter, Escape cancela, sin botones.
 function FormNombre({
   lista,
   onCerrar,
@@ -131,31 +159,59 @@ function FormNombre({
   lista: ListaRoadmapVista;
   onCerrar: () => void;
 }) {
-  const accion = renombrarLista.bind(null, lista.id);
-  const [state, formAction, pending] = useActionState(
-    async (prev: { error?: string } | undefined, formData: FormData) => {
-      const r = await accion(prev, formData);
-      if (!r.error) onCerrar();
-      return r;
-    },
-    undefined,
-  );
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string>();
+  const cancelado = useRef(false);
+
+  const guardar = async (valor: string) => {
+    const nombre = valor.trim();
+    if (!nombre || nombre === lista.nombre) {
+      onCerrar();
+      return;
+    }
+    setGuardando(true);
+    const fd = new FormData();
+    fd.set("nombre", nombre);
+    const r = await renombrarLista(lista.id, undefined, fd);
+    setGuardando(false);
+    if (r.error) setError(r.error);
+    else onCerrar();
+  };
 
   return (
-    <form action={formAction} className="flex items-center gap-2">
+    <span className="flex items-center gap-2">
       <input
-        name="nombre"
         defaultValue={lista.nombre}
         aria-label="Nombre de la lista"
         autoComplete="off"
         autoFocus
-        required
-        className="w-56 rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri"
+        disabled={guardando}
+        onFocus={(e) => e.currentTarget.select()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            cancelado.current = true;
+            onCerrar();
+          }
+        }}
+        onBlur={(e) => {
+          if (cancelado.current) {
+            cancelado.current = false;
+            return;
+          }
+          guardar(e.target.value);
+        }}
+        className="w-56 rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri disabled:opacity-50"
       />
-      <BotonGuardarIcono pending={pending} />
-      <BotonCancelarIcono onClick={onCerrar} />
-      {state?.error && <span className="text-xs text-dc-pink">{state.error}</span>}
-    </form>
+      {error && (
+        <span role="alert" className="text-xs text-dc-pink">
+          {error}
+        </span>
+      )}
+    </span>
   );
 }
 

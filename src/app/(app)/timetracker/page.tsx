@@ -192,7 +192,6 @@ export default async function TimetrackerPage({
           filas={filas}
           proyectos={opcionesProyecto}
           tareasPorCliente={tareasPorCliente}
-          tarifas={tarifas}
         />
       </div>
     </div>

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
 import { parseHorasHsMin } from "@/lib/horas";
 import {
+  diasHabilesEntre,
   fechaDesdeISO,
   finTrasDiasHabiles,
   hoyUTC,
@@ -16,6 +17,14 @@ import { ETIQUETA_ESTADO } from "./constantes";
 import type { EstadoTareaRoadmap } from "@/generated/prisma/client";
 
 type Resultado = { error?: string };
+
+// Campos que la tabla del Roadmap edita de a uno, en el lugar.
+export type CampoTarea =
+  | "nombre"
+  | "fechaInicio"
+  | "fechaFin"
+  | "horasEstimadas"
+  | "estado";
 
 // El Roadmap alimenta el desplegable de Tarea de Time Tracking, así que un
 // cambio acá también invalida esa pantalla.
@@ -246,7 +255,9 @@ function parseTarea(formData: FormData) {
   const parsed = TareaSchema.safeParse({
     nombre: formData.get("nombre"),
     fechaInicio: inicio,
-    duracionDias: formData.get("duracionDias"),
+    // El alta tampoco pide duración: la tarea nace de un día hábil y se
+    // redimensiona corriendo su fecha de fin en la tabla.
+    duracionDias: formData.get("duracionDias") ?? "1",
     horas: formData.get("horasEstimadas") ?? "0",
     estado: formData.get("estado") ?? "sin_iniciar",
   });
@@ -300,42 +311,166 @@ export async function crearTarea(
   return {};
 }
 
-export async function actualizarTarea(
+// Guardado de UN campo, disparado por la edición inline de la tabla.
+//
+// La duración ya no es un campo visible: se deriva del par Inicio/Fin y se
+// guarda internamente, que es lo que la secuencia necesita para encadenar.
+// De ahí las dos reglas:
+//   · mover el Inicio no cambia el tamaño de la tarea → conserva la duración
+//     y se recalcula el Fin;
+//   · mover el Fin sí la redimensiona → la duración pasa a ser los días
+//     hábiles entre Inicio y Fin.
+// En los dos casos se reencadena desde esta tarea hacia adelante; lo anterior
+// nunca se toca.
+export async function actualizarCampoTarea(
   tareaId: string,
-  _prev: unknown,
-  formData: FormData,
+  campo: CampoTarea,
+  valor: string,
 ): Promise<Resultado> {
   const tarea = await tareaConAcceso(tareaId);
   if (!tarea) return { error: "Tarea inexistente." };
 
-  const r = parseTarea(formData);
-  if (r.error || !r.datos) return { error: r.error };
+  if (campo === "nombre") {
+    const parsed = NombreSchema.safeParse(valor);
+    if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+    await prisma.tareaRoadmap.update({
+      where: { id: tareaId },
+      data: { nombre: parsed.data },
+    });
+    revalidar();
+    return {};
+  }
 
-  await prisma.tareaRoadmap.update({ where: { id: tareaId }, data: r.datos });
+  if (campo === "estado") {
+    if (!(valor in ETIQUETA_ESTADO)) return { error: "Estado inválido." };
+    await prisma.tareaRoadmap.update({
+      where: { id: tareaId },
+      data: { estado: valor as EstadoTareaRoadmap },
+    });
+    revalidar();
+    return {};
+  }
 
-  // La tarea editada es el ancla: conserva la fecha que se acaba de fijar y
-  // empuja a las posteriores. Las anteriores no se tocan.
+  if (campo === "horasEstimadas") {
+    const horas = parseHorasHsMin(valor || "0");
+    if (horas === null || horas < 0) {
+      return { error: "Horas inválidas: cargá 1,5 o el formato 1:30." };
+    }
+    await prisma.tareaRoadmap.update({
+      where: { id: tareaId },
+      data: { horasEstimadas: horas },
+    });
+    revalidar();
+    return {};
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return { error: "Fecha inválida." };
+  const fecha = fechaDesdeISO(valor);
+
+  let fechaInicio: Date;
+  let duracionDias: number;
+
+  if (campo === "fechaInicio") {
+    fechaInicio = fecha;
+    duracionDias = tarea.duracionDias;
+  } else {
+    fechaInicio = tarea.fechaInicio;
+    if (fecha < fechaInicio) {
+      return { error: "El fin no puede ser anterior al inicio." };
+    }
+    // Mínimo un día hábil: un rango que cae entero en fin de semana
+    // igual ocupa una jornada.
+    duracionDias = Math.max(1, diasHabilesEntre(fechaInicio, fecha));
+  }
+
+  await prisma.tareaRoadmap.update({
+    where: { id: tareaId },
+    data: {
+      fechaInicio,
+      duracionDias,
+      fechaFin: finTrasDiasHabiles(fechaInicio, duracionDias),
+    },
+  });
+
   await resecuenciar(tarea.lista.clienteId, tareaId);
   revalidar();
   return {};
 }
 
-// Cambio de estado suelto (desde la pastilla de la fila): no toca fechas, así
-// que no hace falta recalcular nada.
-export async function cambiarEstadoTarea(
-  tareaId: string,
-  estado: string,
-): Promise<Resultado> {
-  const tarea = await tareaConAcceso(tareaId);
-  if (!tarea) return { error: "Tarea inexistente." };
-  if (!(estado in ETIQUETA_ESTADO)) return { error: "Estado inválido." };
+// ── Acciones masivas ──────────────────────────────────────────────────────
 
-  await prisma.tareaRoadmap.update({
-    where: { id: tareaId },
-    data: { estado: estado as EstadoTareaRoadmap },
+// Valida el acceso a todos los proyectos tocados y devuelve las tareas.
+async function tareasConAcceso(ids: string[]) {
+  const tareas = await prisma.tareaRoadmap.findMany({
+    where: { id: { in: ids } },
+    include: { lista: { select: { clienteId: true } } },
   });
+  const clientes = [...new Set(tareas.map((t) => t.lista.clienteId))];
+  for (const clienteId of clientes) await requireAcceso(clienteId);
+  return { tareas, clientes };
+}
+
+// Solo se aplican en masa los campos que tienen sentido uniformes. Las fechas
+// y el nombre quedan afuera a propósito: son propios de cada tarea y las
+// fechas se derivan de la secuencia.
+export async function editarTareas(
+  ids: string[],
+  campo: "estado" | "horasEstimadas",
+  valor: string,
+): Promise<{ error?: string; actualizadas?: number }> {
+  if (ids.length === 0) return { actualizadas: 0 };
+  const { tareas } = await tareasConAcceso(ids);
+  if (tareas.length === 0) return { actualizadas: 0 };
+
+  if (campo === "estado") {
+    if (!(valor in ETIQUETA_ESTADO)) return { error: "Estado inválido." };
+    await prisma.tareaRoadmap.updateMany({
+      where: { id: { in: tareas.map((t) => t.id) } },
+      data: { estado: valor as EstadoTareaRoadmap },
+    });
+  } else {
+    const horas = parseHorasHsMin(valor || "0");
+    if (horas === null || horas < 0) {
+      return { error: "Horas inválidas: cargá 1,5 o el formato 1:30." };
+    }
+    await prisma.tareaRoadmap.updateMany({
+      where: { id: { in: tareas.map((t) => t.id) } },
+      data: { horasEstimadas: horas },
+    });
+  }
+
+  // Ninguno de los dos campos toca fechas: no hace falta reencadenar.
   revalidar();
-  return {};
+  return { actualizadas: tareas.length };
+}
+
+export async function eliminarTareas(ids: string[]): Promise<void> {
+  if (ids.length === 0) return;
+  const { tareas, clientes } = await tareasConAcceso(ids);
+  if (tareas.length === 0) return;
+
+  const idsValidos = tareas.map((t) => t.id);
+  const aBorrar = new Set(idsValidos);
+
+  // Las anclas se resuelven ANTES de borrar: es la tarea anterior a la
+  // primera eliminada de cada proyecto, y por definición no está en el lote.
+  const anclas = new Map<string, string | undefined>();
+  for (const clienteId of clientes) {
+    const orden = await getTareasEnOrden(clienteId);
+    const i = orden.findIndex((t) => aBorrar.has(t.id));
+    anclas.set(clienteId, i > 0 ? orden[i - 1].id : undefined);
+  }
+
+  await prisma.registroHoras.updateMany({
+    where: { tareaId: { in: idsValidos } },
+    data: { tareaId: null },
+  });
+  await prisma.tareaRoadmap.deleteMany({ where: { id: { in: idsValidos } } });
+
+  for (const clienteId of clientes) {
+    await resecuenciar(clienteId, anclas.get(clienteId));
+  }
+  revalidar();
 }
 
 export async function eliminarTarea(tareaId: string): Promise<void> {

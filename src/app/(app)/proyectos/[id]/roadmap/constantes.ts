@@ -22,16 +22,16 @@ export const OPCIONES_ESTADO = Object.entries(ETIQUETA_ESTADO).map(
   ([value, label]) => ({ value, label }),
 );
 
-// Tarea · Inicio · Fin · Duración · Horas est. · Estado · (acciones)
+// (checkbox) · Tarea · Inicio · Fin · Horas est. · Estado · (acciones)
+// La duración no tiene columna: se deriva de Inicio y Fin y se guarda sola.
 export const GRID_ROADMAP =
-  "grid min-w-[900px] grid-cols-[minmax(190px,1fr)_105px_105px_85px_95px_130px_150px] items-center gap-2";
+  "grid min-w-[840px] grid-cols-[34px_minmax(200px,1fr)_120px_120px_110px_150px_80px] items-center gap-2";
 
 export type TareaRoadmapFila = {
   id: string;
   nombre: string;
   fechaInicio: string; // YYYY-MM-DD
   fechaFin: string; // YYYY-MM-DD
-  duracionDias: number;
   horasEstimadas: string; // hs:min
   estado: string;
 };

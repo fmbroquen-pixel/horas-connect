@@ -51,6 +51,8 @@ export function DatePicker({
   invalido = false,
   ariaLabel,
   className = "",
+  autoAbrir = false,
+  onCerrar,
 }: {
   name?: string;
   value: string;
@@ -63,8 +65,14 @@ export function DatePicker({
   invalido?: boolean;
   ariaLabel?: string;
   className?: string;
+  // Montar ya desplegado. Lo usan las celdas editables de las tablas: el
+  // mismo clic que entra en edición abre el calendario.
+  autoAbrir?: boolean;
+  // Se dispara cada vez que el calendario se cierra (eligiendo, con Escape,
+  // tabulando o clickeando afuera) para que la celda salga del modo edición.
+  onCerrar?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoAbrir);
   const [cursor, setCursor] = useState<Date>(() => fromISO(value) ?? new Date());
   const ref = useRef<HTMLDivElement>(null);
 
@@ -78,11 +86,21 @@ export function DatePicker({
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        // No se llama a `cerrar` para no re-suscribir el listener en cada
+        // render: onCerrar llega como prop y cambia de identidad siempre.
+        setOpen(false);
+        onCerrar?.();
+      }
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
-  }, [open]);
+  }, [open, onCerrar]);
+
+  const cerrar = () => {
+    setOpen(false);
+    onCerrar?.();
+  };
 
   const abrir = () => {
     // Sin un valor cargado, el calendario abre siempre en HOY (no en el
@@ -104,7 +122,7 @@ export function DatePicker({
   const elegir = (d: Date) => {
     if (fueraDeRango(d)) return;
     onChange(toISO(d));
-    setOpen(false);
+    cerrar();
     // Devolver el foco al trigger para poder tabular al siguiente campo.
     setTimeout(() => ref.current?.querySelector("button")?.focus(), 0);
   };
@@ -129,9 +147,9 @@ export function DatePicker({
     }
     if (e.key === "Escape") {
       e.preventDefault();
-      setOpen(false);
+      cerrar();
     } else if (e.key === "Tab") {
-      setOpen(false); // confirma y deja continuar la tabulación natural
+      cerrar(); // confirma y deja continuar la tabulación natural
     } else if (e.key === "ArrowLeft") {
       e.preventDefault();
       moverCursor(-1);
@@ -177,7 +195,7 @@ export function DatePicker({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={ariaLabel}
-        onClick={() => (open ? setOpen(false) : abrir())}
+        onClick={() => (open ? cerrar() : abrir())}
         onKeyDown={onKeyDown}
         className={`flex w-full items-center justify-between gap-2 rounded-lg border ${borde} bg-dc-deeper px-3 py-1.5 text-sm shadow-sm outline-none transition focus:border-dc-peri`}
       >

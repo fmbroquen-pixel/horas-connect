@@ -5,8 +5,7 @@ import { asegurarRoadmap } from "@/lib/roadmap";
 import { formatHorasHsMin } from "@/lib/horas";
 import { InfoButton } from "@/components/info-button";
 import { mostrarFechaISO } from "../../../admin/clientes/constantes";
-import { ListaRoadmapCard } from "./lista-roadmap";
-import { NuevaListaBoton } from "./nueva-lista-boton";
+import { RoadmapTablero } from "./tablero";
 import type { ListaRoadmapVista } from "./constantes";
 
 const CARD = "rounded-2xl border border-dc-line bg-dc-card px-4 py-3";
@@ -50,7 +49,6 @@ export default async function ProyectoRoadmapPage({
       nombre: t.nombre,
       fechaInicio: t.fechaInicio.toISOString().slice(0, 10),
       fechaFin: t.fechaFin.toISOString().slice(0, 10),
-      duracionDias: t.duracionDias,
       horasEstimadas: formatHorasHsMin(Number(t.horasEstimadas)),
       estado: t.estado,
     }));
@@ -126,21 +124,7 @@ export default async function ProyectoRoadmapPage({
         />
       </div>
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-2">
-        {vistas.map((lista) => (
-          <ListaRoadmapCard key={lista.id} lista={lista} />
-        ))}
-
-        {vistas.length === 0 && (
-          <p className="px-4 py-6 text-center text-sm text-dc-muted">
-            Este proyecto no tiene listas en el Roadmap. Agregá una para armar
-            el plan de trabajo.
-          </p>
-        )}
-
-        {/* Agregar va siempre al final del plan, después de la última lista. */}
-        <NuevaListaBoton clienteId={id} />
-      </div>
+      <RoadmapTablero clienteId={id} listas={vistas} />
     </div>
   );
 }

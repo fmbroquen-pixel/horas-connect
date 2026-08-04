@@ -1,66 +1,47 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import { crearTarea } from "./actions";
-import { OPCIONES_ESTADO } from "./constantes";
-import { Modal } from "@/components/ui/modal";
-import { ToastOk } from "@/components/ui/toast-ok";
-import { Dropdown } from "@/components/dropdown";
-import { reformatEntradaHoras } from "@/lib/horas";
-import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
 
-const INPUT =
-  "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
-const LABEL = "mb-1 block text-xs text-dc-muted";
-
-// Alta de tarea. No pide fechas a propósito: la tarea se agrega al final de
-// la lista y la planificación secuencial le asigna el arranque a partir de la
-// tarea anterior. Lo que define su lugar en el calendario es la duración.
+// Alta de tarea al pie de la lista, sin modal: para un nombre no hace falta.
+// La tarea nace con un día hábil de duración, sin horas y sin iniciar; sus
+// fechas las asigna la secuencia a partir de la tarea anterior. Todo lo demás
+// se ajusta después en la misma fila.
 export function NuevaTareaBoton({ listaId }: { listaId: string }) {
-  const [open, setOpen] = useState(false);
-  const [toast, setToast] = useState(false);
-  const [nombre, setNombre] = useState("");
-  const [duracion, setDuracion] = useState("1");
-  const [horas, setHoras] = useState("1:00");
-  const [estado, setEstado] = useState("sin_iniciar");
-  const nombreRef = useRef<HTMLInputElement>(null);
+  const [abierto, setAbierto] = useState(false);
+  const [error, setError] = useState<string>();
+  const [pending, start] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const cancelado = useRef(false);
 
-  const accion = crearTarea.bind(null, listaId);
-  const [state, formAction, pending] = useActionState(
-    async (prev: { error?: string } | undefined, formData: FormData) => {
-      const r = await accion(prev, formData);
-      if (!r.error) {
-        setOpen(false);
-        setToast(true);
+  const crear = (valor: string) => {
+    const nombre = valor.trim();
+    if (!nombre) {
+      setAbierto(false);
+      return;
+    }
+    start(async () => {
+      const fd = new FormData();
+      fd.set("nombre", nombre);
+      const r = await crearTarea(listaId, undefined, fd);
+      if (r.error) {
+        setError(r.error);
+        return;
       }
-      return r;
-    },
-    undefined,
-  );
-
-  const abrir = () => {
-    setNombre("");
-    setDuracion("1");
-    setHoras("1:00");
-    setEstado("sin_iniciar");
-    setOpen(true);
+      setError(undefined);
+      // Queda listo para encadenar varias altas seguidas.
+      if (inputRef.current) {
+        inputRef.current.value = "";
+        inputRef.current.focus();
+      }
+    });
   };
 
-  useEffect(() => {
-    if (!open) return;
-    const t = setTimeout(() => nombreRef.current?.focus(), 60);
-    return () => clearTimeout(t);
-  }, [open]);
-
-  const valido = nombre.trim().length > 0 && Number(duracion) >= 1;
-
-  return (
-    <>
-      {/* Fila de alta al pie de la lista (patrón ClickUp): discreta en
-          reposo, se enciende al pasar por encima. */}
+  if (!abierto) {
+    return (
       <button
         type="button"
-        onClick={abrir}
+        onClick={() => setAbierto(true)}
         className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm text-dc-muted transition hover:bg-dc-card hover:text-dc-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dc-peri/40"
       >
         <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -68,103 +49,45 @@ export function NuevaTareaBoton({ listaId }: { listaId: string }) {
         </svg>
         Agregar tarea
       </button>
+    );
+  }
 
-      <Modal open={open} onClose={() => setOpen(false)} labelledBy="titulo-nueva-tarea-roadmap">
-        <div className="dc-menu dc-pop-in w-full max-w-md rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
-          <h2
-            id="titulo-nueva-tarea-roadmap"
-            className="font-display text-sm uppercase text-white"
-          >
-            Nueva tarea
-          </h2>
-          <p className="mt-1 text-xs text-dc-muted">
-            Se agrega al final de la lista y arranca el día hábil siguiente al
-            fin de la tarea anterior.
-          </p>
-
-          <form action={formAction} className="mt-4 space-y-4">
-            <label className="block">
-              <span className={LABEL}>Nombre</span>
-              <input
-                ref={nombreRef}
-                name="nombre"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                autoComplete="off"
-                placeholder="Ej: Office Hours"
-                className={INPUT}
-              />
-            </label>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block">
-                <span className={LABEL}>Duración (días hábiles)</span>
-                <input
-                  name="duracionDias"
-                  value={duracion}
-                  onChange={(e) => setDuracion(e.target.value)}
-                  inputMode="numeric"
-                  autoComplete="off"
-                  className={INPUT}
-                />
-              </label>
-              <label className="block">
-                <span className={LABEL}>Horas estimadas</span>
-                <input
-                  name="horasEstimadas"
-                  value={horas}
-                  onChange={(e) => setHoras(e.target.value)}
-                  onBlur={() => {
-                    const f = reformatEntradaHoras(horas);
-                    if (f) setHoras(f);
-                  }}
-                  inputMode="decimal"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  title="Cargá un número (1,5) o el formato 1:30"
-                  className={INPUT}
-                />
-              </label>
-            </div>
-
-            <div>
-              <span className={LABEL}>Estado</span>
-              <Dropdown
-                name="estado"
-                value={estado}
-                onChange={setEstado}
-                options={OPCIONES_ESTADO}
-                className="w-full"
-                ariaLabel="Estado"
-              />
-            </div>
-
-            {state?.error && (
-              <p className="text-xs text-dc-pink" role="alert">
-                {state.error}
-              </p>
-            )}
-
-            <div className="flex justify-end gap-2 pt-1">
-              <button type="button" onClick={() => setOpen(false)} className={BTN_SECONDARY}>
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={!valido || pending}
-                className={`${BTN_PRIMARY} disabled:cursor-not-allowed disabled:opacity-50`}
-              >
-                {pending ? "Creando…" : "Agregar tarea"}
-              </button>
-            </div>
-          </form>
-        </div>
-      </Modal>
-
-      <ToastOk show={toast} onHide={() => setToast(false)}>
-        Tarea agregada
-      </ToastOk>
-    </>
+  return (
+    <div className="px-4 py-2">
+      <input
+        ref={inputRef}
+        autoFocus
+        disabled={pending}
+        placeholder="Nombre de la tarea y Enter"
+        aria-label="Nombre de la tarea nueva"
+        autoComplete="off"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            crear(e.currentTarget.value);
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            cancelado.current = true;
+            setAbierto(false);
+            setError(undefined);
+          }
+        }}
+        onBlur={(e) => {
+          if (cancelado.current) {
+            cancelado.current = false;
+            return;
+          }
+          const v = e.target.value.trim();
+          if (v) crear(v);
+          else setAbierto(false);
+        }}
+        className="w-full max-w-sm rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri disabled:opacity-50"
+      />
+      {error && (
+        <p role="alert" className="mt-1 text-xs text-dc-pink">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }

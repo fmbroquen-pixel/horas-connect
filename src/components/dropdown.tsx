@@ -17,6 +17,8 @@ export function Dropdown({
   className = "",
   invalido = false,
   ariaLabel,
+  autoAbrir = false,
+  onCerrar,
 }: {
   name?: string;
   value: string;
@@ -27,9 +29,18 @@ export function Dropdown({
   className?: string;
   invalido?: boolean;
   ariaLabel?: string;
+  // Montar ya desplegado. Lo usan las celdas editables de las tablas: el
+  // mismo clic que entra en edición abre el menú, sin pedir un segundo clic.
+  autoAbrir?: boolean;
+  // Se dispara cada vez que el menú se cierra (eligiendo, con Escape o
+  // clickeando afuera) para que la celda pueda salir del modo edición.
+  onCerrar?: () => void;
 }) {
-  const [open, setOpen] = useState(false);
-  const [foco, setFoco] = useState(0);
+  const [open, setOpen] = useState(autoAbrir);
+  const [foco, setFoco] = useState(() => {
+    const i = options.findIndex((o) => o.value === value);
+    return i >= 0 ? i : 0;
+  });
   const ref = useRef<HTMLDivElement>(null);
   const listaRef = useRef<HTMLUListElement>(null);
 
@@ -38,11 +49,21 @@ export function Dropdown({
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        // No se llama a `cerrar` para no re-suscribir el listener en cada
+        // render: onCerrar llega como prop y cambia de identidad siempre.
+        setOpen(false);
+        onCerrar?.();
+      }
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
-  }, [open]);
+  }, [open, onCerrar]);
+
+  const cerrar = () => {
+    setOpen(false);
+    onCerrar?.();
+  };
 
   const abrir = () => {
     const idx = options.findIndex((o) => o.value === value);
@@ -52,7 +73,7 @@ export function Dropdown({
 
   const elegir = (v: string) => {
     onChange(v);
-    setOpen(false);
+    cerrar();
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -63,7 +84,7 @@ export function Dropdown({
       return;
     }
     if (!open) return;
-    if (e.key === "Escape") setOpen(false);
+    if (e.key === "Escape") cerrar();
     else if (e.key === "ArrowDown") {
       e.preventDefault();
       setFoco((f) => Math.min(f + 1, options.length - 1));
@@ -88,7 +109,7 @@ export function Dropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={ariaLabel}
-        onClick={() => (open ? setOpen(false) : abrir())}
+        onClick={() => (open ? cerrar() : abrir())}
         onKeyDown={onKeyDown}
         className={`flex w-full items-center justify-between gap-2 rounded-lg border ${borde} bg-dc-deeper px-3 py-1.5 text-sm shadow-sm outline-none transition focus:border-dc-peri disabled:opacity-60`}
       >
