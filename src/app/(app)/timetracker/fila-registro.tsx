@@ -14,6 +14,7 @@ import {
   type MapaTarifas,
   type OpcionSelect,
   type RegistroFila,
+  type TareasPorCliente,
 } from "./tipos";
 import {
   BotonEditarIcono,
@@ -28,14 +29,14 @@ const INPUT =
 export function FilaRegistro({
   registro,
   proyectos,
-  etapas,
+  tareasPorCliente,
   tarifas,
   seleccionado,
   onToggle,
 }: {
   registro: RegistroFila;
   proyectos: OpcionSelect[];
-  etapas: OpcionSelect[];
+  tareasPorCliente: TareasPorCliente;
   tarifas: MapaTarifas;
   seleccionado: boolean;
   onToggle: (id: string) => void;
@@ -44,7 +45,6 @@ export function FilaRegistro({
 
   if (!editando) {
     const proyecto = proyectos.find((p) => p.id === registro.clienteId);
-    const etapa = etapas.find((e) => e.id === registro.etapaId);
     return (
       <div className="border-b border-dc-line px-4 py-3 last:border-0">
         <div className={GRID_TIMETRACKER}>
@@ -63,8 +63,11 @@ export function FilaRegistro({
           <span className="truncate text-center text-sm text-dc-text">
             {proyecto?.nombre ?? "—"}
           </span>
-          <span className="truncate text-center text-sm text-dc-muted">
-            {etapa?.nombre ?? "—"}
+          <span
+            className="truncate text-center text-sm text-dc-muted"
+            title={registro.tareaNombre}
+          >
+            {registro.tareaNombre}
           </span>
           <span className="text-center text-sm text-dc-muted">
             {ETIQUETA_OWNERSHIP[registro.ownership]}
@@ -106,7 +109,7 @@ export function FilaRegistro({
     <FormEdicion
       registro={registro}
       proyectos={proyectos}
-      etapas={etapas}
+      tareasPorCliente={tareasPorCliente}
       tarifas={tarifas}
       onCerrar={() => setEditando(false)}
     />
@@ -116,19 +119,19 @@ export function FilaRegistro({
 function FormEdicion({
   registro,
   proyectos,
-  etapas,
+  tareasPorCliente,
   tarifas,
   onCerrar,
 }: {
   registro: RegistroFila;
   proyectos: OpcionSelect[];
-  etapas: OpcionSelect[];
+  tareasPorCliente: TareasPorCliente;
   tarifas: MapaTarifas;
   onCerrar: () => void;
 }) {
   const [fecha, setFecha] = useState(registro.fecha);
   const [clienteId, setClienteId] = useState(registro.clienteId);
-  const [etapaId, setEtapaId] = useState(registro.etapaId);
+  const [tareaId, setTareaId] = useState(registro.tareaId);
   const [modalidad, setModalidad] = useState<string>(registro.modalidad);
   const [ownership, setOwnership] = useState<string>(registro.ownership);
   const [horas, setHoras] = useState(registro.horas);
@@ -150,6 +153,15 @@ function FormEdicion({
       ? tarifa * horasDecimal
       : null;
 
+  const tareas = tareasPorCliente[clienteId] ?? [];
+
+  // Al mover el registro a otro cliente, la tarea deja de aplicar: cada
+  // proyecto tiene su propio Roadmap.
+  const cambiarCliente = (v: string) => {
+    setClienteId(v);
+    setTareaId("");
+  };
+
   return (
     <form
       action={formAction}
@@ -169,16 +181,17 @@ function FormEdicion({
         <Dropdown
           name="clienteId"
           value={clienteId}
-          onChange={setClienteId}
+          onChange={cambiarCliente}
           options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
           ariaLabel="Cliente"
         />
         <Dropdown
-          name="etapaId"
-          value={etapaId}
-          onChange={setEtapaId}
-          options={etapas.map((e) => ({ value: e.id, label: e.nombre }))}
-          ariaLabel="Etapa"
+          name="tareaId"
+          value={tareaId}
+          onChange={setTareaId}
+          options={tareas.map((t) => ({ value: t.id, label: t.nombre }))}
+          placeholder={tareas.length === 0 ? "Sin tareas en el Roadmap" : "Tarea"}
+          ariaLabel="Tarea"
         />
         <Dropdown
           name="ownership"

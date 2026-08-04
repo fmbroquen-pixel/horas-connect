@@ -64,7 +64,6 @@ function navParaRol(rol: string): {
         children: [
           { href: "/admin/usuarios", label: "Usuarios" },
           { href: "/admin/clientes", label: "Clientes" },
-          { href: "/admin/etapas", label: "Etapas" },
         ],
       },
     };

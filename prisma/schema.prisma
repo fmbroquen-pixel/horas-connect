@@ -65,6 +65,12 @@ model Cliente {
   // Enlace al tablero operativo externo del proyecto (sección Proyectos).
   tableroUrl String? @map("tablero_url")
 
+  // Momento en que se generó el Roadmap por defecto (Onboarding + un tablero
+  // por trimestre). Es la marca que evita volver a sembrarlo: si el usuario
+  // borra todas las listas, el proyecto queda vacío a propósito y nadie las
+  // recrea por atrás.
+  roadmapCreadoEn DateTime? @map("roadmap_creado_en")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -76,6 +82,7 @@ model Cliente {
   semaforoEventos SemaforoEvento[]
   etapaEventos    EtapaEvento[]
   tareas          TareaProyecto[]
+  listasRoadmap   ListaRoadmap[]
 
   @@map("clientes")
 }
@@ -124,7 +131,9 @@ enum EstadoTarea {
   hecha
 }
 
-// Tareas/hitos del cronograma (Gantt) del proyecto.
+// Tareas/hitos del Gantt. La sección se retiró de la app (se rediseñará más
+// adelante) y el plan de trabajo vive ahora en ListaRoadmap/TareaRoadmap; el
+// modelo se conserva para no borrar los cronogramas ya cargados.
 model TareaProyecto {
   id          String      @id @default(cuid())
   clienteId   String      @map("cliente_id")
@@ -141,6 +150,63 @@ model TareaProyecto {
 
   @@index([clienteId, fechaInicio])
   @@map("tareas_proyecto")
+}
+
+// ── Roadmap del proyecto ───────────────────────────────────────────────────
+// El plan de trabajo: listas de tareas (Onboarding, un tablero por trimestre)
+// con su presupuesto de horas. Cada proyecto arranca con una copia de las
+// plantillas por defecto, pero desde ese momento sus listas son propias: no
+// hay vínculo con la plantilla, así cada cliente puede evolucionar distinto.
+
+enum EstadoTareaRoadmap {
+  sin_iniciar
+  en_curso
+  no_ejecutada
+  finalizada
+}
+
+model ListaRoadmap {
+  id        String   @id @default(cuid())
+  clienteId String   @map("cliente_id")
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+  nombre    String
+  orden     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tareas TareaRoadmap[]
+
+  @@index([clienteId, orden])
+  @@map("listas_roadmap")
+}
+
+model TareaRoadmap {
+  id      String       @id @default(cuid())
+  listaId String       @map("lista_id")
+  lista   ListaRoadmap @relation(fields: [listaId], references: [id], onDelete: Cascade)
+  nombre  String
+  orden   Int          @default(0)
+
+  // Las tareas son secuenciales: la duración en días hábiles es el dato que
+  // manda y las fechas se derivan encadenando una tarea detrás de la otra.
+  // Se guardan igual (y no solo la duración) para poder ordenar y filtrar por
+  // fecha sin recalcular toda la cadena en cada consulta.
+  fechaInicio  DateTime @map("fecha_inicio") @db.Date
+  fechaFin     DateTime @map("fecha_fin") @db.Date
+  duracionDias Int      @map("duracion_dias")
+
+  // Presupuesto de entrega de la tarea. Cuando pasa a "finalizada", cuenta
+  // como horas planificadas entregadas.
+  horasEstimadas Decimal            @map("horas_estimadas") @db.Decimal(6, 2)
+  estado         EstadoTareaRoadmap @default(sin_iniciar)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  registros RegistroHoras[]
+
+  @@index([listaId, orden])
+  @@map("tareas_roadmap")
 }
 
 // Integrantes del equipo del cliente (contactos del lado del cliente, no
@@ -287,8 +353,16 @@ model RegistroHoras {
   cliente   Cliente   @relation(fields: [clienteId], references: [id])
   usuarioId String    @map("usuario_id")
   usuario   Usuario   @relation("Mentor", fields: [usuarioId], references: [id])
-  etapaId   String?   @map("tema_id")
-  etapa     Etapa?    @relation(fields: [etapaId], references: [id])
+
+  // Contra qué tarea del Roadmap se imputan las horas. Opcional en el modelo
+  // porque los registros anteriores al Roadmap no tienen ninguna: esos
+  // conservan su etapaId, que ya no se carga pero se sigue mostrando para que
+  // el historial no quede en blanco.
+  tareaId String?       @map("tarea_id")
+  tarea   TareaRoadmap? @relation(fields: [tareaId], references: [id])
+  etapaId String?       @map("tema_id")
+  etapa   Etapa?        @relation(fields: [etapaId], references: [id])
+
   horas     Decimal   @db.Decimal(5, 2)
   modalidad Modalidad
   ownership Ownership @map("rol")
@@ -311,6 +385,7 @@ model RegistroHoras {
   @@index([fecha])
   @@index([usuarioId, fecha])
   @@index([clienteId, fecha])
+  @@index([tareaId])
   @@index([eliminadoEn])
   @@map("registros_horas")
 }

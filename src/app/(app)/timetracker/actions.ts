@@ -12,7 +12,7 @@ import type { Modalidad, Ownership } from "@/generated/prisma/client";
 const RegistroSchema = z.object({
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Fecha inválida." }),
   clienteId: z.string().min(1, { error: "Elegí un cliente." }),
-  etapaId: z.string().min(1, { error: "Elegí una etapa." }),
+  tareaId: z.string().min(1, { error: "Elegí una tarea." }),
   ownership: z.enum(["owner", "backup"], { error: "Elegí el ownership." }),
   modalidad: z.enum(["presencial", "virtual"], { error: "Elegí la modalidad." }),
   horas: z.string().min(1, { error: "Cargá las horas." }),
@@ -23,7 +23,7 @@ const RegistroSchema = z.object({
 export type CampoRegistro =
   | "fecha"
   | "clienteId"
-  | "etapaId"
+  | "tareaId"
   | "ownership"
   | "modalidad"
   | "horas";
@@ -68,7 +68,7 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
   const parsed = RegistroSchema.safeParse({
     fecha: formData.get("fecha"),
     clienteId: formData.get("clienteId"),
-    etapaId: formData.get("etapaId"),
+    tareaId: formData.get("tareaId"),
     ownership: formData.get("ownership"),
     modalidad: formData.get("modalidad"),
     horas: formData.get("horas"),
@@ -95,6 +95,19 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
   const permitidos = await getProyectosPermitidos(usuarioId);
   if (!permitidos.some((c) => c.id === parsed.data.clienteId)) {
     return { error: "No tenés asignado ese cliente.", campo: "clienteId" as const };
+  }
+
+  // La tarea tiene que pertenecer al Roadmap del cliente elegido: es lo que
+  // evita imputar horas de un proyecto contra el plan de otro.
+  const tarea = await prisma.tareaRoadmap.findFirst({
+    where: { id: parsed.data.tareaId, lista: { clienteId: parsed.data.clienteId } },
+    select: { id: true },
+  });
+  if (!tarea) {
+    return {
+      error: "Esa tarea no pertenece al Roadmap del cliente elegido.",
+      campo: "tareaId" as const,
+    };
   }
 
   const tarifa = await resolverTarifa(
@@ -139,7 +152,7 @@ export async function crearRegistro(
     data: {
       fecha: d.fecha,
       clienteId: d.clienteId,
-      etapaId: d.etapaId,
+      tareaId: d.tareaId,
       usuarioId: destino.id, // worked_by
       horas: d.horas,
       modalidad: d.modalidad,
@@ -192,7 +205,10 @@ export async function actualizarRegistro(
     data: {
       fecha: d.fecha,
       clienteId: d.clienteId,
-      etapaId: d.etapaId,
+      tareaId: d.tareaId,
+      // Al reeditar un registro viejo, la etapa se retira: pasa a estar
+      // imputado contra una tarea del Roadmap y no contra el catálogo anterior.
+      etapaId: null,
       horas: d.horas,
       modalidad: d.modalidad,
       ownership: d.ownership,
@@ -244,7 +260,7 @@ export async function eliminarRegistros(ids: string[]): Promise<void> {
   revalidatePath("/proyectos", "layout");
 }
 
-export type CampoMasivo = "clienteId" | "etapaId" | "ownership" | "modalidad";
+export type CampoMasivo = "clienteId" | "tareaId" | "ownership" | "modalidad";
 
 // Edición masiva: aplica un mismo valor a un campo en las filas
 // seleccionadas. Si el campo cambia la tarifa (modalidad/ownership), se
@@ -291,9 +307,20 @@ export async function editarRegistros(
   if (campo === "modalidad" && valor !== "presencial" && valor !== "virtual") {
     return { error: "Modalidad inválida." };
   }
-  if (campo === "etapaId") {
-    const etapa = await prisma.etapa.findUnique({ where: { id: valor } });
-    if (!etapa) return { error: "Etapa inválida." };
+  if (campo === "tareaId") {
+    // Una tarea pertenece a un solo proyecto, así que solo tiene sentido
+    // aplicarla a filas de ese mismo cliente.
+    const tarea = await prisma.tareaRoadmap.findUnique({
+      where: { id: valor },
+      select: { lista: { select: { clienteId: true } } },
+    });
+    if (!tarea) return { error: "Tarea inválida." };
+    if (filas.some((f) => f.clienteId !== tarea.lista.clienteId)) {
+      return {
+        error:
+          "Esa tarea es de otro proyecto. Seleccioná solo filas del cliente al que pertenece.",
+      };
+    }
   }
 
   const limite = limiteVentana();
@@ -303,9 +330,18 @@ export async function editarRegistros(
     if (!esAdmin && fila.fecha < limite) continue;
 
     if (campo === "clienteId") {
-      await prisma.registroHoras.update({ where: { id: fila.id }, data: { clienteId: valor } });
-    } else if (campo === "etapaId") {
-      await prisma.registroHoras.update({ where: { id: fila.id }, data: { etapaId: valor } });
+      // Cambiar de cliente invalida la tarea: pertenecía al Roadmap del
+      // proyecto anterior, así que la fila queda sin tarea hasta que se le
+      // asigne una del proyecto nuevo.
+      await prisma.registroHoras.update({
+        where: { id: fila.id },
+        data: { clienteId: valor, tareaId: null },
+      });
+    } else if (campo === "tareaId") {
+      await prisma.registroHoras.update({
+        where: { id: fila.id },
+        data: { tareaId: valor, etapaId: null },
+      });
     } else {
       const modalidad = (campo === "modalidad" ? valor : fila.modalidad) as Modalidad;
       const ownership = (campo === "ownership" ? valor : fila.ownership) as Ownership;

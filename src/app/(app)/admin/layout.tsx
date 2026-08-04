@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSesionActual } from "@/lib/auth";
 
-// La navegación entre secciones de Settings (Usuarios/Clientes/Etapas) vive
+// La navegación entre secciones de Settings (Usuarios/Clientes) vive
 // en el submenú desplegable de la sidebar; acá solo queda el guard de admin
 // y la etiqueta de contexto.
 export default async function AdminLayout({

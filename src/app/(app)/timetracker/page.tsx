@@ -6,6 +6,7 @@ import {
   getUsuariosQueReportan,
   resolverUsuarioDestino,
 } from "@/lib/registrar-para";
+import { getTareasPorCliente } from "@/lib/roadmap";
 import { formatHorasHsMin } from "@/lib/horas";
 import { hoyISO, rangoDefault30 } from "@/lib/formato";
 import { FiltroPopover } from "@/components/filtro-popover";
@@ -52,29 +53,30 @@ export default async function TimetrackerPage({
     ? params.proyecto
     : undefined;
 
-  const [etapas, tarifasVigentes, registros, usuariosQueReportan] = await Promise.all([
-    prisma.etapa.findMany({
-      where: { activo: true },
-      orderBy: [{ grupo: "asc" }, { orden: "asc" }],
-    }),
-    prisma.tarifa.findMany({
-      where: { usuarioId: destino.id, vigenteHasta: null },
-    }),
-    prisma.registroHoras.findMany({
-      where: {
-        usuarioId: destino.id,
-        eliminadoEn: null,
-        fecha: {
-          gte: new Date(desde + "T00:00:00Z"),
-          lte: new Date(hasta + "T00:00:00Z"),
+  const [tareasPorCliente, tarifasVigentes, registros, usuariosQueReportan] =
+    await Promise.all([
+      // Las tareas del Roadmap de cada cliente permitido: el desplegable de
+      // Tarea se arma con las del cliente que se elija.
+      getTareasPorCliente(proyectos.map((p) => p.id)),
+      prisma.tarifa.findMany({
+        where: { usuarioId: destino.id, vigenteHasta: null },
+      }),
+      prisma.registroHoras.findMany({
+        where: {
+          usuarioId: destino.id,
+          eliminadoEn: null,
+          fecha: {
+            gte: new Date(desde + "T00:00:00Z"),
+            lte: new Date(hasta + "T00:00:00Z"),
+          },
+          ...(proyectoId ? { clienteId: proyectoId } : {}),
         },
-        ...(proyectoId ? { clienteId: proyectoId } : {}),
-      },
-      orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
-      take: 500,
-    }),
-    esAdmin ? getUsuariosQueReportan() : Promise.resolve([]),
-  ]);
+        orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
+        take: 500,
+        include: { etapa: { select: { etiqueta: true } } },
+      }),
+      esAdmin ? getUsuariosQueReportan() : Promise.resolve([]),
+    ]);
 
   const tarifas: MapaTarifas = {};
   for (const t of tarifasVigentes) {
@@ -85,13 +87,25 @@ export default async function TimetrackerPage({
   limite.setDate(limite.getDate() - DIAS_VENTANA_EDICION);
   limite.setHours(0, 0, 0, 0);
 
+  // Etiqueta a mostrar en la columna Tarea. Si el registro ya está imputado a
+  // una tarea del Roadmap se usa su nombre; si es anterior al Roadmap, se
+  // muestra la etapa vieja para que el historial no quede en blanco.
+  const nombreTarea = (clienteId: string, tareaId: string | null, etapa?: string) => {
+    if (tareaId) {
+      const opcion = tareasPorCliente[clienteId]?.find((t) => t.id === tareaId);
+      if (opcion) return opcion.nombre;
+    }
+    return etapa ?? "—";
+  };
+
   const filas: RegistroFila[] = registros
     .filter((r) => r.ownership !== "valor_cero")
     .map((r) => ({
       id: r.id,
       fecha: r.fecha.toISOString().slice(0, 10),
       clienteId: r.clienteId,
-      etapaId: r.etapaId ?? "",
+      tareaId: r.tareaId ?? "",
+      tareaNombre: nombreTarea(r.clienteId, r.tareaId, r.etapa?.etiqueta),
       ownership: r.ownership as "owner" | "backup",
       modalidad: r.modalidad as "presencial" | "virtual",
       horas: formatHorasHsMin(Number(r.horas)),
@@ -104,7 +118,6 @@ export default async function TimetrackerPage({
   const esOtroUsuario = destino.id !== actor.id;
 
   const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
-  const opcionesEtapa = etapas.map((e) => ({ id: e.id, nombre: e.etiqueta }));
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -165,7 +178,7 @@ export default async function TimetrackerPage({
           <BarraCaptura
             key={destino.id}
             proyectos={opcionesProyecto}
-            etapas={opcionesEtapa}
+            tareasPorCliente={tareasPorCliente}
             tarifas={tarifas}
             usuarioId={esOtroUsuario ? destino.id : ""}
           />
@@ -178,7 +191,7 @@ export default async function TimetrackerPage({
           key={destino.id}
           filas={filas}
           proyectos={opcionesProyecto}
-          etapas={opcionesEtapa}
+          tareasPorCliente={tareasPorCliente}
           tarifas={tarifas}
         />
       </div>

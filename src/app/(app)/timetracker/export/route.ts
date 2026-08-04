@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
+import { etiquetaTarea } from "@/lib/roadmap";
 import { rangoDefault30, esISO } from "@/lib/formato";
 
 const ETIQUETA_OWNERSHIP: Record<string, string> = {
@@ -20,7 +21,7 @@ const ETIQUETA_MODALIDAD: Record<string, string> = {
 const COLUMNAS = [
   "Fecha",
   "Cliente",
-  "Etapa",
+  "Tarea",
   "Ownership",
   "Horas",
   "Modalidad",
@@ -69,14 +70,20 @@ export async function GET(request: NextRequest) {
       },
       ...(esISO(proyectoParam) || proyectoParam ? { clienteId: proyectoParam } : {}),
     },
-    include: { cliente: true, etapa: true },
+    include: {
+      cliente: true,
+      etapa: true,
+      tarea: { include: { lista: { select: { nombre: true } } } },
+    },
     orderBy: [{ fecha: "asc" }, { createdAt: "asc" }],
   });
 
   const filas = registros.map((r) => [
     fmtFecha(r.fecha),
     r.cliente.nombre,
-    r.etapa?.etiqueta ?? "",
+    // Registros anteriores al Roadmap: se exporta su etapa vieja para no
+    // perder el dato, aunque ya no sea un valor válido al reimportar.
+    r.tarea ? etiquetaTarea(r.tarea.lista.nombre, r.tarea.nombre) : (r.etapa?.etiqueta ?? ""),
     ETIQUETA_OWNERSHIP[r.ownership] ?? r.ownership,
     Number(r.horas), // número decimal para permitir cálculos en la planilla
     ETIQUETA_MODALIDAD[r.modalidad] ?? r.modalidad,

@@ -1,22 +1,27 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { eliminarRegistros, editarRegistros, type CampoMasivo } from "./actions";
 import { FilaRegistro } from "./fila-registro";
 import { GRID_TIMETRACKER } from "./grid";
 import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 import { Dropdown } from "@/components/dropdown";
-import type { MapaTarifas, OpcionSelect, RegistroFila } from "./tipos";
+import type {
+  MapaTarifas,
+  OpcionSelect,
+  RegistroFila,
+  TareasPorCliente,
+} from "./tipos";
 
 export function TablaRegistros({
   filas,
   proyectos,
-  etapas,
+  tareasPorCliente,
   tarifas,
 }: {
   filas: RegistroFila[];
   proyectos: OpcionSelect[];
-  etapas: OpcionSelect[];
+  tareasPorCliente: TareasPorCliente;
   tarifas: MapaTarifas;
 }) {
   const [sel, setSel] = useState<Set<string>>(new Set());
@@ -30,6 +35,23 @@ export function TablaRegistros({
 
   const editables = filas.filter((f) => f.editable);
   const todasSel = editables.length > 0 && sel.size === editables.length;
+
+  // Las tareas son de un solo proyecto, así que el cambio masivo de Tarea
+  // solo se ofrece cuando todo lo seleccionado es del mismo cliente.
+  const clientesSel = new Set(
+    filas.filter((f) => sel.has(f.id)).map((f) => f.clienteId),
+  );
+  const clienteUnico = clientesSel.size === 1 ? [...clientesSel][0] : "";
+  const tareasSel = clienteUnico ? (tareasPorCliente[clienteUnico] ?? []) : [];
+
+  // Si la selección pasa a mezclar clientes con "Tarea" ya elegida, el campo
+  // deja de ser aplicable y vuelve a Cliente.
+  useEffect(() => {
+    if (!clienteUnico) {
+      setCampo((c) => (c === "tareaId" ? "clienteId" : c));
+      setValor((v) => (campo === "tareaId" ? "" : v));
+    }
+  }, [clienteUnico, campo]);
 
   const toggle = (id: string) =>
     setSel((s) => {
@@ -58,7 +80,7 @@ export function TablaRegistros({
     setCampo(c);
     // Valor por defecto según el campo elegido.
     if (c === "clienteId") setValor(proyectos[0]?.id ?? "");
-    else if (c === "etapaId") setValor(etapas[0]?.id ?? "");
+    else if (c === "tareaId") setValor(tareasSel[0]?.id ?? "");
     else if (c === "ownership") setValor("owner");
     else setValor("presencial");
   };
@@ -107,7 +129,8 @@ export function TablaRegistros({
                 onChange={(v) => cambiarCampo(v as CampoMasivo)}
                 options={[
                   { value: "clienteId", label: "Cliente" },
-                  { value: "etapaId", label: "Etapa" },
+                  // Solo tiene sentido con filas de un mismo proyecto.
+                  ...(clienteUnico ? [{ value: "tareaId", label: "Tarea" }] : []),
                   { value: "ownership", label: "Ownership" },
                   { value: "modalidad", label: "Modalidad" },
                 ]}
@@ -124,13 +147,13 @@ export function TablaRegistros({
                   ariaLabel="Cliente"
                 />
               )}
-              {campo === "etapaId" && (
+              {campo === "tareaId" && (
                 <Dropdown
                   value={valor}
                   onChange={setValor}
-                  options={etapas.map((e) => ({ value: e.id, label: e.nombre }))}
-                  className="w-44"
-                  ariaLabel="Etapa"
+                  options={tareasSel.map((t) => ({ value: t.id, label: t.nombre }))}
+                  className="w-56"
+                  ariaLabel="Tarea"
                 />
               )}
               {campo === "ownership" && (
@@ -179,7 +202,7 @@ export function TablaRegistros({
             />
             <span>Fecha</span>
             <span>Cliente</span>
-            <span>Etapa</span>
+            <span>Tarea</span>
             <span>Ownership</span>
             <span>Horas</span>
             <span>Modalidad</span>
@@ -194,7 +217,7 @@ export function TablaRegistros({
                 key={f.id}
                 registro={f}
                 proyectos={proyectos}
-                etapas={etapas}
+                tareasPorCliente={tareasPorCliente}
                 tarifas={tarifas}
                 seleccionado={sel.has(f.id)}
                 onToggle={toggle}

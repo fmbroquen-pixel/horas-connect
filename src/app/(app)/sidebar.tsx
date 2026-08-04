@@ -61,7 +61,7 @@ function LinkNav({
 // las mismas convenciones visuales que los ítems simples. Se expande sola al
 // entrar a cualquiera de sus rutas y expone estado con aria-expanded/
 // aria-current para mantener la accesibilidad por teclado. La usan tanto
-// Settings (Usuarios/Clientes/Etapas) como Proyectos (Activos/Inactivos).
+// Settings (Usuarios/Clientes) como Proyectos (Activos/Inactivos).
 function CategoriaNav({
   item,
   onNavigate,

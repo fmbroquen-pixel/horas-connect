@@ -9,7 +9,7 @@ import { DIAS_VENTANA_EDICION } from "./constantes";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import { ToastAviso } from "@/components/ui/toast-aviso";
-import type { MapaTarifas, OpcionSelect } from "./tipos";
+import type { MapaTarifas, OpcionSelect, TareasPorCliente } from "./tipos";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -19,7 +19,7 @@ const LABEL = "mb-1 block text-[11px] uppercase tracking-wide text-dc-muted";
 const VALORES_INICIALES = {
   fecha: "",
   clienteId: "",
-  etapaId: "",
+  tareaId: "",
   ownership: "owner",
   modalidad: "presencial",
   horas: "",
@@ -29,7 +29,7 @@ const VALORES_INICIALES = {
 const OBLIGATORIOS: { campo: CampoRegistro; label: string }[] = [
   { campo: "fecha", label: "Fecha" },
   { campo: "clienteId", label: "Cliente" },
-  { campo: "etapaId", label: "Etapa" },
+  { campo: "tareaId", label: "Tarea" },
   { campo: "horas", label: "Horas" },
 ];
 
@@ -37,12 +37,12 @@ const OBLIGATORIOS: { campo: CampoRegistro; label: string }[] = [
 // independiente, optimizado para cargar varias horas seguidas solo con teclado.
 export function BarraCaptura({
   proyectos,
-  etapas,
+  tareasPorCliente,
   tarifas,
   usuarioId = "",
 }: {
   proyectos: OpcionSelect[];
-  etapas: OpcionSelect[];
+  tareasPorCliente: TareasPorCliente;
   tarifas: MapaTarifas;
   // Usuario dueño de las horas cuando un admin carga en nombre de otro.
   // Vacío = el propio usuario. El servidor revalida el permiso igual.
@@ -55,9 +55,17 @@ export function BarraCaptura({
   const formRef = useRef<HTMLFormElement>(null);
 
   const set = (campo: keyof typeof valores, valor: string) => {
-    setValores((v) => ({ ...v, [campo]: valor }));
+    setValores((v) => ({
+      ...v,
+      [campo]: valor,
+      // Cada proyecto tiene su propio Roadmap: al cambiar de cliente, la
+      // tarea elegida ya no aplica y se limpia.
+      ...(campo === "clienteId" ? { tareaId: "" } : {}),
+    }));
     setEstado((e) => (e?.campo === campo ? { error: e.error } : e));
   };
+
+  const tareas = tareasPorCliente[valores.clienteId] ?? [];
 
   const enfocar = (campo: string) => {
     const cont = formRef.current?.querySelector(`[data-campo="${campo}"]`);
@@ -81,9 +89,9 @@ export function BarraCaptura({
       if (!r.error) {
         // Precarga la siguiente carga: conserva proyecto, ownership y modalidad
         // (y la fecha del día); limpia los campos que cambian.
-        setValores((v) => ({ ...v, etapaId: "", horas: "" }));
+        setValores((v) => ({ ...v, tareaId: "", horas: "" }));
         setEstado(undefined);
-        setTimeout(() => enfocar("etapaId"), 20);
+        setTimeout(() => enfocar("tareaId"), 20);
       } else {
         setEstado(r);
         if (r.error) setAviso(r.error);
@@ -145,17 +153,24 @@ export function BarraCaptura({
           />
         </div>
 
-        <div className="w-44" data-campo="etapaId">
-          <span className={LABEL}>Etapa</span>
+        <div className="w-56" data-campo="tareaId">
+          <span className={LABEL}>Tarea</span>
           <Dropdown
-            name="etapaId"
-            value={valores.etapaId}
-            onChange={(v) => set("etapaId", v)}
-            options={etapas.map((e) => ({ value: e.id, label: e.nombre }))}
-            placeholder="Etapa"
-            invalido={estado?.campo === "etapaId"}
+            name="tareaId"
+            value={valores.tareaId}
+            onChange={(v) => set("tareaId", v)}
+            options={tareas.map((t) => ({ value: t.id, label: t.nombre }))}
+            placeholder={
+              !valores.clienteId
+                ? "Elegí un cliente"
+                : tareas.length === 0
+                  ? "Sin tareas en el Roadmap"
+                  : "Tarea"
+            }
+            disabled={!valores.clienteId}
+            invalido={estado?.campo === "tareaId"}
             className="w-full"
-            ariaLabel="Etapa"
+            ariaLabel="Tarea"
           />
         </div>
 

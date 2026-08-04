@@ -12,8 +12,8 @@ const CARD = "rounded-2xl border border-dc-line bg-dc-card p-5";
 // Pestaña Seguimiento: une Tablero, Semáforo y Etapa actual (antes tres
 // pestañas separadas). Prioriza lo crítico: Semáforo y Etapa arriba, una al
 // lado de la otra en cards compactas (lo primero que se necesita ver de un
-// vistazo); Tablero debajo, ocupando el ancho completo. Gantt queda aparte
-// por ser un cronograma, no un estado puntual.
+// vistazo); Tablero debajo, ocupando el ancho completo. El plan de trabajo
+// queda aparte, en Roadmap, por ser un cronograma y no un estado puntual.
 export default async function ProyectoSeguimientoPage({
   params,
 }: {
@@ -91,7 +91,7 @@ export default async function ProyectoSeguimientoPage({
         <div className={CARD}>
           <h2 className="font-display text-sm uppercase text-white">Etapa actual</h2>
           <p className="mt-1 text-xs text-dc-muted">
-            Las etapas se configuran en Settings → Etapas. Cada cambio queda
+            En qué momento del recorrido está el proyecto. Cada cambio queda
             registrado con fecha y responsable.
           </p>
           <div className="mt-4">

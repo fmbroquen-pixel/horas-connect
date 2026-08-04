@@ -3,13 +3,13 @@ import ExcelJS from "exceljs";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
-import { prisma } from "@/lib/prisma";
+import { getTareasPorCliente } from "@/lib/roadmap";
 import { hoyISO } from "@/lib/formato";
 
 // Plantilla de importación: solo las columnas editables (USD/Hora y USD Total
-// se calculan solos y no van en el archivo). Las columnas Cliente, Etapa,
+// se calculan solos y no van en el archivo). Las columnas Cliente, Tarea,
 // Ownership y Modalidad traen listas desplegables con los valores vigentes.
-const CABECERAS = ["Fecha", "Cliente", "Etapa", "Ownership", "Horas", "Modalidad"];
+const CABECERAS = ["Fecha", "Cliente", "Tarea", "Ownership", "Horas", "Modalidad"];
 const OWNERSHIP = ["Owner", "Backup"];
 const MODALIDAD = ["Presencial", "Virtual"];
 const FILAS_VALIDACION = 200; // filas donde se ofrecen los desplegables
@@ -33,15 +33,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: destinoRes.error }, { status: 403 });
   }
 
-  const [proyectos, etapas] = await Promise.all([
-    getProyectosPermitidos(destinoRes.destino.id),
-    prisma.etapa.findMany({
-      where: { activo: true },
-      orderBy: [{ grupo: "asc" }, { orden: "asc" }],
-    }),
-  ]);
+  const proyectos = await getProyectosPermitidos(destinoRes.destino.id);
   const nombresProyecto = proyectos.map((p) => p.nombre);
-  const nombresEtapa = etapas.map((e) => e.etiqueta);
+
+  // El desplegable de Tarea junta las tareas de todos los clientes del
+  // mentor: Excel no puede encadenar una lista a lo que se elija en la
+  // columna Cliente. Que la tarea corresponda al cliente de la fila se valida
+  // al importar, donde sí se conoce el cliente.
+  const tareasPorCliente = await getTareasPorCliente(proyectos.map((p) => p.id));
+  const nombresTarea = [
+    ...new Set(Object.values(tareasPorCliente).flatMap((ts) => ts.map((t) => t.nombre))),
+  ].sort((a, b) => a.localeCompare(b));
 
   const wb = new ExcelJS.Workbook();
 
@@ -54,7 +56,7 @@ export async function GET(request: NextRequest) {
     });
   };
   cargarColumna("A", nombresProyecto);
-  cargarColumna("B", nombresEtapa);
+  cargarColumna("B", nombresTarea);
   cargarColumna("C", OWNERSHIP);
   cargarColumna("D", MODALIDAD);
 
@@ -69,7 +71,7 @@ export async function GET(request: NextRequest) {
   const NOTAS = [
     "Acepta AAAA-MM-DD o DD/MM/AAAA.",
     "Seleccioná un cliente existente de la lista.",
-    "Seleccioná una etapa existente de la lista.",
+    "Seleccioná una tarea del Roadmap del cliente de esta fila.",
     "Seleccioná un ownership existente de la lista.",
     "Acepta formato hora:minuto (ej. 1:30) o decimal (ej. 1,5).",
     "Seleccioná una modalidad existente de la lista.",
@@ -78,11 +80,14 @@ export async function GET(request: NextRequest) {
     ws.getCell(1, i + 1).note = texto;
   });
 
-  // Fila de ejemplo completa y válida.
+  // Fila de ejemplo con una tarea que sí es del primer cliente listado.
+  const tareasDelPrimero = proyectos[0]
+    ? (tareasPorCliente[proyectos[0].id] ?? [])
+    : [];
   ws.addRow([
     hoyISO(),
     nombresProyecto[0] ?? "",
-    nombresEtapa[0] ?? "",
+    tareasDelPrimero[0]?.nombre ?? "",
     OWNERSHIP[0],
     "1:30",
     MODALIDAD[0],
@@ -98,7 +103,7 @@ export async function GET(request: NextRequest) {
   // Desplegables (Data Validation) por columna, desde la fila 2.
   const validaciones: Record<number, string> = {
     2: rango("A", nombresProyecto.length), // Proyecto
-    3: rango("B", nombresEtapa.length), // Etapa
+    3: rango("B", nombresTarea.length), // Tarea
     4: rango("C", OWNERSHIP.length), // Ownership
     6: rango("D", MODALIDAD.length), // Modalidad
   };
