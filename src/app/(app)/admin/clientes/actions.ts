@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { getSesionActual } from "@/lib/auth";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
+import { asegurarRoadmap } from "@/lib/roadmap";
 import { ETIQUETA_PRODUCTO, ETIQUETA_ROL_EQUIPO } from "./constantes";
 
 // El equipo del cliente se gestiona desde Settings (solo admin) y desde la
@@ -26,19 +27,51 @@ function revalidarEquipo(clienteId: string) {
   revalidatePath("/proyectos", "layout");
 }
 
+// Duración y fecha de inicio son obligatorias en el alta: el Roadmap se
+// genera en este mismo momento (Onboarding + un tablero por trimestre) y las
+// necesita para calcular cuántos tableros crear y desde qué fecha encadenar
+// las tareas.
 const ClienteSchema = z.object({
   nombre: z.string().trim().min(1, { error: "El nombre es obligatorio." }),
+  duracionMeses: z
+    .string()
+    .trim()
+    .transform((v) => Number(v))
+    .refine((v) => Number.isInteger(v) && v >= 1, {
+      error: "La duración debe ser un número entero de meses (mínimo 1).",
+    }),
+  fechaInicio: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "La fecha de inicio es obligatoria." }),
 });
 
 export async function crearCliente(_prevState: unknown, formData: FormData) {
   await requireAdmin();
-  const parsed = ClienteSchema.safeParse({ nombre: formData.get("nombre") });
+  const parsed = ClienteSchema.safeParse({
+    nombre: formData.get("nombre"),
+    duracionMeses: formData.get("duracionMeses"),
+    fechaInicio: formData.get("fechaInicio"),
+  });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
 
-  await prisma.cliente.create({ data: { nombre: parsed.data.nombre } });
+  const cliente = await prisma.cliente.create({
+    data: {
+      nombre: parsed.data.nombre,
+      duracionMeses: parsed.data.duracionMeses,
+      fechaInicio: new Date(parsed.data.fechaInicio + "T00:00:00Z"),
+    },
+  });
+
+  // Con la duración y la fecha ya definidas, el plan por defecto se crea
+  // acá mismo: el cliente nace con su Roadmap y con tareas disponibles en
+  // Time Tracking, sin esperar a que alguien abra la pestaña.
+  await asegurarRoadmap(cliente);
+
   revalidatePath("/admin/clientes");
+  revalidatePath("/proyectos", "layout");
+  revalidatePath("/timetracker");
   return { error: undefined };
 }
 

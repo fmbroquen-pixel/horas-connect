@@ -1,8 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
-import { crearCliente } from "./actions";
 import { ETIQUETA_PRODUCTO } from "./constantes";
-import { AgregarModal } from "@/components/admin/agregar-modal";
+import { NuevoClienteBoton } from "./nuevo-cliente-boton";
 import { TAG_ON, TAG_OFF } from "@/lib/ui";
 import { InfoButton } from "@/components/info-button";
 import { FiltroEstado, parseEstadoFiltro } from "@/components/admin/filtro-estado";
@@ -34,14 +33,7 @@ export default async function ClientesPage({
             los datos del servicio, el estado y el equipo de cada cliente.
           </InfoButton>
         </div>
-        <AgregarModal
-          botonLabel="+ Agregar cliente"
-          titulo="Nuevo cliente"
-          campos={[{ name: "nombre", label: "Nombre del cliente", placeholder: "Ej: Andreu" }]}
-          action={crearCliente}
-          toastMsg="Cliente creado"
-          submitLabel="Crear cliente"
-        />
+        <NuevoClienteBoton />
       </div>
 
       <div className="mt-4 flex shrink-0 justify-end">
