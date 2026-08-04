@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/require-admin";
 import { getSesionActual } from "@/lib/auth";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
 import { asegurarRoadmap } from "@/lib/roadmap";
+import { Prisma } from "@/generated/prisma/client";
 import { ETIQUETA_PRODUCTO, ETIQUETA_ROL_EQUIPO } from "./constantes";
 
 // El equipo del cliente se gestiona desde Settings (solo admin) y desde la
@@ -56,13 +57,37 @@ export async function crearCliente(_prevState: unknown, formData: FormData) {
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
 
-  const cliente = await prisma.cliente.create({
-    data: {
-      nombre: parsed.data.nombre,
-      duracionMeses: parsed.data.duracionMeses,
-      fechaInicio: new Date(parsed.data.fechaInicio + "T00:00:00Z"),
-    },
+  // El nombre es único en la base; sin este chequeo, el duplicado revienta
+  // la action con un error de servidor en vez de un aviso en el modal. Se
+  // compara sin distinguir mayúsculas para frenar también "andreu"/"Andreu".
+  const repetido = await prisma.cliente.findFirst({
+    where: { nombre: { equals: parsed.data.nombre, mode: "insensitive" } },
+    select: { nombre: true },
   });
+  if (repetido) {
+    return {
+      error: `Ya existe un cliente con ese nombre ("${repetido.nombre}"). Elegí otro.`,
+    };
+  }
+
+  let cliente;
+  try {
+    cliente = await prisma.cliente.create({
+      data: {
+        nombre: parsed.data.nombre,
+        duracionMeses: parsed.data.duracionMeses,
+        fechaInicio: new Date(parsed.data.fechaInicio + "T00:00:00Z"),
+      },
+    });
+  } catch (e) {
+    // Carrera entre el chequeo y el insert (dos altas simultáneas): la
+    // restricción única de la base es la última línea de defensa y también
+    // tiene que terminar en un aviso, no en una pantalla de error.
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { error: "Ya existe un cliente con ese nombre. Elegí otro." };
+    }
+    throw e;
+  }
 
   // Con la duración y la fecha ya definidas, el plan por defecto se crea
   // acá mismo: el cliente nace con su Roadmap y con tareas disponibles en
@@ -126,17 +151,41 @@ export async function actualizarDatosCliente(
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
 
-  await prisma.cliente.update({
-    where: { id },
-    data: {
-      nombre: parsed.data.nombre,
-      duracionMeses: parsed.data.duracionMeses,
-      producto: parsed.data.producto || null,
-      fechaInicio: parsed.data.fechaInicio
-        ? new Date(parsed.data.fechaInicio + "T00:00:00Z")
-        : null,
+  // Renombrar también puede chocar con la restricción única del nombre; el
+  // choque tiene que volver como aviso al formulario, no como error de
+  // servidor. Se excluye al propio cliente para permitir cambios de
+  // mayúsculas sobre sí mismo.
+  const repetido = await prisma.cliente.findFirst({
+    where: {
+      id: { not: id },
+      nombre: { equals: parsed.data.nombre, mode: "insensitive" },
     },
+    select: { nombre: true },
   });
+  if (repetido) {
+    return {
+      error: `Ya existe un cliente con ese nombre ("${repetido.nombre}"). Elegí otro.`,
+    };
+  }
+
+  try {
+    await prisma.cliente.update({
+      where: { id },
+      data: {
+        nombre: parsed.data.nombre,
+        duracionMeses: parsed.data.duracionMeses,
+        producto: parsed.data.producto || null,
+        fechaInicio: parsed.data.fechaInicio
+          ? new Date(parsed.data.fechaInicio + "T00:00:00Z")
+          : null,
+      },
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { error: "Ya existe un cliente con ese nombre. Elegí otro." };
+    }
+    throw e;
+  }
   revalidatePath("/admin/clientes");
   revalidatePath(`/admin/clientes/${id}`);
   return { error: undefined };
