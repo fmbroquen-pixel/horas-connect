@@ -76,6 +76,17 @@ function CategoriaNav({
     : pathname === item.href || pathname.startsWith(item.href + "/");
   const [abierto, setAbierto] = useState(enSeccion);
 
+  // Al ENTRAR a una ruta de la sección, el submenú se expande solo. Se ajusta
+  // el estado durante el render comparando contra el valor anterior —el patrón
+  // recomendado para sincronizar con props— y no desde un efecto, que
+  // dibujaría la pantalla dos veces. Como solo reacciona al cambio, plegarlo a
+  // mano dentro de la sección se respeta.
+  const [seccionPrevia, setSeccionPrevia] = useState(enSeccion);
+  if (enSeccion !== seccionPrevia) {
+    setSeccionPrevia(enSeccion);
+    if (enSeccion) setAbierto(true);
+  }
+
   // Cuál de los hijos está activo. Regla "el más específico gana": un hijo
   // coincide por match exacto o por prefijo (para que las páginas de detalle
   // mantengan resaltado su padre, p. ej. /admin/usuarios/[id] → Usuarios),
@@ -86,12 +97,6 @@ function CategoriaNav({
   const hijoActivoHref = (item.children ?? [])
     .filter((c) => pathname === c.href || pathname.startsWith(c.href + "/"))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
-
-  // Si se entra a una ruta de la sección (por link directo o navegación),
-  // el submenú se expande solo.
-  useEffect(() => {
-    if (enSeccion) setAbierto(true);
-  }, [enSeccion]);
 
   // Sin hijos: se comporta como un ítem simple.
   if (!item.children?.length) {
@@ -241,9 +246,13 @@ export function SidebarMobile({
   const pathname = usePathname();
 
   // Cierre automático al cambiar de ruta (por si onNavigate no alcanzó).
-  useEffect(() => {
+  // Igual que en CategoriaNav: se compara contra la ruta anterior durante el
+  // render en vez de usar un efecto, para no forzar un segundo dibujado.
+  const [rutaPrevia, setRutaPrevia] = useState(pathname);
+  if (pathname !== rutaPrevia) {
+    setRutaPrevia(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     if (!open) return;
