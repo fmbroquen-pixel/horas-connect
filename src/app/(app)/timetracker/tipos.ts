@@ -2,9 +2,9 @@
 
 export type OpcionSelect = { id: string; nombre: string };
 
-// Catálogo de categorías de tarea (lista — tarea). Es global: clasifica el
-// TIPO de actividad, así que no depende del cliente elegido.
-export type OpcionCategoria = OpcionSelect;
+// Catálogo de conceptos. Es global y curado desde Settings: clasifica en qué
+// se consumieron las horas, así que no depende del cliente elegido.
+export type OpcionConcepto = OpcionSelect;
 
 // Tarifas vigentes del usuario, clave "modalidad-ownership" → USD/hora.
 // Se usa para mostrar en vivo el USD/hora y el total mientras se carga.
@@ -14,11 +14,11 @@ export type RegistroFila = {
   id: string;
   fecha: string; // YYYY-MM-DD
   clienteId: string;
-  // Categoría de la actividad. Los registros anteriores al catálogo llegan
-  // con categoriaId vacío y con la etiqueta de su clasificación anterior en
-  // categoriaNombre, para que el historial se siga leyendo.
-  categoriaId: string;
-  categoriaNombre: string;
+  // Concepto de la actividad. Los registros anteriores al catálogo llegan con
+  // conceptoId vacío y con la etiqueta de su clasificación anterior en
+  // conceptoNombre, para que el historial se siga leyendo.
+  conceptoId: string;
+  conceptoNombre: string;
   ownership: "owner" | "backup";
   modalidad: "presencial" | "virtual";
   horas: string; // hs:min

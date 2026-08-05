@@ -10,7 +10,7 @@ import {
   CeldaOpciones,
   CeldaSoloLectura,
 } from "@/components/tabla/celda-editable";
-import type { OpcionCategoria, OpcionSelect, RegistroFila } from "./tipos";
+import type { OpcionConcepto, OpcionSelect, RegistroFila } from "./tipos";
 import { BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 
 const OPCIONES_OWNERSHIP = [
@@ -34,13 +34,13 @@ function mostrarFecha(iso: string): string {
 export function FilaRegistro({
   registro,
   proyectos,
-  categorias,
+  conceptos,
   seleccionado,
   onToggle,
 }: {
   registro: RegistroFila;
   proyectos: OpcionSelect[];
-  categorias: OpcionCategoria[];
+  conceptos: OpcionConcepto[];
   seleccionado: boolean;
   onToggle: (id: string) => void;
 }) {
@@ -83,14 +83,15 @@ export function FilaRegistro({
         />
 
         <CeldaOpciones
-          valor={registro.categoriaId}
-          opciones={categorias.map((c) => ({ value: c.id, label: c.nombre }))}
-          onGuardar={guardar("categoriaId")}
-          ariaLabel="Tarea"
-          // Registros anteriores al catálogo: sin categoría, pero con la
-          // etiqueta de su clasificación previa para no perder el historial.
-          etiqueta={registro.categoriaId ? undefined : registro.categoriaNombre}
-          placeholder="Elegí una tarea"
+          valor={registro.conceptoId}
+          opciones={conceptos.map((c) => ({ value: c.id, label: c.nombre }))}
+          onGuardar={guardar("conceptoId")}
+          ariaLabel="Concepto"
+          // Cubre dos casos: registros anteriores al catálogo (sin concepto) y
+          // conceptos dados de baja, que ya no están entre las opciones pero
+          // siguen etiquetando su historial.
+          etiqueta={registro.conceptoNombre}
+          placeholder="Elegí un concepto"
           editable={editable}
         />
 

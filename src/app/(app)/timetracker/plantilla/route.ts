@@ -3,13 +3,13 @@ import ExcelJS from "exceljs";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
-import { getCategorias } from "@/lib/categorias-tarea";
+import { getConceptosActivos } from "@/lib/conceptos";
 import { hoyISO } from "@/lib/formato";
 
 // Plantilla de importación: solo las columnas editables (USD/Hora y USD Total
-// se calculan solos y no van en el archivo). Las columnas Cliente, Tarea,
+// se calculan solos y no van en el archivo). Las columnas Cliente, Concepto,
 // Ownership y Modalidad traen listas desplegables con los valores vigentes.
-const CABECERAS = ["Fecha", "Cliente", "Tarea", "Ownership", "Horas", "Modalidad"];
+const CABECERAS = ["Fecha", "Cliente", "Concepto", "Ownership", "Horas", "Modalidad"];
 const OWNERSHIP = ["Owner", "Backup"];
 const MODALIDAD = ["Presencial", "Virtual"];
 const FILAS_VALIDACION = 200; // filas donde se ofrecen los desplegables
@@ -36,10 +36,10 @@ export async function GET(request: NextRequest) {
   const proyectos = await getProyectosPermitidos(destinoRes.destino.id);
   const nombresProyecto = proyectos.map((p) => p.nombre);
 
-  // El desplegable de Tarea es el catálogo de categorías: clasifica el tipo
-  // de actividad, así que es el mismo para cualquier cliente de la planilla.
-  const categorias = await getCategorias();
-  const nombresTarea = categorias.map((c) => c.nombre);
+  // El desplegable de Concepto es el mismo para cualquier cliente: el
+  // catálogo se administra en Settings y no depende del proyecto.
+  const conceptos = await getConceptosActivos();
+  const nombresConcepto = conceptos.map((c) => c.nombre);
 
   const wb = new ExcelJS.Workbook();
 
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     });
   };
   cargarColumna("A", nombresProyecto);
-  cargarColumna("B", nombresTarea);
+  cargarColumna("B", nombresConcepto);
   cargarColumna("C", OWNERSHIP);
   cargarColumna("D", MODALIDAD);
 
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
   const NOTAS = [
     "Acepta AAAA-MM-DD o DD/MM/AAAA.",
     "Seleccioná un cliente existente de la lista.",
-    "Seleccioná una tarea existente de la lista.",
+    "Seleccioná un concepto existente de la lista.",
     "Seleccioná un ownership existente de la lista.",
     "Acepta formato hora:minuto (ej. 1:30) o decimal (ej. 1,5).",
     "Seleccioná una modalidad existente de la lista.",
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
   ws.addRow([
     hoyISO(),
     nombresProyecto[0] ?? "",
-    nombresTarea[0] ?? "",
+    nombresConcepto[0] ?? "",
     OWNERSHIP[0],
     "1:30",
     MODALIDAD[0],
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
   // Desplegables (Data Validation) por columna, desde la fila 2.
   const validaciones: Record<number, string> = {
     2: rango("A", nombresProyecto.length), // Proyecto
-    3: rango("B", nombresTarea.length), // Tarea
+    3: rango("B", nombresConcepto.length), // Concepto
     4: rango("C", OWNERSHIP.length), // Ownership
     6: rango("D", MODALIDAD.length), // Modalidad
   };

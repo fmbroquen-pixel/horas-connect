@@ -4,7 +4,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
-import { getCategorias } from "@/lib/categorias-tarea";
+import { getConceptosActivos } from "@/lib/conceptos";
 import { parseHorasHsMin } from "@/lib/horas";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
@@ -13,30 +13,26 @@ import type { Modalidad, Ownership } from "@/generated/prisma/client";
 const COLUMNAS_REQUERIDAS = [
   "fecha",
   "cliente",
-  "tarea",
+  "concepto",
   "ownership",
   "horas",
   "modalidad",
 ];
 // "Etapa" se ignora en vez de rechazarse: los archivos exportados antes del
 // Roadmap la traen, y así no cortan la importación por una columna de más.
-const COLUMNAS_IGNORADAS = [
-  "usd/hora",
-  "usd total",
-  "usd/h",
-  "usd",
-  "total",
-  "etapa",
-];
-// Alias aceptados: archivos generados con la plantilla anterior usaban
-// "Proyecto" como cabecera; se sigue aceptando como sinónimo de "Cliente".
-const ALIAS_COLUMNAS: Record<string, string> = { proyecto: "cliente" };
+const COLUMNAS_IGNORADAS = ["usd/hora", "usd total", "usd/h", "usd", "total", "etapa"];
+// Alias aceptados: cabeceras de plantillas anteriores. "Proyecto" era el
+// nombre viejo de Cliente, y "Tarea" el de Concepto.
+const ALIAS_COLUMNAS: Record<string, string> = {
+  proyecto: "cliente",
+  tarea: "concepto",
+};
 
 export type FilaPreview = {
   fila: number;
   fecha: string;
   proyecto: string;
-  tarea: string;
+  concepto: string;
   ownership: string;
   horas: string;
   modalidad: string;
@@ -148,11 +144,10 @@ async function procesar(usuarioId: string, archivo: File) {
 
   const proyPorNombre = new Map(proyectos.map((p) => [normalizar(p.nombre), p]));
 
-  // Las categorías son globales: la misma etiqueta "Lista — Tarea" vale para
-  // cualquier cliente, así que basta un único índice por nombre.
-  const categorias = await getCategorias();
-  const categoriaPorNombre = new Map(
-    categorias.map((c) => [normalizar(c.nombre), c.id]),
+  // El catálogo de conceptos es global, así que basta un índice por nombre.
+  const conceptos = await getConceptosActivos();
+  const conceptoPorNombre = new Map<string, string>(
+    conceptos.map((c) => [normalizar(c.nombre), c.id]),
   );
 
   const hoy = new Date();
@@ -164,7 +159,7 @@ async function procesar(usuarioId: string, archivo: File) {
     select: {
       fecha: true,
       clienteId: true,
-      categoriaId: true,
+      conceptoId: true,
       ownership: true,
       modalidad: true,
       horas: true,
@@ -173,7 +168,7 @@ async function procesar(usuarioId: string, archivo: File) {
   const claveExistente = new Set(
     existentes.map(
       (r) =>
-        `${r.fecha.toISOString().slice(0, 10)}|${r.clienteId}|${r.categoriaId}|${r.ownership}|${r.modalidad}|${Number(r.horas)}`,
+        `${r.fecha.toISOString().slice(0, 10)}|${r.clienteId}|${r.conceptoId}|${r.ownership}|${r.modalidad}|${Number(r.horas)}`,
     ),
   );
   const clavesEnLote = new Set<string>();
@@ -182,7 +177,7 @@ async function procesar(usuarioId: string, archivo: File) {
   const validas: {
     fecha: Date;
     clienteId: string;
-    categoriaId: string;
+    conceptoId: string;
     ownership: Ownership;
     modalidad: Modalidad;
     horas: number;
@@ -198,7 +193,7 @@ async function procesar(usuarioId: string, archivo: File) {
     const rawFecha = cols[idx("fecha")];
     const fechaStr = val("fecha");
     const proyecto = val("cliente");
-    const tareaTexto = val("tarea");
+    const conceptoTexto = val("concepto");
     const ownershipRaw = normalizar(val("ownership"));
     const horasStr = val("horas");
     const modalidadRaw = normalizar(val("modalidad"));
@@ -213,10 +208,9 @@ async function procesar(usuarioId: string, archivo: File) {
     if (!proyecto) errores.push("Falta el cliente");
     else if (!proy) errores.push("Cliente inexistente o no asignado");
 
-    // La categoría se busca en el catálogo global (formato "Lista — Tarea").
-    const categoriaId = categoriaPorNombre.get(normalizar(tareaTexto));
-    if (!tareaTexto) errores.push("Falta la tarea");
-    else if (!categoriaId) errores.push("Tarea inexistente en el catálogo");
+    const conceptoId = conceptoPorNombre.get(normalizar(conceptoTexto));
+    if (!conceptoTexto) errores.push("Falta el concepto");
+    else if (!conceptoId) errores.push("Concepto inexistente o dado de baja");
 
     const ownership: Ownership | null =
       ownershipRaw === "owner" || ownershipRaw === "titular"
@@ -244,8 +238,8 @@ async function procesar(usuarioId: string, archivo: File) {
     }
 
     // Duplicados (contra la base y dentro del mismo archivo).
-    if (errores.length === 0 && fechaISO && proy && categoriaId && ownership && modalidad && horas !== null) {
-      const clave = `${fechaISO}|${proy.id}|${categoriaId}|${ownership}|${modalidad}|${horas}`;
+    if (errores.length === 0 && fechaISO && proy && conceptoId && ownership && modalidad && horas !== null) {
+      const clave = `${fechaISO}|${proy.id}|${conceptoId}|${ownership}|${modalidad}|${horas}`;
       if (claveExistente.has(clave)) errores.push("Registro duplicado (ya existe)");
       else if (clavesEnLote.has(clave)) errores.push("Duplicado dentro del archivo");
       else clavesEnLote.add(clave);
@@ -255,18 +249,18 @@ async function procesar(usuarioId: string, archivo: File) {
       fila: i + 2, // +1 header, +1 base 1
       fecha: fechaStr,
       proyecto,
-      tarea: tareaTexto,
+      concepto: conceptoTexto,
       ownership: val("ownership"),
       horas: horasStr,
       modalidad: val("modalidad"),
       errores,
     });
 
-    if (errores.length === 0 && fechaISO && proy && categoriaId && ownership && modalidad && horas !== null && tarifa !== undefined) {
+    if (errores.length === 0 && fechaISO && proy && conceptoId && ownership && modalidad && horas !== null && tarifa !== undefined) {
       validas.push({
         fecha: new Date(fechaISO + "T00:00:00Z"),
         clienteId: proy.id,
-        categoriaId,
+        conceptoId,
         ownership,
         modalidad,
         horas,
@@ -341,7 +335,7 @@ export async function confirmarImportacion(
     data: r.validas.map((v) => ({
       fecha: v.fecha,
       clienteId: v.clienteId,
-      categoriaId: v.categoriaId,
+      conceptoId: v.conceptoId,
       usuarioId: destino.id, // worked_by
       horas: v.horas,
       modalidad: v.modalidad,

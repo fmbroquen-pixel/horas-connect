@@ -9,7 +9,7 @@ import { DIAS_VENTANA_EDICION } from "./constantes";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import { ToastAviso } from "@/components/ui/toast-aviso";
-import type { MapaTarifas, OpcionCategoria, OpcionSelect } from "./tipos";
+import type { MapaTarifas, OpcionConcepto, OpcionSelect } from "./tipos";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -19,7 +19,7 @@ const LABEL = "mb-1 block text-[11px] uppercase tracking-wide text-dc-muted";
 const VALORES_INICIALES = {
   fecha: "",
   clienteId: "",
-  categoriaId: "",
+  conceptoId: "",
   ownership: "owner",
   modalidad: "presencial",
   horas: "",
@@ -29,7 +29,7 @@ const VALORES_INICIALES = {
 const OBLIGATORIOS: { campo: CampoRegistro; label: string }[] = [
   { campo: "fecha", label: "Fecha" },
   { campo: "clienteId", label: "Cliente" },
-  { campo: "categoriaId", label: "Tarea" },
+  { campo: "conceptoId", label: "Concepto" },
   { campo: "horas", label: "Horas" },
 ];
 
@@ -37,12 +37,12 @@ const OBLIGATORIOS: { campo: CampoRegistro; label: string }[] = [
 // independiente, optimizado para cargar varias horas seguidas solo con teclado.
 export function BarraCaptura({
   proyectos,
-  categorias,
+  conceptos,
   tarifas,
   usuarioId = "",
 }: {
   proyectos: OpcionSelect[];
-  categorias: OpcionCategoria[];
+  conceptos: OpcionConcepto[];
   tarifas: MapaTarifas;
   // Usuario dueño de las horas cuando un admin carga en nombre de otro.
   // Vacío = el propio usuario. El servidor revalida el permiso igual.
@@ -81,9 +81,9 @@ export function BarraCaptura({
       if (!r.error) {
         // Precarga la siguiente carga: conserva proyecto, ownership y modalidad
         // (y la fecha del día); limpia los campos que cambian.
-        setValores((v) => ({ ...v, categoriaId: "", horas: "" }));
+        setValores((v) => ({ ...v, conceptoId: "", horas: "" }));
         setEstado(undefined);
-        setTimeout(() => enfocar("categoriaId"), 20);
+        setTimeout(() => enfocar("conceptoId"), 20);
       } else {
         setEstado(r);
         if (r.error) setAviso(r.error);
@@ -145,17 +145,17 @@ export function BarraCaptura({
           />
         </div>
 
-        <div className="w-64" data-campo="categoriaId">
-          <span className={LABEL}>Tarea</span>
+        <div className="w-52" data-campo="conceptoId">
+          <span className={LABEL}>Concepto</span>
           <Dropdown
-            name="categoriaId"
-            value={valores.categoriaId}
-            onChange={(v) => set("categoriaId", v)}
-            options={categorias.map((c) => ({ value: c.id, label: c.nombre }))}
-            placeholder={categorias.length === 0 ? "Sin tareas cargadas" : "Tarea"}
-            invalido={estado?.campo === "categoriaId"}
+            name="conceptoId"
+            value={valores.conceptoId}
+            onChange={(v) => set("conceptoId", v)}
+            options={conceptos.map((c) => ({ value: c.id, label: c.nombre }))}
+            placeholder={conceptos.length === 0 ? "Sin conceptos" : "Concepto"}
+            invalido={estado?.campo === "conceptoId"}
             className="w-full"
-            ariaLabel="Tarea"
+            ariaLabel="Concepto"
           />
         </div>
 

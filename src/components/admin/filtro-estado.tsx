@@ -17,7 +17,7 @@ const OPCIONES: { value: EstadoFiltro; label: string }[] = [
 
 // Segmented control de navegación (Link, no cliente): el filtro vive en la
 // URL (?estado=...), así que sobrevive a refresh y volver atrás mientras el
-// usuario esté en esta tabla. Se usa en Usuarios y Clientes.
+// usuario esté en esta tabla. Se usa en Usuarios, Clientes y Conceptos.
 export function FiltroEstado({
   basePath,
   actual,

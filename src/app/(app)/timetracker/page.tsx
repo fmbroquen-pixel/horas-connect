@@ -6,7 +6,7 @@ import {
   getUsuariosQueReportan,
   resolverUsuarioDestino,
 } from "@/lib/registrar-para";
-import { getCategorias, etiquetaCategoria } from "@/lib/categorias-tarea";
+import { getConceptosActivos } from "@/lib/conceptos";
 import { formatHorasHsMin } from "@/lib/horas";
 import { hoyISO, rangoDefault30 } from "@/lib/formato";
 import { FiltroPopover } from "@/components/filtro-popover";
@@ -53,11 +53,11 @@ export default async function TimetrackerPage({
     ? params.proyecto
     : undefined;
 
-  const [categorias, tarifasVigentes, registros, usuariosQueReportan] =
+  const [conceptos, tarifasVigentes, registros, usuariosQueReportan] =
     await Promise.all([
-      // Catálogo global de categorías: clasifica el tipo de actividad, así
-      // que el desplegable no depende del cliente elegido.
-      getCategorias(),
+      // Catálogo de conceptos (Settings → Conceptos): clasifica en qué se
+      // consumieron las horas, así que no depende del cliente elegido.
+      getConceptosActivos(),
       prisma.tarifa.findMany({
         where: { usuarioId: destino.id, vigenteHasta: null },
       }),
@@ -74,8 +74,8 @@ export default async function TimetrackerPage({
         orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
         take: 500,
         include: {
+          concepto: { select: { nombre: true } },
           etapa: { select: { etiqueta: true } },
-          tarea: { select: { nombre: true, lista: { select: { nombre: true } } } },
         },
       }),
       esAdmin ? getUsuariosQueReportan() : Promise.resolve([]),
@@ -90,14 +90,10 @@ export default async function TimetrackerPage({
   limite.setDate(limite.getDate() - DIAS_VENTANA_EDICION);
   limite.setHours(0, 0, 0, 0);
 
-  // Etiqueta de la columna Tarea. Con categoría se usa su nombre; si el
-  // registro es anterior al catálogo, se cae a su clasificación previa (la
-  // tarea del Roadmap, o la etapa más vieja aún) para que el historial no
-  // quede en blanco.
-  const etiquetaPrevia = (r: (typeof registros)[number]) =>
-    r.tarea
-      ? etiquetaCategoria(r.tarea.lista.nombre, r.tarea.nombre)
-      : (r.etapa?.etiqueta ?? "—");
+  // Etiqueta de la columna Concepto: el nombre guardado, aunque el concepto
+  // esté dado de baja y ya no figure en el desplegable. Si el registro es
+  // anterior al catálogo se cae a su clasificación previa, para que el
+  // historial no quede en blanco.
 
   const filas: RegistroFila[] = registros
     .filter((r) => r.ownership !== "valor_cero")
@@ -105,9 +101,8 @@ export default async function TimetrackerPage({
       id: r.id,
       fecha: r.fecha.toISOString().slice(0, 10),
       clienteId: r.clienteId,
-      categoriaId: r.categoriaId ?? "",
-      categoriaNombre:
-        categorias.find((c) => c.id === r.categoriaId)?.nombre ?? etiquetaPrevia(r),
+      conceptoId: r.conceptoId ?? "",
+      conceptoNombre: r.concepto?.nombre ?? r.etapa?.etiqueta ?? "—",
       ownership: r.ownership as "owner" | "backup",
       modalidad: r.modalidad as "presencial" | "virtual",
       horas: formatHorasHsMin(Number(r.horas)),
@@ -180,7 +175,7 @@ export default async function TimetrackerPage({
           <BarraCaptura
             key={destino.id}
             proyectos={opcionesProyecto}
-            categorias={categorias}
+            conceptos={conceptos}
             tarifas={tarifas}
             usuarioId={esOtroUsuario ? destino.id : ""}
           />
@@ -193,7 +188,7 @@ export default async function TimetrackerPage({
           key={destino.id}
           filas={filas}
           proyectos={opcionesProyecto}
-          categorias={categorias}
+          conceptos={conceptos}
         />
       </div>
     </div>

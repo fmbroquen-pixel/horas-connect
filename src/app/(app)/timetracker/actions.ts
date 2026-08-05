@@ -12,7 +12,7 @@ import type { Modalidad, Ownership } from "@/generated/prisma/client";
 const RegistroSchema = z.object({
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Fecha inválida." }),
   clienteId: z.string().min(1, { error: "Elegí un cliente." }),
-  categoriaId: z.string().min(1, { error: "Elegí una tarea." }),
+  conceptoId: z.string().min(1, { error: "Elegí un concepto." }),
   ownership: z.enum(["owner", "backup"], { error: "Elegí el ownership." }),
   modalidad: z.enum(["presencial", "virtual"], { error: "Elegí la modalidad." }),
   horas: z.string().min(1, { error: "Cargá las horas." }),
@@ -23,7 +23,7 @@ const RegistroSchema = z.object({
 export type CampoRegistro =
   | "fecha"
   | "clienteId"
-  | "categoriaId"
+  | "conceptoId"
   | "ownership"
   | "modalidad"
   | "horas";
@@ -76,7 +76,7 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
   const parsed = RegistroSchema.safeParse({
     fecha: formData.get("fecha"),
     clienteId: formData.get("clienteId"),
-    categoriaId: formData.get("categoriaId"),
+    conceptoId: formData.get("conceptoId"),
     ownership: formData.get("ownership"),
     modalidad: formData.get("modalidad"),
     horas: formData.get("horas"),
@@ -105,14 +105,14 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
     return { error: "No tenés asignado ese cliente.", campo: "clienteId" as const };
   }
 
-  // La categoría es global (clasifica el tipo de actividad), así que solo
-  // hace falta que exista: no se valida contra el Roadmap del cliente.
-  const categoria = await prisma.categoriaTarea.findUnique({
-    where: { id: parsed.data.categoriaId },
+  // El concepto es global y curado: solo se exige que exista y esté activo,
+  // para no dejar cargar contra uno retirado.
+  const concepto = await prisma.concepto.findFirst({
+    where: { id: parsed.data.conceptoId, activo: true },
     select: { id: true },
   });
-  if (!categoria) {
-    return { error: "Esa tarea no existe.", campo: "categoriaId" as const };
+  if (!concepto) {
+    return { error: "Ese concepto no existe.", campo: "conceptoId" as const };
   }
 
   const tarifa = await resolverTarifa(
@@ -157,7 +157,7 @@ export async function crearRegistro(
     data: {
       fecha: d.fecha,
       clienteId: d.clienteId,
-      categoriaId: d.categoriaId,
+      conceptoId: d.conceptoId,
       usuarioId: destino.id, // worked_by
       horas: d.horas,
       modalidad: d.modalidad,
@@ -208,10 +208,7 @@ export async function actualizarCampoRegistro(
   const fd = new FormData();
   fd.set("fecha", campo === "fecha" ? valor : registro.fecha.toISOString().slice(0, 10));
   fd.set("clienteId", campo === "clienteId" ? valor : registro.clienteId);
-  fd.set(
-    "categoriaId",
-    campo === "categoriaId" ? valor : (registro.categoriaId ?? ""),
-  );
+  fd.set("conceptoId", campo === "conceptoId" ? valor : (registro.conceptoId ?? ""));
   fd.set("ownership", campo === "ownership" ? valor : registro.ownership);
   fd.set("modalidad", campo === "modalidad" ? valor : registro.modalidad);
   fd.set("horas", campo === "horas" ? valor : formatHorasHsMin(Number(registro.horas)));
@@ -225,7 +222,7 @@ export async function actualizarCampoRegistro(
     data: {
       fecha: d.fecha,
       clienteId: d.clienteId,
-      categoriaId: d.categoriaId,
+      conceptoId: d.conceptoId,
       horas: d.horas,
       modalidad: d.modalidad,
       ownership: d.ownership,
@@ -271,7 +268,7 @@ export async function eliminarRegistros(ids: string[]): Promise<void> {
   revalidarHoras();
 }
 
-export type CampoMasivo = "clienteId" | "categoriaId" | "ownership" | "modalidad";
+export type CampoMasivo = "clienteId" | "conceptoId" | "ownership" | "modalidad";
 
 // Edición masiva: aplica un mismo valor a un campo en las filas
 // seleccionadas. Si el campo cambia la tarifa (modalidad/ownership), se
@@ -318,13 +315,13 @@ export async function editarRegistros(
   if (campo === "modalidad" && valor !== "presencial" && valor !== "virtual") {
     return { error: "Modalidad inválida." };
   }
-  if (campo === "categoriaId") {
-    // La categoría es global: se puede aplicar a filas de distintos clientes.
-    const categoria = await prisma.categoriaTarea.findUnique({
-      where: { id: valor },
+  if (campo === "conceptoId") {
+    // El concepto es global: se puede aplicar a filas de distintos clientes.
+    const concepto = await prisma.concepto.findFirst({
+      where: { id: valor, activo: true },
       select: { id: true },
     });
-    if (!categoria) return { error: "Tarea inválida." };
+    if (!concepto) return { error: "Concepto inválido." };
   }
 
   const limite = limiteVentana();
@@ -334,16 +331,16 @@ export async function editarRegistros(
     if (!esAdmin && fila.fecha < limite) continue;
 
     if (campo === "clienteId") {
-      // La categoría no se toca: clasifica el tipo de actividad y sigue
-      // valiendo aunque las horas se muevan a otro proyecto.
+      // El concepto no se toca: clasifica la actividad y sigue valiendo
+      // aunque las horas se muevan a otro proyecto.
       await prisma.registroHoras.update({
         where: { id: fila.id },
         data: { clienteId: valor },
       });
-    } else if (campo === "categoriaId") {
+    } else if (campo === "conceptoId") {
       await prisma.registroHoras.update({
         where: { id: fila.id },
-        data: { categoriaId: valor },
+        data: { conceptoId: valor },
       });
     } else {
       const modalidad = (campo === "modalidad" ? valor : fila.modalidad) as Modalidad;

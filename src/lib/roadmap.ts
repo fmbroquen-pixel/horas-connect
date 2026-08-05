@@ -7,7 +7,6 @@ import {
   hoyUTC,
   siguienteDiaHabil,
 } from "@/lib/dias-habiles";
-import { sincronizarCategorias } from "@/lib/categorias-tarea";
 import type { Cliente } from "@/generated/prisma/client";
 
 // ── Plantillas por defecto ────────────────────────────────────────────────
@@ -60,11 +59,6 @@ export type TareaPlantilla = {
 
 export type Plantilla = { nombre: string; tareas: TareaPlantilla[] };
 
-// Una lista instanciada en un proyecto: conserva de qué plantilla salió, que
-// es lo que agrupa las categorías de Time Tracking ("Tablero Q1" y
-// "Tablero Q3" comparten la categoría "Tablero Trimestral").
-export type ListaInstanciada = Plantilla & { plantilla: string | null };
-
 function desdeXlsx(filas: FilaXlsx[]): TareaPlantilla[] {
   return filas.map(([nombre, inicioISO, finISO, horas]) => ({
     nombre,
@@ -98,14 +92,11 @@ export function cantidadTrimestres(duracionMeses: number | null): number {
 }
 
 // Plan sugerido para un proyecto: Onboarding + un tablero por trimestre.
-export function listasPorDefecto(duracionMeses: number | null): ListaInstanciada[] {
+export function listasPorDefecto(duracionMeses: number | null): Plantilla[] {
   return [
-    { ...PLANTILLA_ONBOARDING, plantilla: PLANTILLA_ONBOARDING.nombre },
+    PLANTILLA_ONBOARDING,
     ...Array.from({ length: cantidadTrimestres(duracionMeses) }, (_, i) => ({
-      // El nombre lleva el trimestre; la plantilla, no: son la misma clase
-      // de actividad repetida.
       nombre: `Tablero Q${i + 1}`,
-      plantilla: PLANTILLA_TABLERO.nombre,
       tareas: PLANTILLA_TABLERO.tareas,
     })),
   ];
@@ -227,12 +218,7 @@ export async function asegurarRoadmap(
 
     for (const [i, plantilla] of plantillas.entries()) {
       const lista = await tx.listaRoadmap.create({
-        data: {
-          clienteId: cliente.id,
-          nombre: plantilla.nombre,
-          plantilla: plantilla.plantilla,
-          orden: i,
-        },
+        data: { clienteId: cliente.id, nombre: plantilla.nombre, orden: i },
       });
       await tx.tareaRoadmap.createMany({
         data: plantilla.tareas.map((t, j) => ({
@@ -253,7 +239,4 @@ export async function asegurarRoadmap(
       data: { roadmapCreadoEn: new Date() },
     });
   });
-
-  // El plan recién sembrado estrena las categorías de Time Tracking.
-  await sincronizarCategorias(cliente.id);
 }

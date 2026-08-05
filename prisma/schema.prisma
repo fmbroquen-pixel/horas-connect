@@ -178,11 +178,6 @@ model ListaRoadmap {
   nombre    String
   orden     Int      @default(0)
 
-  // Plantilla de la que salió la lista, si salió de una. Es lo que permite
-  // que "Tablero Q1" y "Tablero Q3" compartan la misma categoría de Time
-  // Tracking ("Tablero Trimestral"): el tipo de actividad es el mismo aunque
-  // la instancia sea de otro trimestre. Sobrevive al renombre de la lista.
-  plantilla String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -221,27 +216,28 @@ model TareaRoadmap {
   @@map("tareas_roadmap")
 }
 
-// Categoría de tarea para Time Tracking: en qué TIPO de actividad se
-// consumieron las horas, no contra qué tarea calendarizada del Roadmap.
-//
-// El catálogo se deriva de las listas del Roadmap (par lista + tarea) y se
-// deduplica: "Tablero Trimestral — Office Hours" existe una sola vez aunque
-// aparezca cuatro veces en cada tablero y en todos los proyectos. Por eso no
-// lleva fechas, estado ni trimestre: no es una instancia, es una clase.
+// Concepto de Time Tracking: en qué se consumieron las horas. Es un catálogo
+// corto y curado que administra el admin, deliberadamente independiente del
+// Roadmap: el Roadmap planifica (con fechas y horas estimadas) y el concepto
+// clasifica gasto real. Por eso incluye cosas que no son tareas de un plan,
+// como Traslado u Otros.
 //
 // Las horas siguen atadas al proyecto por RegistroHoras.clienteId, así que se
-// pueden cruzar horas por proyecto, por lista y por tipo de tarea.
-model CategoriaTarea {
-  id     String @id @default(cuid())
-  lista  String
-  nombre String
+// pueden cruzar horas por proyecto y por concepto.
+model Concepto {
+  id     String  @id @default(cuid())
+  nombre String  @unique
+  // Orden de presentación: la secuencia del proceso (Primera Quincenal,
+  // Primera Mensual, …) dice más que el alfabético.
+  orden  Int     @default(0)
+  // Baja lógica: retirar un concepto no puede desclasificar el historial.
+  activo Boolean @default(true)
 
   createdAt DateTime @default(now())
 
   registros RegistroHoras[]
 
-  @@unique([lista, nombre])
-  @@map("categorias_tarea")
+  @@map("conceptos")
 }
 
 // Integrantes del equipo del cliente (contactos del lado del cliente, no
@@ -407,11 +403,11 @@ model RegistroHoras {
   usuarioId String    @map("usuario_id")
   usuario   Usuario   @relation("Mentor", fields: [usuarioId], references: [id])
 
-  // En qué TIPO de actividad se consumieron las horas. Es una categoría
-  // (lista + tarea), no una tarea calendarizada: cargar horas no compite con
-  // el presupuesto de una instancia puntual del Roadmap.
-  categoriaId String?         @map("categoria_id")
-  categoria   CategoriaTarea? @relation(fields: [categoriaId], references: [id])
+  // En qué se consumieron las horas. Es un concepto del catálogo, no una
+  // tarea calendarizada: cargar horas no compite con el presupuesto de una
+  // instancia puntual del Roadmap.
+  conceptoId String?   @map("concepto_id")
+  concepto   Concepto? @relation(fields: [conceptoId], references: [id])
 
   // Referencias de etapas anteriores del modelo, conservadas para no perder
   // el detalle histórico de con qué se cargó cada registro. Ya no se escriben:
@@ -445,7 +441,7 @@ model RegistroHoras {
   @@index([usuarioId, fecha])
   @@index([clienteId, fecha])
   @@index([tareaId])
-  @@index([categoriaId])
+  @@index([conceptoId])
   @@index([eliminadoEn])
   @@map("registros_horas")
 }

@@ -13,7 +13,6 @@ import {
   isoDesdeFecha,
 } from "@/lib/dias-habiles";
 import { PLANTILLAS, getTareasEnOrden, resecuenciar } from "@/lib/roadmap";
-import { sincronizarCategorias } from "@/lib/categorias-tarea";
 import { ETIQUETA_ESTADO } from "./constantes";
 import type { EstadoTareaRoadmap } from "@/generated/prisma/client";
 
@@ -27,20 +26,11 @@ export type CampoTarea =
   | "horasEstimadas"
   | "estado";
 
-// El Roadmap alimenta el desplegable de Tarea de Time Tracking, así que un
-// cambio acá también invalida esa pantalla.
+// El Roadmap alimenta los KPIs del proyecto y del Home. No toca el
+// desplegable de Concepto de Time Tracking: ese catálogo es independiente.
 function revalidar() {
   revalidatePath("/proyectos", "layout");
-  revalidatePath("/timetracker");
   revalidatePath("/dashboard");
-}
-
-// Todo cambio que pueda estrenar un par (lista, tarea) actualiza el catálogo
-// de categorías de Time Tracking antes de revalidar, para que la opción nueva
-// ya esté disponible en el desplegable.
-async function sincronizarYRevalidar(clienteId: string) {
-  await sincronizarCategorias(clienteId);
-  revalidar();
 }
 
 async function requireAcceso(clienteId: string) {
@@ -124,9 +114,6 @@ export async function crearLista(
     data: {
       clienteId,
       nombre: parsed.data,
-      // Se recuerda de qué plantilla salió aunque la lista se llame distinto:
-      // es lo que agrupa sus tareas bajo una única categoría.
-      plantilla: plantilla?.nombre ?? null,
       orden: (ultima?.orden ?? -1) + 1,
     },
   });
@@ -149,7 +136,7 @@ export async function crearLista(
   }
 
   await resecuenciar(clienteId, await anclaAntesDeLista(clienteId, lista.id));
-  await sincronizarYRevalidar(clienteId);
+  revalidar();
   return {};
 }
 
@@ -168,9 +155,7 @@ export async function renombrarLista(
     where: { id: listaId },
     data: { nombre: parsed.data },
   });
-  // Una lista sin plantilla presta su nombre a la categoría: al renombrarla
-  // puede estrenar un par nuevo.
-  await sincronizarYRevalidar(lista.clienteId);
+  revalidar();
   return {};
 }
 
@@ -210,7 +195,6 @@ export async function duplicarLista(listaId: string): Promise<void> {
     data: {
       clienteId: lista.clienteId,
       nombre: `${lista.nombre} (copia)`,
-      plantilla: lista.plantilla,
       orden: (ultima?.orden ?? -1) + 1,
     },
   });
@@ -234,7 +218,7 @@ export async function duplicarLista(listaId: string): Promise<void> {
     lista.clienteId,
     await anclaAntesDeLista(lista.clienteId, copia.id),
   );
-  await sincronizarYRevalidar(lista.clienteId);
+  revalidar();
 }
 
 // ── Tareas ────────────────────────────────────────────────────────────────
@@ -318,7 +302,7 @@ export async function crearTarea(
 
   // La tarea nueva se suma al final de su lista y arrastra a las siguientes.
   await resecuenciar(lista.clienteId, await anclaPrevia(lista.clienteId, tarea.id));
-  await sincronizarYRevalidar(lista.clienteId);
+  revalidar();
   return {};
 }
 
@@ -348,7 +332,7 @@ export async function actualizarCampoTarea(
       where: { id: tareaId },
       data: { nombre: parsed.data },
     });
-    await sincronizarYRevalidar(tarea.lista.clienteId);
+    revalidar();
     return {};
   }
 

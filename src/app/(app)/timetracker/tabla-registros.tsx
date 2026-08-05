@@ -6,16 +6,16 @@ import { FilaRegistro } from "./fila-registro";
 import { GRID_TIMETRACKER } from "./grid";
 import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 import { Dropdown } from "@/components/dropdown";
-import type { OpcionCategoria, OpcionSelect, RegistroFila } from "./tipos";
+import type { OpcionConcepto, OpcionSelect, RegistroFila } from "./tipos";
 
 export function TablaRegistros({
   filas,
   proyectos,
-  categorias,
+  conceptos,
 }: {
   filas: RegistroFila[];
   proyectos: OpcionSelect[];
-  categorias: OpcionCategoria[];
+  conceptos: OpcionConcepto[];
 }) {
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirmar, setConfirmar] = useState(false);
@@ -56,7 +56,7 @@ export function TablaRegistros({
     setCampo(c);
     // Valor por defecto según el campo elegido.
     if (c === "clienteId") setValor(proyectos[0]?.id ?? "");
-    else if (c === "categoriaId") setValor(categorias[0]?.id ?? "");
+    else if (c === "conceptoId") setValor(conceptos[0]?.id ?? "");
     else if (c === "ownership") setValor("owner");
     else setValor("presencial");
   };
@@ -105,7 +105,7 @@ export function TablaRegistros({
                 onChange={(v) => cambiarCampo(v as CampoMasivo)}
                 options={[
                   { value: "clienteId", label: "Cliente" },
-                  { value: "categoriaId", label: "Tarea" },
+                  { value: "conceptoId", label: "Concepto" },
                   { value: "ownership", label: "Ownership" },
                   { value: "modalidad", label: "Modalidad" },
                 ]}
@@ -122,13 +122,13 @@ export function TablaRegistros({
                   ariaLabel="Cliente"
                 />
               )}
-              {campo === "categoriaId" && (
+              {campo === "conceptoId" && (
                 <Dropdown
                   value={valor}
                   onChange={setValor}
-                  options={categorias.map((c) => ({ value: c.id, label: c.nombre }))}
-                  className="w-64"
-                  ariaLabel="Tarea"
+                  options={conceptos.map((c) => ({ value: c.id, label: c.nombre }))}
+                  className="w-52"
+                  ariaLabel="Concepto"
                 />
               )}
               {campo === "ownership" && (
@@ -177,7 +177,7 @@ export function TablaRegistros({
             />
             <span>Fecha</span>
             <span>Cliente</span>
-            <span>Tarea</span>
+            <span>Concepto</span>
             <span>Ownership</span>
             <span>Horas</span>
             <span>Modalidad</span>
@@ -192,7 +192,7 @@ export function TablaRegistros({
                 key={f.id}
                 registro={f}
                 proyectos={proyectos}
-                categorias={categorias}
+                conceptos={conceptos}
                 seleccionado={sel.has(f.id)}
                 onToggle={toggle}
               />
