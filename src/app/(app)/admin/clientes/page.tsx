@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/require-admin";
 import { ETIQUETA_PRODUCTO } from "./constantes";
 import { NuevoClienteBoton } from "./nuevo-cliente-boton";
 import { TAG_ON, TAG_OFF } from "@/lib/ui";
+import { formatMonto } from "@/lib/formato";
 import { InfoButton } from "@/components/info-button";
 import { FiltroEstado, parseEstadoFiltro } from "@/components/admin/filtro-estado";
 import { EditarLink } from "@/components/admin/editar-link";
@@ -44,9 +45,10 @@ export default async function ClientesPage({
         <table className="w-full min-w-[640px] table-fixed text-sm">
           <thead className="sticky top-0 z-10">
             <tr className="border-b border-dc-line">
-              <th className="w-[42%] px-4">Nombre del cliente</th>
-              <th className="w-[28%] px-4">Producto</th>
-              <th className="w-[18%] px-4">Estado</th>
+              <th className="w-[34%] px-4">Nombre del cliente</th>
+              <th className="w-[22%] px-4">Producto</th>
+              <th className="w-[18%] px-4">Cuota (USD)</th>
+              <th className="w-[14%] px-4">Estado</th>
               <th className="w-[12%] px-4" />
             </tr>
           </thead>
@@ -65,6 +67,18 @@ export default async function ClientesPage({
                     <span className="text-dc-muted">—</span>
                   )}
                 </td>
+                <td className="px-4 py-3 text-center tabular-nums">
+                  {c.valorCuotaUsd !== null ? (
+                    formatMonto(Number(c.valorCuotaUsd))
+                  ) : (
+                    <span
+                      className="text-dc-muted"
+                      title="Sin cargar: se completa al guardar los datos del cliente"
+                    >
+                      —
+                    </span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-center">
                   <span className={c.activo ? TAG_ON : TAG_OFF}>
                     {c.activo ? "Activo" : "Inactivo"}
@@ -79,7 +93,7 @@ export default async function ClientesPage({
             ))}
             {clientes.length === 0 && (
               <tr>
-                <td className="px-4 py-6 text-center text-dc-muted" colSpan={4}>
+                <td className="px-4 py-6 text-center text-dc-muted" colSpan={5}>
                   {estado === "todos"
                     ? "Todavía no hay clientes cargados."
                     : "No hay clientes que coincidan con este filtro."}

@@ -2,9 +2,11 @@ import Link from "next/link";
 
 export type EstadoFiltro = "todos" | "activos" | "inactivos";
 
-// Valida el parámetro de la URL; cualquier valor desconocido cae en "todos".
+// Valida el parámetro de la URL. Sin parámetro (o con uno desconocido) se
+// muestran solo los activos: es lo que se usa a diario, y los dados de baja
+// quedan a un clic sin ensuciar la lista.
 export function parseEstadoFiltro(valor?: string): EstadoFiltro {
-  return valor === "activos" || valor === "inactivos" ? valor : "todos";
+  return valor === "todos" || valor === "inactivos" ? valor : "activos";
 }
 
 const OPCIONES: { value: EstadoFiltro; label: string }[] = [
@@ -15,7 +17,7 @@ const OPCIONES: { value: EstadoFiltro; label: string }[] = [
 
 // Segmented control de navegación (Link, no cliente): el filtro vive en la
 // URL (?estado=...), así que sobrevive a refresh y volver atrás mientras el
-// usuario esté en esta tabla. Se usa en Usuarios, Clientes y Etapas.
+// usuario esté en esta tabla. Se usa en Usuarios y Clientes.
 export function FiltroEstado({
   basePath,
   actual,
@@ -27,7 +29,10 @@ export function FiltroEstado({
     <div className="inline-flex items-center gap-1 rounded-lg border border-dc-line bg-dc-deeper p-1">
       {OPCIONES.map((o) => {
         const activa = o.value === actual;
-        const href = o.value === "todos" ? basePath : `${basePath}?estado=${o.value}`;
+        // "Activos" es el default, así que su link es la ruta limpia; el
+        // resto (incluido "Todos") viaja explícito en la URL.
+        const href =
+          o.value === "activos" ? basePath : `${basePath}?estado=${o.value}`;
         return (
           <Link
             key={o.value}

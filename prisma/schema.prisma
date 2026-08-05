@@ -62,6 +62,12 @@ model Cliente {
   producto      String?
   fechaInicio   DateTime? @map("fecha_inicio") @db.Date
 
+  // Cuota mensual pactada. Obligatoria en los formularios (alta y edición),
+  // pero nullable en la base: los clientes cargados antes de que existiera el
+  // campo no tienen un valor real, y ponerles 0 por defecto sería afirmar que
+  // no cobran. Queda vacío hasta que un admin lo complete.
+  valorCuotaUsd Decimal? @map("valor_cuota_usd") @db.Decimal(10, 2)
+
   // Enlace al tablero operativo externo del proyecto (sección Proyectos).
   tableroUrl String? @map("tablero_url")
 

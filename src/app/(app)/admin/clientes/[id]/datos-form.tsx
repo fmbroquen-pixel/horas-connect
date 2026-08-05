@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { actualizarDatosCliente } from "../actions";
+import { actualizarDatosCliente, type CampoCliente } from "../actions";
 import {
   OPCIONES_PRODUCTO,
   sumarMesesISO,
@@ -28,16 +28,21 @@ export function DatosClienteForm({
     duracionMeses: string;
     producto: string;
     fechaInicio: string;
+    valorCuotaUsd: string;
   };
 }) {
   const [duracion, setDuracion] = useState(inicial.duracionMeses);
   const [producto, setProducto] = useState(inicial.producto);
   const [fechaInicio, setFechaInicio] = useState(inicial.fechaInicio);
+  const [cuota, setCuota] = useState(inicial.valorCuotaUsd);
   const [toast, setToast] = useState(false);
 
   const accion = actualizarDatosCliente.bind(null, clienteId);
   const [state, formAction, pending] = useActionState(
-    async (prev: { error?: string } | undefined, formData: FormData) => {
+    async (
+      prev: { error?: string; campo?: CampoCliente } | undefined,
+      formData: FormData,
+    ) => {
       const r = await accion(prev, formData);
       if (!r.error) setToast(true);
       return r;
@@ -52,11 +57,19 @@ export function DatosClienteForm({
       ? sumarMesesISO(fechaInicio, meses)
       : null;
 
+  const errorDe = (campo: CampoCliente) =>
+    state?.campo === campo ? state.error : undefined;
+
   return (
     <form action={formAction} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <label className="block">
         <span className={LABEL}>Nombre del cliente</span>
         <input name="nombre" defaultValue={inicial.nombre} className={INPUT} />
+        <ErrorCampo mensaje={errorDe("nombre")} />
+        <p className="mt-1 text-xs text-dc-muted">
+          Renombrar no afecta las horas, los viáticos ni el Roadmap ya
+          cargados: cuelgan del identificador del cliente, no de su nombre.
+        </p>
       </label>
 
       <div>
@@ -70,7 +83,22 @@ export function DatosClienteForm({
           className="w-full"
           ariaLabel="Producto"
         />
+        <ErrorCampo mensaje={errorDe("producto")} />
       </div>
+
+      <label className="block">
+        <span className={LABEL}>Valor de la cuota (USD)</span>
+        <input
+          name="valorCuotaUsd"
+          inputMode="decimal"
+          autoComplete="off"
+          value={cuota}
+          onChange={(e) => setCuota(e.target.value)}
+          placeholder="Ej: 1500,50"
+          className={INPUT}
+        />
+        <ErrorCampo mensaje={errorDe("valorCuotaUsd")} />
+      </label>
 
       <label className="block">
         <span className={LABEL}>Duración (meses)</span>
@@ -86,6 +114,7 @@ export function DatosClienteForm({
           placeholder="Ej: 12"
           className={INPUT}
         />
+        <ErrorCampo mensaje={errorDe("duracionMeses")} />
       </label>
 
       <div>
@@ -97,6 +126,7 @@ export function DatosClienteForm({
           className="w-full"
           ariaLabel="Fecha de inicio"
         />
+        <ErrorCampo mensaje={errorDe("fechaInicio")} />
       </div>
 
       <div>
@@ -110,7 +140,9 @@ export function DatosClienteForm({
         <button type="submit" disabled={pending} className={BTN_SECONDARY}>
           {pending ? "Guardando…" : "Guardar datos"}
         </button>
-        {state?.error && (
+        {/* Errores sin campo asociado; los que sí lo tienen se muestran
+            debajo de su input. */}
+        {state?.error && !state.campo && (
           <p className="mt-2 text-xs text-dc-pink" role="alert">
             {state.error}
           </p>
@@ -121,5 +153,14 @@ export function DatosClienteForm({
         Datos guardados
       </ToastOk>
     </form>
+  );
+}
+
+function ErrorCampo({ mensaje }: { mensaje?: string }) {
+  if (!mensaje) return null;
+  return (
+    <p className="mt-1 text-xs text-dc-pink" role="alert">
+      {mensaje}
+    </p>
   );
 }

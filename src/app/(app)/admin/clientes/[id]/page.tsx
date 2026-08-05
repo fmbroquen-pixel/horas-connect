@@ -32,6 +32,12 @@ export default async function ClienteDatosPage({
             fechaInicio: cliente.fechaInicio
               ? cliente.fechaInicio.toISOString().slice(0, 10)
               : "",
+            // Los clientes cargados antes de que existiera el campo llegan
+            // vacíos: el formulario los obliga a completarlo al guardar.
+            valorCuotaUsd:
+              cliente.valorCuotaUsd !== null
+                ? String(Number(cliente.valorCuotaUsd))
+                : "",
           }}
         />
       </div>

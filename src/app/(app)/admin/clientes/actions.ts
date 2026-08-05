@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { getSesionActual } from "@/lib/auth";
@@ -28,12 +29,37 @@ function revalidarEquipo(clienteId: string) {
   revalidatePath("/proyectos", "layout");
 }
 
-// Duración y fecha de inicio son obligatorias en el alta: el Roadmap se
-// genera en este mismo momento (Onboarding + un tablero por trimestre) y las
-// necesita para calcular cuántos tableros crear y desde qué fecha encadenar
-// las tareas.
+// Campos del cliente. El "campo" que viaja con cada error permite mostrarlo
+// debajo del input que lo produjo en vez de en un cartel suelto.
+export type CampoCliente =
+  | "nombre"
+  | "producto"
+  | "duracionMeses"
+  | "fechaInicio"
+  | "valorCuotaUsd";
+
+export type ResultadoCliente = { error?: string; campo?: CampoCliente };
+
+const CUOTA_INVALIDA =
+  "El valor de la cuota debe ser un número mayor o igual a 0.";
+
+// Acepta 1234.56 y 1234,56 (la coma es lo natural al tipear en es-AR).
+function parseCuota(valor: unknown): number | null {
+  const texto = String(valor ?? "").trim().replace(",", ".");
+  if (texto === "") return null;
+  const n = Number(texto);
+  return Number.isFinite(n) && n >= 0 ? n : null;
+}
+
+// El alta pide todo lo que define al proyecto: con la duración y la fecha se
+// genera el Roadmap en el mismo momento, y producto y cuota completan la
+// ficha comercial para que ningún cliente quede a medio cargar.
 const ClienteSchema = z.object({
   nombre: z.string().trim().min(1, { error: "El nombre es obligatorio." }),
+  producto: z
+    .string()
+    .trim()
+    .refine((v) => v in ETIQUETA_PRODUCTO, { error: "Elegí un producto." }),
   duracionMeses: z
     .string()
     .trim()
@@ -46,15 +72,28 @@ const ClienteSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "La fecha de inicio es obligatoria." }),
 });
 
-export async function crearCliente(_prevState: unknown, formData: FormData) {
+export async function crearCliente(
+  _prevState: unknown,
+  formData: FormData,
+): Promise<ResultadoCliente> {
   await requireAdmin();
   const parsed = ClienteSchema.safeParse({
     nombre: formData.get("nombre"),
+    producto: formData.get("producto"),
     duracionMeses: formData.get("duracionMeses"),
     fechaInicio: formData.get("fechaInicio"),
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+    const issue = parsed.error.issues[0];
+    return {
+      error: issue?.message ?? "Datos inválidos.",
+      campo: issue?.path[0] as CampoCliente | undefined,
+    };
+  }
+
+  const valorCuotaUsd = parseCuota(formData.get("valorCuotaUsd"));
+  if (valorCuotaUsd === null) {
+    return { error: CUOTA_INVALIDA, campo: "valorCuotaUsd" };
   }
 
   // El nombre es único en la base; sin este chequeo, el duplicado revienta
@@ -67,6 +106,7 @@ export async function crearCliente(_prevState: unknown, formData: FormData) {
   if (repetido) {
     return {
       error: `Ya existe un cliente con ese nombre ("${repetido.nombre}"). Elegí otro.`,
+      campo: "nombre",
     };
   }
 
@@ -75,8 +115,10 @@ export async function crearCliente(_prevState: unknown, formData: FormData) {
     cliente = await prisma.cliente.create({
       data: {
         nombre: parsed.data.nombre,
+        producto: parsed.data.producto,
         duracionMeses: parsed.data.duracionMeses,
         fechaInicio: new Date(parsed.data.fechaInicio + "T00:00:00Z"),
+        valorCuotaUsd,
       },
     });
   } catch (e) {
@@ -84,7 +126,7 @@ export async function crearCliente(_prevState: unknown, formData: FormData) {
     // restricción única de la base es la última línea de defensa y también
     // tiene que terminar en un aviso, no en una pantalla de error.
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return { error: "Ya existe un cliente con ese nombre. Elegí otro." };
+      return { error: "Ya existe un cliente con ese nombre. Elegí otro.", campo: "nombre" };
     }
     throw e;
   }
@@ -97,7 +139,11 @@ export async function crearCliente(_prevState: unknown, formData: FormData) {
   revalidatePath("/admin/clientes");
   revalidatePath("/proyectos", "layout");
   revalidatePath("/timetracker");
-  return { error: undefined };
+
+  // El alta termina en la ficha del cliente recién creado (pestaña Datos):
+  // es donde se sigue completando. redirect() corta la ejecución lanzando,
+  // así que va después de revalidar y fuera de cualquier try/catch.
+  redirect(`/admin/clientes/${cliente.id}`);
 }
 
 export async function alternarActivoCliente(id: string, activo: boolean) {
@@ -139,7 +185,7 @@ export async function actualizarDatosCliente(
   id: string,
   _prevState: unknown,
   formData: FormData,
-): Promise<{ error?: string }> {
+): Promise<ResultadoCliente> {
   await requireAdmin();
   const parsed = DatosClienteSchema.safeParse({
     nombre: formData.get("nombre"),
@@ -148,7 +194,19 @@ export async function actualizarDatosCliente(
     fechaInicio: formData.get("fechaInicio") ?? "",
   });
   if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+    const issue = parsed.error.issues[0];
+    return {
+      error: issue?.message ?? "Datos inválidos.",
+      campo: issue?.path[0] as CampoCliente | undefined,
+    };
+  }
+
+  // La cuota es obligatoria también al editar: los clientes cargados antes de
+  // que existiera el campo lo tienen vacío, y este guard es lo que fuerza a
+  // completarlo la próxima vez que se toquen sus datos.
+  const valorCuotaUsd = parseCuota(formData.get("valorCuotaUsd"));
+  if (valorCuotaUsd === null) {
+    return { error: CUOTA_INVALIDA, campo: "valorCuotaUsd" };
   }
 
   // Renombrar también puede chocar con la restricción única del nombre; el
@@ -165,9 +223,13 @@ export async function actualizarDatosCliente(
   if (repetido) {
     return {
       error: `Ya existe un cliente con ese nombre ("${repetido.nombre}"). Elegí otro.`,
+      campo: "nombre",
     };
   }
 
+  // Update por id: renombrar cambia solo la etiqueta visible. El id es un
+  // cuid inmutable y todo lo demás (horas, viáticos, Roadmap, equipo,
+  // facturación, asignaciones) cuelga de él, así que nada se desvincula.
   try {
     await prisma.cliente.update({
       where: { id },
@@ -175,6 +237,7 @@ export async function actualizarDatosCliente(
         nombre: parsed.data.nombre,
         duracionMeses: parsed.data.duracionMeses,
         producto: parsed.data.producto || null,
+        valorCuotaUsd,
         fechaInicio: parsed.data.fechaInicio
           ? new Date(parsed.data.fechaInicio + "T00:00:00Z")
           : null,
@@ -182,7 +245,7 @@ export async function actualizarDatosCliente(
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return { error: "Ya existe un cliente con ese nombre. Elegí otro." };
+      return { error: "Ya existe un cliente con ese nombre. Elegí otro.", campo: "nombre" };
     }
     throw e;
   }
