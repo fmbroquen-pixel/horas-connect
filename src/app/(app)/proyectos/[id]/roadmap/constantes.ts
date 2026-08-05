@@ -36,6 +36,40 @@ export type TareaRoadmapFila = {
   estado: string;
 };
 
+// Avance y estado de una lista. Ninguno de los dos se edita a mano: son
+// siempre una lectura de las tareas, así que cualquier cambio en ellas los
+// actualiza solo.
+//
+// Una tarea está "resuelta" cuando ya no queda trabajo por hacer, y eso
+// incluye las No ejecutadas: se decidió no hacerlas, así que no pueden dejar
+// una lista trabada en 90% para siempre.
+export function progresoLista(tareas: { estado: string }[]): {
+  porcentaje: number;
+  estado: string;
+  resueltas: number;
+  total: number;
+} {
+  const total = tareas.length;
+  const resueltas = tareas.filter(
+    (t) => t.estado === "finalizada" || t.estado === "no_ejecutada",
+  ).length;
+
+  // Una lista vacía se considera sin iniciar: no hay nada resuelto todavía.
+  const estado =
+    total === 0 || tareas.every((t) => t.estado === "sin_iniciar")
+      ? "sin_iniciar"
+      : resueltas === total
+        ? "finalizada"
+        : "en_curso";
+
+  return {
+    porcentaje: total > 0 ? Math.round((resueltas / total) * 100) : 0,
+    estado,
+    resueltas,
+    total,
+  };
+}
+
 export type ListaRoadmapVista = {
   id: string;
   nombre: string;

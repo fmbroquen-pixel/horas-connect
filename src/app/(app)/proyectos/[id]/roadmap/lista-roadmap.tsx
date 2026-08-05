@@ -2,10 +2,15 @@
 
 import { useId, useRef, useState } from "react";
 import { duplicarLista, eliminarLista, renombrarLista } from "./actions";
-import { GRID_ROADMAP, type ListaRoadmapVista } from "./constantes";
+import {
+  COLOR_ESTADO,
+  ETIQUETA_ESTADO,
+  GRID_ROADMAP,
+  progresoLista,
+  type ListaRoadmapVista,
+} from "./constantes";
 import { FilaTareaRoadmap } from "./fila-tarea";
 import { NuevaTareaBoton } from "./nueva-tarea-boton";
-import { formatHorasHsMin } from "@/lib/horas";
 import { BTN_ICON_SM } from "@/lib/ui";
 import {
   BotonEditarIcono,
@@ -31,6 +36,10 @@ export function ListaRoadmapCard({
   const [abierta, setAbierta] = useState(false);
   const [renombrando, setRenombrando] = useState(false);
   const idContenido = useId();
+
+  // Avance y estado se derivan de las tareas en cada render: cualquier cambio
+  // (editar un estado, agregar o borrar una tarea) los actualiza solo.
+  const avance = progresoLista(lista.tareas);
 
   const ids = lista.tareas.map((t) => t.id);
   const seleccionadas = ids.filter((id) => sel.has(id)).length;
@@ -81,12 +90,39 @@ export function ListaRoadmapCard({
           </>
         )}
 
-        <span className="ml-auto flex items-center gap-3 text-xs text-dc-muted">
-          <span title="Horas estimadas de la lista">
-            {formatHorasHsMin(lista.horasEstimadas)} planificadas
+        <span className="ml-auto flex items-center gap-3">
+          <span className="flex items-center gap-1.5 text-xs text-dc-muted">
+            <span
+              aria-hidden
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: COLOR_ESTADO[avance.estado] }}
+            />
+            {ETIQUETA_ESTADO[avance.estado]}
           </span>
-          <span title="Horas de las tareas finalizadas">
-            {formatHorasHsMin(lista.horasEntregadas)} entregadas
+
+          <span
+            className="flex items-center gap-2"
+            title={`${avance.resueltas} de ${avance.total} tarea(s) resueltas (finalizadas o no ejecutadas)`}
+          >
+            <span
+              role="progressbar"
+              aria-valuenow={avance.porcentaje}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Avance de ${lista.nombre}`}
+              className="block h-1.5 w-24 overflow-hidden rounded-full bg-dc-line sm:w-32"
+            >
+              <span
+                className="block h-full rounded-full transition-[width] duration-300"
+                style={{
+                  width: `${avance.porcentaje}%`,
+                  backgroundColor: COLOR_ESTADO[avance.estado],
+                }}
+              />
+            </span>
+            <span className="w-9 text-right text-xs tabular-nums text-dc-muted">
+              {avance.porcentaje}%
+            </span>
           </span>
         </span>
 
