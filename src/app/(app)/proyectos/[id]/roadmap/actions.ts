@@ -13,6 +13,7 @@ import {
   isoDesdeFecha,
 } from "@/lib/dias-habiles";
 import { PLANTILLAS, getTareasEnOrden, resecuenciar } from "@/lib/roadmap";
+import { sincronizarCategorias } from "@/lib/categorias-tarea";
 import { ETIQUETA_ESTADO } from "./constantes";
 import type { EstadoTareaRoadmap } from "@/generated/prisma/client";
 
@@ -32,6 +33,14 @@ function revalidar() {
   revalidatePath("/proyectos", "layout");
   revalidatePath("/timetracker");
   revalidatePath("/dashboard");
+}
+
+// Todo cambio que pueda estrenar un par (lista, tarea) actualiza el catálogo
+// de categorías de Time Tracking antes de revalidar, para que la opción nueva
+// ya esté disponible en el desplegable.
+async function sincronizarYRevalidar(clienteId: string) {
+  await sincronizarCategorias(clienteId);
+  revalidar();
 }
 
 async function requireAcceso(clienteId: string) {
@@ -115,6 +124,9 @@ export async function crearLista(
     data: {
       clienteId,
       nombre: parsed.data,
+      // Se recuerda de qué plantilla salió aunque la lista se llame distinto:
+      // es lo que agrupa sus tareas bajo una única categoría.
+      plantilla: plantilla?.nombre ?? null,
       orden: (ultima?.orden ?? -1) + 1,
     },
   });
@@ -137,7 +149,7 @@ export async function crearLista(
   }
 
   await resecuenciar(clienteId, await anclaAntesDeLista(clienteId, lista.id));
-  revalidar();
+  await sincronizarYRevalidar(clienteId);
   return {};
 }
 
@@ -156,7 +168,9 @@ export async function renombrarLista(
     where: { id: listaId },
     data: { nombre: parsed.data },
   });
-  revalidar();
+  // Una lista sin plantilla presta su nombre a la categoría: al renombrarla
+  // puede estrenar un par nuevo.
+  await sincronizarYRevalidar(lista.clienteId);
   return {};
 }
 
@@ -168,12 +182,8 @@ export async function eliminarLista(listaId: string): Promise<void> {
   // en la secuencia.
   const ancla = await anclaAntesDeLista(lista.clienteId, listaId);
 
-  // Las horas ya cargadas contra tareas de esta lista no se borran: pierden
-  // la referencia y quedan como horas del proyecto sin tarea asignada.
-  await prisma.registroHoras.updateMany({
-    where: { tarea: { listaId } },
-    data: { tareaId: null },
-  });
+  // Las horas cargadas no se tocan: apuntan a una CATEGORÍA, que sobrevive a
+  // la lista. El historial sigue clasificado aunque el plan cambie.
   await prisma.listaRoadmap.delete({ where: { id: listaId } });
 
   await resecuenciar(lista.clienteId, ancla);
@@ -200,6 +210,7 @@ export async function duplicarLista(listaId: string): Promise<void> {
     data: {
       clienteId: lista.clienteId,
       nombre: `${lista.nombre} (copia)`,
+      plantilla: lista.plantilla,
       orden: (ultima?.orden ?? -1) + 1,
     },
   });
@@ -223,7 +234,7 @@ export async function duplicarLista(listaId: string): Promise<void> {
     lista.clienteId,
     await anclaAntesDeLista(lista.clienteId, copia.id),
   );
-  revalidar();
+  await sincronizarYRevalidar(lista.clienteId);
 }
 
 // ── Tareas ────────────────────────────────────────────────────────────────
@@ -307,7 +318,7 @@ export async function crearTarea(
 
   // La tarea nueva se suma al final de su lista y arrastra a las siguientes.
   await resecuenciar(lista.clienteId, await anclaPrevia(lista.clienteId, tarea.id));
-  revalidar();
+  await sincronizarYRevalidar(lista.clienteId);
   return {};
 }
 
@@ -337,7 +348,7 @@ export async function actualizarCampoTarea(
       where: { id: tareaId },
       data: { nombre: parsed.data },
     });
-    revalidar();
+    await sincronizarYRevalidar(tarea.lista.clienteId);
     return {};
   }
 
@@ -461,10 +472,6 @@ export async function eliminarTareas(ids: string[]): Promise<void> {
     anclas.set(clienteId, i > 0 ? orden[i - 1].id : undefined);
   }
 
-  await prisma.registroHoras.updateMany({
-    where: { tareaId: { in: idsValidos } },
-    data: { tareaId: null },
-  });
   await prisma.tareaRoadmap.deleteMany({ where: { id: { in: idsValidos } } });
 
   for (const clienteId of clientes) {
@@ -482,10 +489,7 @@ export async function eliminarTarea(tareaId: string): Promise<void> {
   // secuencia y no se podría ubicar su anterior.
   const ancla = await anclaPrevia(clienteId, tareaId);
 
-  await prisma.registroHoras.updateMany({
-    where: { tareaId },
-    data: { tareaId: null },
-  });
+  // Las horas cargadas no se tocan: apuntan a una categoría, no a esta tarea.
   await prisma.tareaRoadmap.delete({ where: { id: tareaId } });
 
   await resecuenciar(clienteId, ancla);

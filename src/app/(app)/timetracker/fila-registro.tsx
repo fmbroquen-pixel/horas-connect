@@ -10,7 +10,7 @@ import {
   CeldaOpciones,
   CeldaSoloLectura,
 } from "@/components/tabla/celda-editable";
-import type { OpcionSelect, RegistroFila, TareasPorCliente } from "./tipos";
+import type { OpcionCategoria, OpcionSelect, RegistroFila } from "./tipos";
 import { BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 
 const OPCIONES_OWNERSHIP = [
@@ -34,18 +34,17 @@ function mostrarFecha(iso: string): string {
 export function FilaRegistro({
   registro,
   proyectos,
-  tareasPorCliente,
+  categorias,
   seleccionado,
   onToggle,
 }: {
   registro: RegistroFila;
   proyectos: OpcionSelect[];
-  tareasPorCliente: TareasPorCliente;
+  categorias: OpcionCategoria[];
   seleccionado: boolean;
   onToggle: (id: string) => void;
 }) {
   const editable = registro.editable;
-  const tareas = tareasPorCliente[registro.clienteId] ?? [];
 
   const guardar = (campo: Parameters<typeof actualizarCampoRegistro>[1]) =>
     async (valor: string) => actualizarCampoRegistro(registro.id, campo, valor);
@@ -84,14 +83,14 @@ export function FilaRegistro({
         />
 
         <CeldaOpciones
-          valor={registro.tareaId}
-          opciones={tareas.map((t) => ({ value: t.id, label: t.nombre }))}
-          onGuardar={guardar("tareaId")}
+          valor={registro.categoriaId}
+          opciones={categorias.map((c) => ({ value: c.id, label: c.nombre }))}
+          onGuardar={guardar("categoriaId")}
           ariaLabel="Tarea"
-          // Registros anteriores al Roadmap: sin tareaId, pero con la etiqueta
-          // de su etapa vieja para que el historial se siga leyendo.
-          etiqueta={registro.tareaId ? undefined : registro.tareaNombre}
-          placeholder={tareas.length === 0 ? "Sin tareas" : "Elegí una tarea"}
+          // Registros anteriores al catálogo: sin categoría, pero con la
+          // etiqueta de su clasificación previa para no perder el historial.
+          etiqueta={registro.categoriaId ? undefined : registro.categoriaNombre}
+          placeholder="Elegí una tarea"
           editable={editable}
         />
 

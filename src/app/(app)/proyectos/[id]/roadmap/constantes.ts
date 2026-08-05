@@ -2,11 +2,13 @@
 // que el encabezado de la tabla, que vive en un Server Component, reciba el
 // string de la grilla y no una referencia de cliente.
 
+// La clave `finalizada` es el valor del enum en la base y no se toca: cambiar
+// solo la etiqueta deja intactos todos los registros ya cargados.
 export const ETIQUETA_ESTADO: Record<string, string> = {
   sin_iniciar: "Sin iniciar",
   en_curso: "En curso",
   no_ejecutada: "No ejecutada",
-  finalizada: "Finalizada",
+  finalizada: "Finalizado",
 };
 
 // Fuera de la paleta dc-* (que no tiene verde/rojo puros), igual que el

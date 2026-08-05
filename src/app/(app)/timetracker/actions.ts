@@ -12,7 +12,7 @@ import type { Modalidad, Ownership } from "@/generated/prisma/client";
 const RegistroSchema = z.object({
   fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Fecha inválida." }),
   clienteId: z.string().min(1, { error: "Elegí un cliente." }),
-  tareaId: z.string().min(1, { error: "Elegí una tarea." }),
+  categoriaId: z.string().min(1, { error: "Elegí una tarea." }),
   ownership: z.enum(["owner", "backup"], { error: "Elegí el ownership." }),
   modalidad: z.enum(["presencial", "virtual"], { error: "Elegí la modalidad." }),
   horas: z.string().min(1, { error: "Cargá las horas." }),
@@ -23,7 +23,7 @@ const RegistroSchema = z.object({
 export type CampoRegistro =
   | "fecha"
   | "clienteId"
-  | "tareaId"
+  | "categoriaId"
   | "ownership"
   | "modalidad"
   | "horas";
@@ -76,7 +76,7 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
   const parsed = RegistroSchema.safeParse({
     fecha: formData.get("fecha"),
     clienteId: formData.get("clienteId"),
-    tareaId: formData.get("tareaId"),
+    categoriaId: formData.get("categoriaId"),
     ownership: formData.get("ownership"),
     modalidad: formData.get("modalidad"),
     horas: formData.get("horas"),
@@ -105,17 +105,14 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
     return { error: "No tenés asignado ese cliente.", campo: "clienteId" as const };
   }
 
-  // La tarea tiene que pertenecer al Roadmap del cliente elegido: es lo que
-  // evita imputar horas de un proyecto contra el plan de otro.
-  const tarea = await prisma.tareaRoadmap.findFirst({
-    where: { id: parsed.data.tareaId, lista: { clienteId: parsed.data.clienteId } },
+  // La categoría es global (clasifica el tipo de actividad), así que solo
+  // hace falta que exista: no se valida contra el Roadmap del cliente.
+  const categoria = await prisma.categoriaTarea.findUnique({
+    where: { id: parsed.data.categoriaId },
     select: { id: true },
   });
-  if (!tarea) {
-    return {
-      error: "Esa tarea no pertenece al Roadmap del cliente elegido.",
-      campo: "tareaId" as const,
-    };
+  if (!categoria) {
+    return { error: "Esa tarea no existe.", campo: "categoriaId" as const };
   }
 
   const tarifa = await resolverTarifa(
@@ -160,7 +157,7 @@ export async function crearRegistro(
     data: {
       fecha: d.fecha,
       clienteId: d.clienteId,
-      tareaId: d.tareaId,
+      categoriaId: d.categoriaId,
       usuarioId: destino.id, // worked_by
       horas: d.horas,
       modalidad: d.modalidad,
@@ -194,8 +191,8 @@ async function registroEditable(id: string, usuarioId: string, esAdmin: boolean)
 // Guardado de UN campo, disparado por la edición inline de la tabla. El resto
 // de los valores se leen del registro guardado y se vuelven a validar en
 // conjunto: así las reglas cruzadas (la tarifa depende de modalidad +
-// ownership, la tarea depende del cliente) siguen valiendo aunque el usuario
-// haya tocado una sola celda.
+// ownership, el cliente tiene que estar asignado) siguen valiendo aunque el
+// usuario haya tocado una sola celda.
 export async function actualizarCampoRegistro(
   id: string,
   campo: CampoRegistro,
@@ -208,26 +205,13 @@ export async function actualizarCampoRegistro(
   if (check.error || !check.registro) return { error: check.error };
   const registro = check.registro;
 
-  // Cambiar de cliente deja huérfana la tarea: pertenece al Roadmap del
-  // proyecto anterior. Se limpia y la celda Tarea queda vacía esperando una
-  // del proyecto nuevo, en vez de rechazar el cambio.
-  if (campo === "clienteId") {
-    const permitidos = await getProyectosPermitidos(registro.usuarioId);
-    if (!permitidos.some((c) => c.id === valor)) {
-      return { error: "No tenés asignado ese cliente.", campo: "clienteId" };
-    }
-    await prisma.registroHoras.update({
-      where: { id },
-      data: { clienteId: valor, tareaId: null },
-    });
-    revalidarHoras();
-    return {};
-  }
-
   const fd = new FormData();
   fd.set("fecha", campo === "fecha" ? valor : registro.fecha.toISOString().slice(0, 10));
-  fd.set("clienteId", registro.clienteId);
-  fd.set("tareaId", campo === "tareaId" ? valor : (registro.tareaId ?? ""));
+  fd.set("clienteId", campo === "clienteId" ? valor : registro.clienteId);
+  fd.set(
+    "categoriaId",
+    campo === "categoriaId" ? valor : (registro.categoriaId ?? ""),
+  );
   fd.set("ownership", campo === "ownership" ? valor : registro.ownership);
   fd.set("modalidad", campo === "modalidad" ? valor : registro.modalidad);
   fd.set("horas", campo === "horas" ? valor : formatHorasHsMin(Number(registro.horas)));
@@ -241,10 +225,7 @@ export async function actualizarCampoRegistro(
     data: {
       fecha: d.fecha,
       clienteId: d.clienteId,
-      tareaId: d.tareaId,
-      // Al reeditar un registro viejo, la etapa se retira: pasa a estar
-      // imputado contra una tarea del Roadmap y no contra el catálogo anterior.
-      etapaId: null,
+      categoriaId: d.categoriaId,
       horas: d.horas,
       modalidad: d.modalidad,
       ownership: d.ownership,
@@ -290,7 +271,7 @@ export async function eliminarRegistros(ids: string[]): Promise<void> {
   revalidarHoras();
 }
 
-export type CampoMasivo = "clienteId" | "tareaId" | "ownership" | "modalidad";
+export type CampoMasivo = "clienteId" | "categoriaId" | "ownership" | "modalidad";
 
 // Edición masiva: aplica un mismo valor a un campo en las filas
 // seleccionadas. Si el campo cambia la tarifa (modalidad/ownership), se
@@ -337,20 +318,13 @@ export async function editarRegistros(
   if (campo === "modalidad" && valor !== "presencial" && valor !== "virtual") {
     return { error: "Modalidad inválida." };
   }
-  if (campo === "tareaId") {
-    // Una tarea pertenece a un solo proyecto, así que solo tiene sentido
-    // aplicarla a filas de ese mismo cliente.
-    const tarea = await prisma.tareaRoadmap.findUnique({
+  if (campo === "categoriaId") {
+    // La categoría es global: se puede aplicar a filas de distintos clientes.
+    const categoria = await prisma.categoriaTarea.findUnique({
       where: { id: valor },
-      select: { lista: { select: { clienteId: true } } },
+      select: { id: true },
     });
-    if (!tarea) return { error: "Tarea inválida." };
-    if (filas.some((f) => f.clienteId !== tarea.lista.clienteId)) {
-      return {
-        error:
-          "Esa tarea es de otro proyecto. Seleccioná solo filas del cliente al que pertenece.",
-      };
-    }
+    if (!categoria) return { error: "Tarea inválida." };
   }
 
   const limite = limiteVentana();
@@ -360,17 +334,16 @@ export async function editarRegistros(
     if (!esAdmin && fila.fecha < limite) continue;
 
     if (campo === "clienteId") {
-      // Cambiar de cliente invalida la tarea: pertenecía al Roadmap del
-      // proyecto anterior, así que la fila queda sin tarea hasta que se le
-      // asigne una del proyecto nuevo.
+      // La categoría no se toca: clasifica el tipo de actividad y sigue
+      // valiendo aunque las horas se muevan a otro proyecto.
       await prisma.registroHoras.update({
         where: { id: fila.id },
-        data: { clienteId: valor, tareaId: null },
+        data: { clienteId: valor },
       });
-    } else if (campo === "tareaId") {
+    } else if (campo === "categoriaId") {
       await prisma.registroHoras.update({
         where: { id: fila.id },
-        data: { tareaId: valor, etapaId: null },
+        data: { categoriaId: valor },
       });
     } else {
       const modalidad = (campo === "modalidad" ? valor : fila.modalidad) as Modalidad;

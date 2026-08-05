@@ -4,7 +4,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
-import { getTareasPorCliente } from "@/lib/roadmap";
+import { getCategorias } from "@/lib/categorias-tarea";
 import { parseHorasHsMin } from "@/lib/horas";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
@@ -148,16 +148,12 @@ async function procesar(usuarioId: string, archivo: File) {
 
   const proyPorNombre = new Map(proyectos.map((p) => [normalizar(p.nombre), p]));
 
-  // Las tareas se resuelven dentro del cliente de cada fila: dos proyectos
-  // pueden tener tareas con el mismo nombre y no son intercambiables.
-  const tareasPorCliente = await getTareasPorCliente(proyectos.map((p) => p.id));
-  const tareaPorClienteYNombre = new Map<string, Map<string, string>>();
-  for (const [clienteId, tareas] of Object.entries(tareasPorCliente)) {
-    tareaPorClienteYNombre.set(
-      clienteId,
-      new Map(tareas.map((t) => [normalizar(t.nombre), t.id])),
-    );
-  }
+  // Las categorías son globales: la misma etiqueta "Lista — Tarea" vale para
+  // cualquier cliente, así que basta un único índice por nombre.
+  const categorias = await getCategorias();
+  const categoriaPorNombre = new Map(
+    categorias.map((c) => [normalizar(c.nombre), c.id]),
+  );
 
   const hoy = new Date();
   hoy.setHours(23, 59, 59, 999);
@@ -168,7 +164,7 @@ async function procesar(usuarioId: string, archivo: File) {
     select: {
       fecha: true,
       clienteId: true,
-      tareaId: true,
+      categoriaId: true,
       ownership: true,
       modalidad: true,
       horas: true,
@@ -177,7 +173,7 @@ async function procesar(usuarioId: string, archivo: File) {
   const claveExistente = new Set(
     existentes.map(
       (r) =>
-        `${r.fecha.toISOString().slice(0, 10)}|${r.clienteId}|${r.tareaId}|${r.ownership}|${r.modalidad}|${Number(r.horas)}`,
+        `${r.fecha.toISOString().slice(0, 10)}|${r.clienteId}|${r.categoriaId}|${r.ownership}|${r.modalidad}|${Number(r.horas)}`,
     ),
   );
   const clavesEnLote = new Set<string>();
@@ -186,7 +182,7 @@ async function procesar(usuarioId: string, archivo: File) {
   const validas: {
     fecha: Date;
     clienteId: string;
-    tareaId: string;
+    categoriaId: string;
     ownership: Ownership;
     modalidad: Modalidad;
     horas: number;
@@ -217,14 +213,10 @@ async function procesar(usuarioId: string, archivo: File) {
     if (!proyecto) errores.push("Falta el cliente");
     else if (!proy) errores.push("Cliente inexistente o no asignado");
 
-    // La tarea se busca dentro del Roadmap del cliente de esta misma fila.
-    const tareaId = proy
-      ? tareaPorClienteYNombre.get(proy.id)?.get(normalizar(tareaTexto))
-      : undefined;
+    // La categoría se busca en el catálogo global (formato "Lista — Tarea").
+    const categoriaId = categoriaPorNombre.get(normalizar(tareaTexto));
     if (!tareaTexto) errores.push("Falta la tarea");
-    else if (proy && !tareaId) {
-      errores.push("La tarea no está en el Roadmap de ese cliente");
-    }
+    else if (!categoriaId) errores.push("Tarea inexistente en el catálogo");
 
     const ownership: Ownership | null =
       ownershipRaw === "owner" || ownershipRaw === "titular"
@@ -252,8 +244,8 @@ async function procesar(usuarioId: string, archivo: File) {
     }
 
     // Duplicados (contra la base y dentro del mismo archivo).
-    if (errores.length === 0 && fechaISO && proy && tareaId && ownership && modalidad && horas !== null) {
-      const clave = `${fechaISO}|${proy.id}|${tareaId}|${ownership}|${modalidad}|${horas}`;
+    if (errores.length === 0 && fechaISO && proy && categoriaId && ownership && modalidad && horas !== null) {
+      const clave = `${fechaISO}|${proy.id}|${categoriaId}|${ownership}|${modalidad}|${horas}`;
       if (claveExistente.has(clave)) errores.push("Registro duplicado (ya existe)");
       else if (clavesEnLote.has(clave)) errores.push("Duplicado dentro del archivo");
       else clavesEnLote.add(clave);
@@ -270,11 +262,11 @@ async function procesar(usuarioId: string, archivo: File) {
       errores,
     });
 
-    if (errores.length === 0 && fechaISO && proy && tareaId && ownership && modalidad && horas !== null && tarifa !== undefined) {
+    if (errores.length === 0 && fechaISO && proy && categoriaId && ownership && modalidad && horas !== null && tarifa !== undefined) {
       validas.push({
         fecha: new Date(fechaISO + "T00:00:00Z"),
         clienteId: proy.id,
-        tareaId,
+        categoriaId,
         ownership,
         modalidad,
         horas,
@@ -349,7 +341,7 @@ export async function confirmarImportacion(
     data: r.validas.map((v) => ({
       fecha: v.fecha,
       clienteId: v.clienteId,
-      tareaId: v.tareaId,
+      categoriaId: v.categoriaId,
       usuarioId: destino.id, // worked_by
       horas: v.horas,
       modalidad: v.modalidad,

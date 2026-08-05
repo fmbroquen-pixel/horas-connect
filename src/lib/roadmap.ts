@@ -7,6 +7,7 @@ import {
   hoyUTC,
   siguienteDiaHabil,
 } from "@/lib/dias-habiles";
+import { sincronizarCategorias } from "@/lib/categorias-tarea";
 import type { Cliente } from "@/generated/prisma/client";
 
 // ── Plantillas por defecto ────────────────────────────────────────────────
@@ -59,6 +60,11 @@ export type TareaPlantilla = {
 
 export type Plantilla = { nombre: string; tareas: TareaPlantilla[] };
 
+// Una lista instanciada en un proyecto: conserva de qué plantilla salió, que
+// es lo que agrupa las categorías de Time Tracking ("Tablero Q1" y
+// "Tablero Q3" comparten la categoría "Tablero Trimestral").
+export type ListaInstanciada = Plantilla & { plantilla: string | null };
+
 function desdeXlsx(filas: FilaXlsx[]): TareaPlantilla[] {
   return filas.map(([nombre, inicioISO, finISO, horas]) => ({
     nombre,
@@ -92,11 +98,14 @@ export function cantidadTrimestres(duracionMeses: number | null): number {
 }
 
 // Plan sugerido para un proyecto: Onboarding + un tablero por trimestre.
-export function listasPorDefecto(duracionMeses: number | null): Plantilla[] {
+export function listasPorDefecto(duracionMeses: number | null): ListaInstanciada[] {
   return [
-    PLANTILLA_ONBOARDING,
+    { ...PLANTILLA_ONBOARDING, plantilla: PLANTILLA_ONBOARDING.nombre },
     ...Array.from({ length: cantidadTrimestres(duracionMeses) }, (_, i) => ({
+      // El nombre lleva el trimestre; la plantilla, no: son la misma clase
+      // de actividad repetida.
       nombre: `Tablero Q${i + 1}`,
+      plantilla: PLANTILLA_TABLERO.nombre,
       tareas: PLANTILLA_TABLERO.tareas,
     })),
   ];
@@ -218,7 +227,12 @@ export async function asegurarRoadmap(
 
     for (const [i, plantilla] of plantillas.entries()) {
       const lista = await tx.listaRoadmap.create({
-        data: { clienteId: cliente.id, nombre: plantilla.nombre, orden: i },
+        data: {
+          clienteId: cliente.id,
+          nombre: plantilla.nombre,
+          plantilla: plantilla.plantilla,
+          orden: i,
+        },
       });
       await tx.tareaRoadmap.createMany({
         data: plantilla.tareas.map((t, j) => ({
@@ -239,71 +253,7 @@ export async function asegurarRoadmap(
       data: { roadmapCreadoEn: new Date() },
     });
   });
-}
 
-// ── Etiquetas de tarea (Time Tracking) ────────────────────────────────────
-
-export type OpcionTarea = { id: string; nombre: string };
-
-type TareaConLista = {
-  id: string;
-  nombre: string;
-  fechaInicio: Date;
-  lista: { nombre: string };
-};
-
-// Etiqueta canónica de una tarea, usada en el desplegable de Time Tracking y
-// en los archivos de importación/exportación. Lleva la lista adelante porque
-// los nombres se repiten entre listas ("Office Hours" está en cada tablero).
-export function etiquetaTarea(lista: string, tarea: string): string {
-  return `${lista} · ${tarea}`;
-}
-
-// Opciones listas para un desplegable. Cuando un mismo nombre se repite
-// dentro de la misma lista —el caso de "Office Hours", que aparece cuatro
-// veces por tablero— se agrega la fecha de inicio para poder distinguirlas.
-export function opcionesTarea(tareas: TareaConLista[]): OpcionTarea[] {
-  const etiquetas = tareas.map((t) => etiquetaTarea(t.lista.nombre, t.nombre));
-  const repeticiones = new Map<string, number>();
-  for (const e of etiquetas) repeticiones.set(e, (repeticiones.get(e) ?? 0) + 1);
-
-  return tareas.map((t, i) => {
-    const etiqueta = etiquetas[i];
-    const fecha = t.fechaInicio.toLocaleDateString("es-AR", { timeZone: "UTC" });
-    return {
-      id: t.id,
-      nombre:
-        (repeticiones.get(etiqueta) ?? 0) > 1
-          ? `${etiqueta} (${fecha})`
-          : etiqueta,
-    };
-  });
-}
-
-// Tareas del roadmap de varios clientes, agrupadas por cliente y en el orden
-// de ejecución. Es lo que alimenta el desplegable de Tarea de Time Tracking,
-// que cambia según el cliente elegido.
-export async function getTareasPorCliente(
-  clienteIds: string[],
-): Promise<Record<string, OpcionTarea[]>> {
-  if (clienteIds.length === 0) return {};
-
-  const tareas = await prisma.tareaRoadmap.findMany({
-    where: { lista: { clienteId: { in: clienteIds } } },
-    orderBy: [
-      { lista: { orden: "asc" } },
-      { lista: { createdAt: "asc" } },
-      { orden: "asc" },
-      { createdAt: "asc" },
-    ],
-    include: { lista: { select: { nombre: true, clienteId: true } } },
-  });
-
-  const porCliente: Record<string, TareaConLista[]> = {};
-  for (const t of tareas) {
-    (porCliente[t.lista.clienteId] ??= []).push(t);
-  }
-  return Object.fromEntries(
-    Object.entries(porCliente).map(([id, ts]) => [id, opcionesTarea(ts)]),
-  );
+  // El plan recién sembrado estrena las categorías de Time Tracking.
+  await sincronizarCategorias(cliente.id);
 }

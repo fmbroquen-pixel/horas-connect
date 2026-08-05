@@ -6,7 +6,7 @@ import {
   getUsuariosQueReportan,
   resolverUsuarioDestino,
 } from "@/lib/registrar-para";
-import { getTareasPorCliente } from "@/lib/roadmap";
+import { getCategorias, etiquetaCategoria } from "@/lib/categorias-tarea";
 import { formatHorasHsMin } from "@/lib/horas";
 import { hoyISO, rangoDefault30 } from "@/lib/formato";
 import { FiltroPopover } from "@/components/filtro-popover";
@@ -53,11 +53,11 @@ export default async function TimetrackerPage({
     ? params.proyecto
     : undefined;
 
-  const [tareasPorCliente, tarifasVigentes, registros, usuariosQueReportan] =
+  const [categorias, tarifasVigentes, registros, usuariosQueReportan] =
     await Promise.all([
-      // Las tareas del Roadmap de cada cliente permitido: el desplegable de
-      // Tarea se arma con las del cliente que se elija.
-      getTareasPorCliente(proyectos.map((p) => p.id)),
+      // Catálogo global de categorías: clasifica el tipo de actividad, así
+      // que el desplegable no depende del cliente elegido.
+      getCategorias(),
       prisma.tarifa.findMany({
         where: { usuarioId: destino.id, vigenteHasta: null },
       }),
@@ -73,7 +73,10 @@ export default async function TimetrackerPage({
         },
         orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
         take: 500,
-        include: { etapa: { select: { etiqueta: true } } },
+        include: {
+          etapa: { select: { etiqueta: true } },
+          tarea: { select: { nombre: true, lista: { select: { nombre: true } } } },
+        },
       }),
       esAdmin ? getUsuariosQueReportan() : Promise.resolve([]),
     ]);
@@ -87,16 +90,14 @@ export default async function TimetrackerPage({
   limite.setDate(limite.getDate() - DIAS_VENTANA_EDICION);
   limite.setHours(0, 0, 0, 0);
 
-  // Etiqueta a mostrar en la columna Tarea. Si el registro ya está imputado a
-  // una tarea del Roadmap se usa su nombre; si es anterior al Roadmap, se
-  // muestra la etapa vieja para que el historial no quede en blanco.
-  const nombreTarea = (clienteId: string, tareaId: string | null, etapa?: string) => {
-    if (tareaId) {
-      const opcion = tareasPorCliente[clienteId]?.find((t) => t.id === tareaId);
-      if (opcion) return opcion.nombre;
-    }
-    return etapa ?? "—";
-  };
+  // Etiqueta de la columna Tarea. Con categoría se usa su nombre; si el
+  // registro es anterior al catálogo, se cae a su clasificación previa (la
+  // tarea del Roadmap, o la etapa más vieja aún) para que el historial no
+  // quede en blanco.
+  const etiquetaPrevia = (r: (typeof registros)[number]) =>
+    r.tarea
+      ? etiquetaCategoria(r.tarea.lista.nombre, r.tarea.nombre)
+      : (r.etapa?.etiqueta ?? "—");
 
   const filas: RegistroFila[] = registros
     .filter((r) => r.ownership !== "valor_cero")
@@ -104,8 +105,9 @@ export default async function TimetrackerPage({
       id: r.id,
       fecha: r.fecha.toISOString().slice(0, 10),
       clienteId: r.clienteId,
-      tareaId: r.tareaId ?? "",
-      tareaNombre: nombreTarea(r.clienteId, r.tareaId, r.etapa?.etiqueta),
+      categoriaId: r.categoriaId ?? "",
+      categoriaNombre:
+        categorias.find((c) => c.id === r.categoriaId)?.nombre ?? etiquetaPrevia(r),
       ownership: r.ownership as "owner" | "backup",
       modalidad: r.modalidad as "presencial" | "virtual",
       horas: formatHorasHsMin(Number(r.horas)),
@@ -178,7 +180,7 @@ export default async function TimetrackerPage({
           <BarraCaptura
             key={destino.id}
             proyectos={opcionesProyecto}
-            tareasPorCliente={tareasPorCliente}
+            categorias={categorias}
             tarifas={tarifas}
             usuarioId={esOtroUsuario ? destino.id : ""}
           />
@@ -191,7 +193,7 @@ export default async function TimetrackerPage({
           key={destino.id}
           filas={filas}
           proyectos={opcionesProyecto}
-          tareasPorCliente={tareasPorCliente}
+          categorias={categorias}
         />
       </div>
     </div>

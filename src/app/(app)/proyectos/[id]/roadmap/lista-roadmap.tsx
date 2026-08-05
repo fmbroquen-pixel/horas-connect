@@ -47,19 +47,27 @@ export function ListaRoadmapCard({
 
   return (
     <section className="dc-panel overflow-hidden">
-      <header className="flex flex-wrap items-center gap-2 border-b border-dc-line px-4 py-3">
+      {/* Todo el header pliega y despliega. Los controles que hacen otra cosa
+          (renombrar, duplicar, eliminar) frenan la propagación para no
+          arrastrar el desplegable con ellos. */}
+      <header
+        onClick={() => setAbierta((v) => !v)}
+        className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-2 border-b border-dc-line px-4 py-3 transition hover:bg-dc-card/60"
+      >
         {renombrando ? (
-          <FormNombre lista={lista} onCerrar={() => setRenombrando(false)} />
+          <span onClick={(e) => e.stopPropagation()}>
+            <FormNombre lista={lista} onCerrar={() => setRenombrando(false)} />
+          </span>
         ) : (
           <>
-            {/* El plegado es el propio título: objetivo de clic grande y con
-                el estado anunciado para lectores de pantalla. */}
+            {/* Sin onClick propio: el click (y Enter/Espacio, que en un
+                <button> emiten click) burbujea al header y pliega una sola
+                vez. Queda accesible por teclado y anuncia su estado. */}
             <button
               type="button"
-              onClick={() => setAbierta((v) => !v)}
               aria-expanded={abierta}
               aria-controls={idContenido}
-              className="flex items-center gap-2 rounded-lg py-0.5 pr-2 text-left transition hover:text-dc-peri focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40"
+              className="flex items-center gap-2 rounded-lg text-left transition hover:text-dc-peri focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -75,23 +83,28 @@ export function ListaRoadmapCard({
               >
                 <path d="M6 9l6 6 6-6" />
               </svg>
-              <h3 className="font-display text-sm uppercase text-dc-text">
+              <h3 className="font-display text-sm uppercase leading-none text-dc-text">
                 {lista.nombre}
               </h3>
             </button>
-            <span className="text-xs text-dc-muted">
+            <span className="text-xs leading-none text-dc-muted">
               {lista.tareas.length} tarea(s)
               {seleccionadas > 0 && ` · ${seleccionadas} seleccionada(s)`}
             </span>
-            <BotonEditarIcono
-              onClick={() => setRenombrando(true)}
-              label="Renombrar lista"
-            />
+            <span onClick={(e) => e.stopPropagation()}>
+              <BotonEditarIcono
+                onClick={() => setRenombrando(true)}
+                label="Renombrar lista"
+              />
+            </span>
           </>
         )}
 
+        {/* Estado + avance: todo sobre la misma línea óptica (items-center y
+            leading-none), para que el punto, el texto, la barra y el
+            porcentaje no queden escalonados. */}
         <span className="ml-auto flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-xs text-dc-muted">
+          <span className="flex items-center gap-1.5 text-xs leading-none text-dc-muted">
             <span
               aria-hidden
               className="h-2 w-2 shrink-0 rounded-full"
@@ -110,7 +123,7 @@ export function ListaRoadmapCard({
               aria-valuemin={0}
               aria-valuemax={100}
               aria-label={`Avance de ${lista.nombre}`}
-              className="block h-1.5 w-24 overflow-hidden rounded-full bg-dc-line sm:w-32"
+              className="block h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-dc-line sm:w-32"
             >
               <span
                 className="block h-full rounded-full transition-[width] duration-300"
@@ -120,13 +133,16 @@ export function ListaRoadmapCard({
                 }}
               />
             </span>
-            <span className="w-9 text-right text-xs tabular-nums text-dc-muted">
+            <span className="w-9 text-right text-xs leading-none tabular-nums text-dc-muted">
               {avance.porcentaje}%
             </span>
           </span>
         </span>
 
-        <span className="flex items-center gap-1">
+        <span
+          onClick={(e) => e.stopPropagation()}
+          className="flex items-center gap-1"
+        >
           <BotonIcono
             label="Duplicar lista"
             onClick={() => duplicarLista(lista.id)}

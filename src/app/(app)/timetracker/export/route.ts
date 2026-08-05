@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
-import { etiquetaTarea } from "@/lib/roadmap";
+import { etiquetaCategoria } from "@/lib/categorias-tarea";
 import { rangoDefault30, esISO } from "@/lib/formato";
 
 const ETIQUETA_OWNERSHIP: Record<string, string> = {
@@ -73,6 +73,7 @@ export async function GET(request: NextRequest) {
     include: {
       cliente: true,
       etapa: true,
+      categoria: true,
       tarea: { include: { lista: { select: { nombre: true } } } },
     },
     orderBy: [{ fecha: "asc" }, { createdAt: "asc" }],
@@ -81,9 +82,13 @@ export async function GET(request: NextRequest) {
   const filas = registros.map((r) => [
     fmtFecha(r.fecha),
     r.cliente.nombre,
-    // Registros anteriores al Roadmap: se exporta su etapa vieja para no
-    // perder el dato, aunque ya no sea un valor válido al reimportar.
-    r.tarea ? etiquetaTarea(r.tarea.lista.nombre, r.tarea.nombre) : (r.etapa?.etiqueta ?? ""),
+    // Registros anteriores al catálogo: se exporta su clasificación previa
+    // para no perder el dato, aunque ya no sea un valor válido al reimportar.
+    r.categoria
+      ? etiquetaCategoria(r.categoria.lista, r.categoria.nombre)
+      : r.tarea
+        ? etiquetaCategoria(r.tarea.lista.nombre, r.tarea.nombre)
+        : (r.etapa?.etiqueta ?? ""),
     ETIQUETA_OWNERSHIP[r.ownership] ?? r.ownership,
     Number(r.horas), // número decimal para permitir cálculos en la planilla
     ETIQUETA_MODALIDAD[r.modalidad] ?? r.modalidad,

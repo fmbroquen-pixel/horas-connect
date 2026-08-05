@@ -6,16 +6,16 @@ import { FilaRegistro } from "./fila-registro";
 import { GRID_TIMETRACKER } from "./grid";
 import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 import { Dropdown } from "@/components/dropdown";
-import type { OpcionSelect, RegistroFila, TareasPorCliente } from "./tipos";
+import type { OpcionCategoria, OpcionSelect, RegistroFila } from "./tipos";
 
 export function TablaRegistros({
   filas,
   proyectos,
-  tareasPorCliente,
+  categorias,
 }: {
   filas: RegistroFila[];
   proyectos: OpcionSelect[];
-  tareasPorCliente: TareasPorCliente;
+  categorias: OpcionCategoria[];
 }) {
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirmar, setConfirmar] = useState(false);
@@ -28,22 +28,6 @@ export function TablaRegistros({
 
   const editables = filas.filter((f) => f.editable);
   const todasSel = editables.length > 0 && sel.size === editables.length;
-
-  // Las tareas son de un solo proyecto, así que el cambio masivo de Tarea
-  // solo se ofrece cuando todo lo seleccionado es del mismo cliente.
-  const clientesSel = new Set(
-    filas.filter((f) => sel.has(f.id)).map((f) => f.clienteId),
-  );
-  const clienteUnico = clientesSel.size === 1 ? [...clientesSel][0] : "";
-  const tareasSel = clienteUnico ? (tareasPorCliente[clienteUnico] ?? []) : [];
-
-  // Si la selección pasa a mezclar clientes con "Tarea" ya elegida, el campo
-  // deja de ser aplicable. Se deriva en el render en vez de corregir el estado
-  // desde un efecto, que dispararía un render en cascada.
-  const campoEfectivo: CampoMasivo =
-    campo === "tareaId" && !clienteUnico ? "clienteId" : campo;
-  const valorEfectivo =
-    campoEfectivo === campo ? valor : (proyectos[0]?.id ?? "");
 
   const toggle = (id: string) =>
     setSel((s) => {
@@ -72,14 +56,14 @@ export function TablaRegistros({
     setCampo(c);
     // Valor por defecto según el campo elegido.
     if (c === "clienteId") setValor(proyectos[0]?.id ?? "");
-    else if (c === "tareaId") setValor(tareasSel[0]?.id ?? "");
+    else if (c === "categoriaId") setValor(categorias[0]?.id ?? "");
     else if (c === "ownership") setValor("owner");
     else setValor("presencial");
   };
 
   const aplicarEdicion = () =>
     start(async () => {
-      const r = await editarRegistros([...sel], campoEfectivo, valorEfectivo);
+      const r = await editarRegistros([...sel], campo, valor);
       if (!r.error) limpiar();
     });
 
@@ -117,12 +101,11 @@ export function TablaRegistros({
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <span className="text-xs text-dc-muted">Cambiar</span>
               <Dropdown
-                value={campoEfectivo}
+                value={campo}
                 onChange={(v) => cambiarCampo(v as CampoMasivo)}
                 options={[
                   { value: "clienteId", label: "Cliente" },
-                  // Solo tiene sentido con filas de un mismo proyecto.
-                  ...(clienteUnico ? [{ value: "tareaId", label: "Tarea" }] : []),
+                  { value: "categoriaId", label: "Tarea" },
                   { value: "ownership", label: "Ownership" },
                   { value: "modalidad", label: "Modalidad" },
                 ]}
@@ -130,27 +113,27 @@ export function TablaRegistros({
                 ariaLabel="Campo a cambiar"
               />
               <span className="text-xs text-dc-muted">a</span>
-              {campoEfectivo === "clienteId" && (
+              {campo === "clienteId" && (
                 <Dropdown
-                  value={valorEfectivo}
+                  value={valor}
                   onChange={setValor}
                   options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
                   className="w-44"
                   ariaLabel="Cliente"
                 />
               )}
-              {campoEfectivo === "tareaId" && (
+              {campo === "categoriaId" && (
                 <Dropdown
-                  value={valorEfectivo}
+                  value={valor}
                   onChange={setValor}
-                  options={tareasSel.map((t) => ({ value: t.id, label: t.nombre }))}
-                  className="w-56"
+                  options={categorias.map((c) => ({ value: c.id, label: c.nombre }))}
+                  className="w-64"
                   ariaLabel="Tarea"
                 />
               )}
-              {campoEfectivo === "ownership" && (
+              {campo === "ownership" && (
                 <Dropdown
-                  value={valorEfectivo}
+                  value={valor}
                   onChange={setValor}
                   options={[
                     { value: "owner", label: "Owner" },
@@ -160,9 +143,9 @@ export function TablaRegistros({
                   ariaLabel="Ownership"
                 />
               )}
-              {campoEfectivo === "modalidad" && (
+              {campo === "modalidad" && (
                 <Dropdown
-                  value={valorEfectivo}
+                  value={valor}
                   onChange={setValor}
                   options={[
                     { value: "presencial", label: "Presencial" },
@@ -172,7 +155,7 @@ export function TablaRegistros({
                   ariaLabel="Modalidad"
                 />
               )}
-              <button type="button" onClick={aplicarEdicion} disabled={pending || !valorEfectivo} className={BTN_PRIMARY_SM}>
+              <button type="button" onClick={aplicarEdicion} disabled={pending || !valor} className={BTN_PRIMARY_SM}>
                 {pending ? "Aplicando…" : "Aplicar a seleccionadas"}
               </button>
             </div>
@@ -209,7 +192,7 @@ export function TablaRegistros({
                 key={f.id}
                 registro={f}
                 proyectos={proyectos}
-                tareasPorCliente={tareasPorCliente}
+                categorias={categorias}
                 seleccionado={sel.has(f.id)}
                 onToggle={toggle}
               />

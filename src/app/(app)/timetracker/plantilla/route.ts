@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
-import { getTareasPorCliente } from "@/lib/roadmap";
+import { getCategorias } from "@/lib/categorias-tarea";
 import { hoyISO } from "@/lib/formato";
 
 // Plantilla de importación: solo las columnas editables (USD/Hora y USD Total
@@ -36,14 +36,10 @@ export async function GET(request: NextRequest) {
   const proyectos = await getProyectosPermitidos(destinoRes.destino.id);
   const nombresProyecto = proyectos.map((p) => p.nombre);
 
-  // El desplegable de Tarea junta las tareas de todos los clientes del
-  // mentor: Excel no puede encadenar una lista a lo que se elija en la
-  // columna Cliente. Que la tarea corresponda al cliente de la fila se valida
-  // al importar, donde sí se conoce el cliente.
-  const tareasPorCliente = await getTareasPorCliente(proyectos.map((p) => p.id));
-  const nombresTarea = [
-    ...new Set(Object.values(tareasPorCliente).flatMap((ts) => ts.map((t) => t.nombre))),
-  ].sort((a, b) => a.localeCompare(b));
+  // El desplegable de Tarea es el catálogo de categorías: clasifica el tipo
+  // de actividad, así que es el mismo para cualquier cliente de la planilla.
+  const categorias = await getCategorias();
+  const nombresTarea = categorias.map((c) => c.nombre);
 
   const wb = new ExcelJS.Workbook();
 
@@ -71,7 +67,7 @@ export async function GET(request: NextRequest) {
   const NOTAS = [
     "Acepta AAAA-MM-DD o DD/MM/AAAA.",
     "Seleccioná un cliente existente de la lista.",
-    "Seleccioná una tarea del Roadmap del cliente de esta fila.",
+    "Seleccioná una tarea existente de la lista.",
     "Seleccioná un ownership existente de la lista.",
     "Acepta formato hora:minuto (ej. 1:30) o decimal (ej. 1,5).",
     "Seleccioná una modalidad existente de la lista.",
@@ -80,14 +76,10 @@ export async function GET(request: NextRequest) {
     ws.getCell(1, i + 1).note = texto;
   });
 
-  // Fila de ejemplo con una tarea que sí es del primer cliente listado.
-  const tareasDelPrimero = proyectos[0]
-    ? (tareasPorCliente[proyectos[0].id] ?? [])
-    : [];
   ws.addRow([
     hoyISO(),
     nombresProyecto[0] ?? "",
-    tareasDelPrimero[0]?.nombre ?? "",
+    nombresTarea[0] ?? "",
     OWNERSHIP[0],
     "1:30",
     MODALIDAD[0],

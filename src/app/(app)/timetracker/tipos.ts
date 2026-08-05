@@ -2,9 +2,9 @@
 
 export type OpcionSelect = { id: string; nombre: string };
 
-// Tareas del Roadmap disponibles por cliente: el desplegable de Tarea cambia
-// según el cliente elegido, porque cada proyecto tiene su propio plan.
-export type TareasPorCliente = Record<string, OpcionSelect[]>;
+// Catálogo de categorías de tarea (lista — tarea). Es global: clasifica el
+// TIPO de actividad, así que no depende del cliente elegido.
+export type OpcionCategoria = OpcionSelect;
 
 // Tarifas vigentes del usuario, clave "modalidad-ownership" → USD/hora.
 // Se usa para mostrar en vivo el USD/hora y el total mientras se carga.
@@ -14,12 +14,11 @@ export type RegistroFila = {
   id: string;
   fecha: string; // YYYY-MM-DD
   clienteId: string;
-  // Tarea del Roadmap contra la que se imputan las horas. Los registros
-  // anteriores al Roadmap no tienen ninguna: llegan con tareaId vacío y con
-  // la etiqueta de su etapa vieja en tareaNombre, para que el historial se
-  // siga leyendo.
-  tareaId: string;
-  tareaNombre: string;
+  // Categoría de la actividad. Los registros anteriores al catálogo llegan
+  // con categoriaId vacío y con la etiqueta de su clasificación anterior en
+  // categoriaNombre, para que el historial se siga leyendo.
+  categoriaId: string;
+  categoriaNombre: string;
   ownership: "owner" | "backup";
   modalidad: "presencial" | "virtual";
   horas: string; // hs:min
