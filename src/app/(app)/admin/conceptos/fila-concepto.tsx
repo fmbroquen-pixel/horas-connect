@@ -22,6 +22,7 @@ export function FilaConcepto({ concepto }: { concepto: ConceptoFila }) {
           valor={concepto.nombre}
           onGuardar={guardar("nombre")}
           ariaLabel="Nombre del concepto"
+          alinear="izquierda"
         />
         <CeldaTexto
           valor={String(concepto.orden)}

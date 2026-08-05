@@ -55,11 +55,12 @@ export default async function ConceptosPage({
       </div>
 
       <div className="mt-4 flex min-h-0 flex-1 overflow-x-auto dc-panel">
-        <div className="flex min-h-0 min-w-[560px] flex-1 flex-col">
+        <div className="flex min-h-0 min-w-[420px] flex-1 flex-col">
           {/* shrink-0 fuera del contenedor con overflow: el encabezado queda
               fijo y solo scrollea el cuerpo. */}
           <div className={`dc-thead ${GRID_CONCEPTOS} shrink-0 border-b border-dc-line px-4`}>
-            <span>Nombre</span>
+            {/* dc-col-izq: el header acompaña la alineación de su contenido. */}
+            <span className="dc-col-izq">Nombre</span>
             <span>Orden</span>
             <span>Estado</span>
           </div>
