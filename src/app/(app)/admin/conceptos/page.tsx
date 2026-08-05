@@ -1,7 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { crearConcepto } from "./actions";
-import { FilaConcepto, GRID_CONCEPTOS } from "./fila-concepto";
+import { FilaConcepto } from "./fila-concepto";
+import { GRID_CONCEPTOS } from "./constantes";
 import { AgregarModal } from "@/components/admin/agregar-modal";
 import { InfoButton } from "@/components/info-button";
 import { FiltroEstado, parseEstadoFiltro } from "@/components/admin/filtro-estado";

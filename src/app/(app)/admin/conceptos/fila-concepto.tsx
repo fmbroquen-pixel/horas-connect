@@ -4,19 +4,7 @@ import { useTransition } from "react";
 import { actualizarCampoConcepto, alternarActivoConcepto } from "./actions";
 import { CeldaTexto } from "@/components/tabla/celda-editable";
 import { BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
-
-// Anchos fijos para Orden y Estado, y el resto para Nombre: así las tres
-// columnas caen siempre en el mismo lugar y el gap generoso evita que los
-// textos se lean pegados.
-export const GRID_CONCEPTOS =
-  "grid min-w-[560px] grid-cols-[minmax(240px,1fr)_120px_160px] items-center gap-6";
-
-export type ConceptoFila = {
-  id: string;
-  nombre: string;
-  orden: number;
-  activo: boolean;
-};
+import { GRID_CONCEPTOS, type ConceptoFila } from "./constantes";
 
 // Fila del catálogo con edición inline: nombre y orden se guardan solos al
 // salir del campo o con Enter, igual que en Time Tracking y Roadmap.
