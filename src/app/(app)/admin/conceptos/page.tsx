@@ -27,7 +27,9 @@ export default async function ConceptosPage({
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h1 className="font-display text-lg uppercase text-white">Conceptos</h1>
+          <h1 className="font-display text-lg uppercase text-white">
+            Conceptos Time Tracker
+          </h1>
           <InfoButton>
             Opciones del desplegable de Concepto al cargar horas: en qué se
             consumieron. El nombre y el orden se editan en la tabla; al
@@ -53,8 +55,10 @@ export default async function ConceptosPage({
 
       <div className="mt-4 flex min-h-0 flex-1 overflow-x-auto dc-panel">
         <div className="flex min-h-0 min-w-[560px] flex-1 flex-col">
+          {/* shrink-0 fuera del contenedor con overflow: el encabezado queda
+              fijo y solo scrollea el cuerpo. */}
           <div className={`dc-thead ${GRID_CONCEPTOS} shrink-0 border-b border-dc-line px-4`}>
-            <span className="dc-col-izq">Nombre</span>
+            <span>Nombre</span>
             <span>Orden</span>
             <span>Estado</span>
           </div>
