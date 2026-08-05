@@ -1,17 +1,18 @@
 import { prisma } from "@/lib/prisma";
-import { getClientesProyectos } from "@/lib/proyecto-acceso";
-import type { Usuario } from "@/generated/prisma/client";
 import { FilaProyectoEstado } from "./fila-proyecto-estado";
 
-// Widget único de Home: lista ejecutiva dentro de una card (sin tabla, sin
-// grid, sin dropdowns permanentes). Mismo alcance de visibilidad que la
-// sección Proyectos: admin ve todos los clientes activos, un mentor ve los
-// suyos asignados. Semáforo y etapa son editables tanto por admin como por
-// el mentor con acceso al proyecto (mismo permiso que ya aplica en
+// Semáforo de proyectos: lista ejecutiva dentro de una card (sin tabla, sin
+// grid, sin dropdowns permanentes). El alcance lo decide el Home y llega en
+// `clienteIds`, para que el widget responda al mismo filtro de proyectos que
+// los KPIs y el gráfico. Semáforo y etapa son editables tanto por admin como
+// por el mentor con acceso al proyecto (mismo permiso que ya aplica en
 // Seguimiento vía cambiarSemaforo/cambiarEtapa); no se muestran mentores.
-export async function EstadoProyectos({ usuario }: { usuario: Usuario }) {
-  const clientes = await getClientesProyectos(usuario);
-  const ids = clientes.map((c) => c.id);
+export async function EstadoProyectos({ clienteIds }: { clienteIds: string[] }) {
+  const ids = clienteIds;
+  const clientes = await prisma.cliente.findMany({
+    where: { id: { in: ids } },
+    orderBy: { nombre: "asc" },
+  });
 
   const [semaforos, etapaEventos, etapas] = await Promise.all([
     prisma.semaforoEvento.findMany({

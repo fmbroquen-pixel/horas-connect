@@ -1,0 +1,194 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { DatePicker } from "@/components/date-picker";
+import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
+
+type Proyecto = { id: string; nombre: string };
+
+function fmt(iso: string) {
+  if (!iso) return "";
+  const [a, m, d] = iso.split("-");
+  return `${d}/${m}/${a}`;
+}
+
+// Filtro del Home: rango de fechas + selección múltiple de proyectos. A
+// diferencia del FiltroPopover del resto de la app (un solo proyecto), acá se
+// eligen varios y el default —sin parámetro en la URL— son todos los
+// accesibles: así el Home abre mostrando el panorama completo.
+export function FiltrosHome({
+  desde,
+  hasta,
+  maxHoy,
+  proyectos,
+  seleccionados,
+}: {
+  desde: string;
+  hasta: string;
+  maxHoy: string;
+  proyectos: Proyecto[];
+  seleccionados: string[];
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [desdeSel, setDesdeSel] = useState(desde);
+  const [hastaSel, setHastaSel] = useState(hasta);
+  const [sel, setSel] = useState<Set<string>>(new Set(seleccionados));
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+  }, [open]);
+
+  const todos = proyectos.length > 0 && sel.size === proyectos.length;
+
+  const toggle = (id: string) =>
+    setSel((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+
+  const aplicar = () => {
+    const params = new URLSearchParams();
+    if (desdeSel) params.set("desde", desdeSel);
+    if (hastaSel) params.set("hasta", hastaSel);
+    // "Todos" no viaja en la URL: es el default y así el link queda limpio.
+    if (sel.size > 0 && sel.size < proyectos.length) {
+      params.set("proyectos", [...sel].join(","));
+    }
+    const qs = params.toString();
+    router.push(qs ? `/dashboard?${qs}` : "/dashboard");
+    setOpen(false);
+  };
+
+  const limpiar = () => {
+    setSel(new Set(proyectos.map((p) => p.id)));
+    router.push("/dashboard");
+    setOpen(false);
+  };
+
+  const parcial = seleccionados.length < proyectos.length;
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="hidden rounded-full border border-dc-line bg-dc-card px-3 py-1 text-xs text-dc-muted sm:inline-flex">
+        <span className="text-dc-peri">Filtros activos&nbsp;→&nbsp;</span>
+        <span className="text-dc-text">
+          {fmt(desde)} – {fmt(hasta)}
+        </span>
+        <span className="text-dc-text">
+          &nbsp;·&nbsp;
+          {parcial
+            ? `${seleccionados.length} de ${proyectos.length} proyectos`
+            : "Todos los proyectos"}
+        </span>
+      </span>
+
+      <div className="relative" ref={ref}>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          title="Filtrar"
+          aria-label="Filtrar"
+          aria-expanded={open}
+          className="flex items-center gap-1.5 rounded-lg border border-dc-line px-3 py-1.5 text-sm text-dc-muted transition hover:border-dc-peri hover:text-dc-text"
+        >
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
+          </svg>
+          Filtrar
+        </button>
+
+        {open && (
+          <div className="dc-menu dc-pop-in absolute right-0 z-40 mt-2 w-80 rounded-xl border border-dc-line bg-dc-deep p-4 shadow-[0_12px_32px_rgba(0,0,0,0.45)]">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <span className="mb-1 block text-xs text-dc-muted">Desde</span>
+                <DatePicker
+                  value={desdeSel}
+                  onChange={setDesdeSel}
+                  max={hastaSel || maxHoy}
+                  rangeStart={desdeSel}
+                  rangeEnd={hastaSel}
+                  className="w-full"
+                  ariaLabel="Desde"
+                />
+              </div>
+              <div>
+                <span className="mb-1 block text-xs text-dc-muted">Hasta</span>
+                <DatePicker
+                  value={hastaSel}
+                  onChange={setHastaSel}
+                  min={desdeSel || undefined}
+                  max={maxHoy}
+                  rangeStart={desdeSel}
+                  rangeEnd={hastaSel}
+                  className="w-full"
+                  ariaLabel="Hasta"
+                />
+              </div>
+            </div>
+
+            <div className="mt-3">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs text-dc-muted">Proyectos</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSel(todos ? new Set() : new Set(proyectos.map((p) => p.id)))
+                  }
+                  className="text-xs text-dc-peri transition hover:text-dc-pink"
+                >
+                  {todos ? "Ninguno" : "Todos"}
+                </button>
+              </div>
+              <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-dc-line p-2">
+                {proyectos.map((p) => (
+                  <label
+                    key={p.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm text-dc-text transition hover:bg-dc-line/40"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={sel.has(p.id)}
+                      onChange={() => toggle(p.id)}
+                      className="h-4 w-4 shrink-0 accent-dc-purple"
+                    />
+                    <span className="truncate">{p.nombre}</span>
+                  </label>
+                ))}
+                {proyectos.length === 0 && (
+                  <p className="px-2 py-1 text-xs text-dc-muted">
+                    No tenés proyectos asignados.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={limpiar} className={BTN_SECONDARY_SM}>
+                Limpiar
+              </button>
+              <button
+                type="button"
+                onClick={aplicar}
+                disabled={sel.size === 0}
+                className={`${BTN_PRIMARY_SM} disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                Aplicar
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

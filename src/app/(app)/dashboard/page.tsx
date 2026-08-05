@@ -1,20 +1,25 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
-import { getProyectosPermitidos } from "@/lib/require-guest";
+import { getProyectosConRol } from "@/lib/proyecto-acceso";
 import { formatHorasHsMin } from "@/lib/horas";
-import { formatMonto, hoyISO, semanaActualISO } from "@/lib/formato";
-import { FiltroPopover } from "@/components/filtro-popover";
+import { construirCurvaHoras } from "@/lib/curva-horas";
+import { hoyISO, semanaActualISO } from "@/lib/formato";
+import { InfoButton } from "@/components/info-button";
+import { CurvaHoras } from "@/components/curva-horas";
+import { FiltrosHome } from "./filtros-home";
 import { EstadoProyectos } from "./estado-proyectos";
 
-const MAX_DIAS_FILTRO = 90;
+const MAX_DIAS_FILTRO = 365;
+const CARD = "rounded-2xl border border-dc-line bg-dc-card";
 
-// Home: centro operativo de CORE. KPIs personales del rango filtrado,
-// estado editable del portafolio (cards) y cumpleaños de la semana.
+// Home de CORE: el panorama del portafolio del usuario. Alcance estricto —los
+// proyectos donde está asignado como Mentor Owner o Backup— y un único juego
+// de filtros (fechas + proyectos) que gobierna KPIs, gráfico y semáforo.
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ desde?: string; hasta?: string; proyecto?: string }>;
+  searchParams: Promise<{ desde?: string; hasta?: string; proyectos?: string }>;
 }) {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
@@ -24,145 +29,193 @@ export default async function DashboardPage({
 
   const params = await searchParams;
 
-  // Rango por defecto: últimos 30 días; máximo permitido: 90 días.
+  // Rango por defecto: últimos 90 días, para que la curva acumulada tenga
+  // suficientes semanas como para leerse.
   const hoy = hoyISO();
-  const hace30 = restarDias(hoy, 30);
-  let desde = validarISO(params.desde) ?? hace30;
+  let desde = validarISO(params.desde) ?? restarDias(hoy, 90);
   let hasta = validarISO(params.hasta) ?? hoy;
   if (desde > hasta) [desde, hasta] = [hasta, desde];
   if (diasEntre(desde, hasta) > MAX_DIAS_FILTRO) {
     desde = restarDias(hasta, MAX_DIAS_FILTRO);
   }
 
-  const proyectos = await getProyectosPermitidos(usuario.id);
-  const proyectoId = proyectos.some((p) => p.id === params.proyecto)
-    ? params.proyecto
-    : undefined;
+  const proyectos = await getProyectosConRol(usuario.id);
+  const idsAccesibles = proyectos.map((p) => p.id);
 
-  const registros = await prisma.registroHoras.findMany({
-    where: {
-      usuarioId: usuario.id,
-      eliminadoEn: null,
-      fecha: {
-        gte: new Date(desde + "T00:00:00Z"),
-        lte: new Date(hasta + "T00:00:00Z"),
-      },
-      ...(proyectoId ? { clienteId: proyectoId } : {}),
-    },
-  });
+  // Sin parámetro se muestran todos los accesibles; con parámetro, solo los
+  // pedidos que además sean accesibles (un id ajeno en la URL no abre nada).
+  const pedidos = (params.proyectos ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const ids =
+    pedidos.length > 0
+      ? pedidos.filter((id) => idsAccesibles.includes(id))
+      : idsAccesibles;
 
-  // Horas y monto totales del rango, y clientes distintos por ownership
-  // (en cuántos proyectos actuó como Owner vs. Backup en el período).
-  let totalHoras = 0;
-  let totalMonto = 0;
-  const clientesOwner = new Set<string>();
-  const clientesBackup = new Set<string>();
-  for (const r of registros) {
-    totalHoras += Number(r.horas);
-    totalMonto += Number(r.montoUsd);
-    if (r.ownership === "owner") clientesOwner.add(r.clienteId);
-    else if (r.ownership === "backup") clientesBackup.add(r.clienteId);
-  }
+  const rangoFecha = {
+    gte: new Date(desde + "T00:00:00Z"),
+    lte: new Date(hasta + "T00:00:00Z"),
+  };
 
-  const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
+  const [registros, tareas] = await Promise.all([
+    // Sin filtro de usuario: el total incluye lo reportado por cualquiera.
+    prisma.registroHoras.findMany({
+      where: { clienteId: { in: ids }, eliminadoEn: null, fecha: rangoFecha },
+      select: { fecha: true, horas: true, usuarioId: true },
+    }),
+    // Las tareas entran al rango por su fecha de fin: es cuando se considera
+    // entregado el presupuesto.
+    prisma.tareaRoadmap.findMany({
+      where: { lista: { clienteId: { in: ids } }, fechaFin: rangoFecha },
+      select: { horasEstimadas: true, estado: true, fechaFin: true },
+    }),
+  ]);
 
-  // Cumpleaños de la semana (lunes a domingo, fecha del sistema): solo entre
-  // los clientes visibles para este usuario (mismo alcance que "proyectos").
+  const presupuestadas = tareas.reduce((a, t) => a + Number(t.horasEstimadas), 0);
+  const entregadas = tareas.reduce(
+    (a, t) => a + (t.estado === "finalizada" ? Number(t.horasEstimadas) : 0),
+    0,
+  );
+  const horasTotal = registros.reduce((a, r) => a + Number(r.horas), 0);
+  const horasUsuario = registros.reduce(
+    (a, r) => a + (r.usuarioId === usuario.id ? Number(r.horas) : 0),
+    0,
+  );
+
+  // Acumulado de horas TOTALES de los proyectos elegidos (no un promedio),
+  // sobre el rango elegido.
+  const curva = construirCurvaHoras(
+    tareas
+      .filter((t) => t.estado === "finalizada")
+      .map((t) => ({ fecha: t.fechaFin, horas: Number(t.horasEstimadas) })),
+    registros.map((r) => ({ fecha: r.fecha, horas: Number(r.horas) })),
+    { desde: rangoFecha.gte, hasta: rangoFecha.lte },
+  );
+
+  // Cumpleaños de la semana (lunes a domingo): mismo comportamiento de
+  // siempre, acotado a los proyectos visibles.
   const semana = semanaActualISO();
   const diasSemanaMD = new Set(semana.map((iso) => iso.slice(5))); // "MM-DD"
   const miembrosEquipo = await prisma.miembroEquipo.findMany({
-    where: {
-      clienteId: { in: proyectos.map((p) => p.id) },
-      cumpleanos: { not: null },
-    },
+    where: { clienteId: { in: ids }, cumpleanos: { not: null } },
     include: { cliente: { select: { nombre: true } } },
   });
+  const md = (d: Date) =>
+    `${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
   const cumpleanosSemana = miembrosEquipo
-    .filter((m) => {
-      const md = `${String(m.cumpleanos!.getUTCMonth() + 1).padStart(2, "0")}-${String(
-        m.cumpleanos!.getUTCDate(),
-      ).padStart(2, "0")}`;
-      return diasSemanaMD.has(md);
-    })
+    .filter((m) => diasSemanaMD.has(md(m.cumpleanos!)))
     .map((m) => ({
       id: m.id,
       nombre: `${m.nombre} ${m.apellido}`,
       fecha: `${String(m.cumpleanos!.getUTCDate()).padStart(2, "0")}/${String(
         m.cumpleanos!.getUTCMonth() + 1,
       ).padStart(2, "0")}`,
-      // Posición dentro de la semana (0=lunes…6=domingo) para orden cronológico.
-      posicion: semana.findIndex(
-        (iso) =>
-          iso.slice(5) ===
-          `${String(m.cumpleanos!.getUTCMonth() + 1).padStart(2, "0")}-${String(
-            m.cumpleanos!.getUTCDate(),
-          ).padStart(2, "0")}`,
-      ),
+      posicion: semana.findIndex((iso) => iso.slice(5) === md(m.cumpleanos!)),
       proyecto: m.cliente.nombre,
     }))
     .sort((a, b) => a.posicion - b.posicion || a.nombre.localeCompare(b.nombre));
 
   return (
-    // Dashboard de una sola pantalla: sin scroll general. Header y KPIs son
-    // shrink-0 (siempre visibles enteros); Estado de Proyectos y Cumpleaños
-    // se reparten el espacio restante y scrollean cada uno por su cuenta.
+    // Una sola pantalla: encabezado y KPIs fijos; gráfico, semáforo y
+    // cumpleaños se reparten el alto restante y scrollean por dentro.
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-xl uppercase text-white">
           Hola, {usuario.nombre.split(" ")[0]}
         </h1>
-        <FiltroPopover
-          basePath="/dashboard"
+        <FiltrosHome
           desde={desde}
           hasta={hasta}
-          proyectoId={proyectoId ?? ""}
-          proyectos={opcionesProyecto}
           maxHoy={hoy}
+          proyectos={proyectos.map((p) => ({ id: p.id, nombre: p.nombre }))}
+          seleccionados={ids}
         />
       </div>
 
-      <div className="mt-6 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
-        <Kpi etiqueta="Horas reportadas" valor={`${formatHorasHsMin(totalHoras)} hs`} />
-        <Kpi etiqueta="A cobrar" valor={formatMonto(totalMonto)} destacado />
-        <Kpi etiqueta="Proyectos Mentor Owner" valor={String(clientesOwner.size)} />
-        <Kpi etiqueta="Proyectos Mentor Backup" valor={String(clientesBackup.size)} />
-      </div>
+      {idsAccesibles.length === 0 ? (
+        <p className={`${CARD} mt-6 px-5 py-8 text-center text-sm text-dc-muted`}>
+          No estás asignado como Mentor Owner ni Backup en ningún proyecto. Un
+          admin puede asignarlos desde Settings → Usuarios.
+        </p>
+      ) : (
+        <>
+          <div className="mt-4 grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
+            <Kpi
+              etiqueta="Horas Presupuestadas Total"
+              valor={formatHorasHsMin(presupuestadas)}
+            />
+            <Kpi
+              etiqueta="Hs Presupuestadas Entregadas"
+              valor={formatHorasHsMin(entregadas)}
+            />
+            <Kpi
+              etiqueta="Hs Time Tracker Total"
+              valor={formatHorasHsMin(horasTotal)}
+            />
+            <Kpi
+              etiqueta="Horas Time Tracker Usuario"
+              valor={formatHorasHsMin(horasUsuario)}
+              destacado
+            />
+          </div>
 
-      {/* Dos columnas 70/30 en desktop; apiladas en pantallas chicas. Ambas
-          comparten el alto disponible (items-stretch por defecto) y scrollean
-          por dentro de forma independiente. */}
-      <div className="mt-6 flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-        <div className="flex min-h-0 flex-1 flex-col lg:flex-none lg:w-[70%]">
-          <EstadoProyectos usuario={usuario} />
-        </div>
+          <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+            <div className="flex min-h-0 flex-col gap-4 lg:w-[68%]">
+              <div
+                className={`${CARD} flex h-64 shrink-0 flex-col px-5 py-3 lg:h-auto lg:min-h-0 lg:flex-1`}
+              >
+                <div className="flex shrink-0 items-center gap-2">
+                  <h2 className="font-display text-sm uppercase text-white">
+                    Horas Presupuestadas vs Horas Time Tracker
+                  </h2>
+                  <InfoButton>Acumulado por semana</InfoButton>
+                </div>
+                <div className="mt-2 min-h-0 flex-1">
+                  <CurvaHoras
+                    semanas={curva.semanas}
+                    entregadas={curva.entregadas}
+                    reales={curva.reales}
+                  />
+                </div>
+              </div>
 
-        {/* Cumpleaños: título fijo; si hay más cumpleaños que alto, scrollea
-            solo la lista. En mobile queda con un tope de altura para no
-            empujar el resto fuera de pantalla. */}
-        <div className="flex max-h-64 min-h-0 flex-col rounded-2xl border border-dc-line bg-dc-card p-5 lg:max-h-none lg:w-[30%]">
-          <h2 className="mb-3 shrink-0 text-base font-semibold text-white">
-            Cumpleaños de la semana
-          </h2>
-          {cumpleanosSemana.length === 0 ? (
-            <p className="text-sm text-dc-muted">No hay cumpleaños esta semana.</p>
-          ) : (
-            <ul className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
-              {cumpleanosSemana.map((c) => (
-                <li
-                  key={c.id}
-                  className="flex items-center justify-between gap-3 py-2.5 text-sm first:pt-0 last:pb-0"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-dc-text">{c.nombre}</p>
-                    <p className="truncate text-xs text-dc-muted">{c.proyecto}</p>
-                  </div>
-                  <span className="shrink-0 tabular-nums text-dc-peri">{c.fecha}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
+              <div className="flex min-h-0 flex-col lg:flex-1">
+                <EstadoProyectos clienteIds={ids} />
+              </div>
+            </div>
+
+            {/* Cumpleaños: título fijo, lista con scroll propio. */}
+            <div
+              className={`${CARD} flex max-h-64 min-h-0 flex-col p-5 lg:max-h-none lg:w-[32%]`}
+            >
+              <h2 className="mb-3 shrink-0 text-base font-semibold text-white">
+                Cumpleaños de la semana
+              </h2>
+              {cumpleanosSemana.length === 0 ? (
+                <p className="text-sm text-dc-muted">No hay cumpleaños esta semana.</p>
+              ) : (
+                <ul className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
+                  {cumpleanosSemana.map((c) => (
+                    <li
+                      key={c.id}
+                      className="flex items-center justify-between gap-3 py-2.5 text-sm first:pt-0 last:pb-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-dc-text">{c.nombre}</p>
+                        <p className="truncate text-xs text-dc-muted">{c.proyecto}</p>
+                      </div>
+                      <span className="shrink-0 tabular-nums text-dc-peri">
+                        {c.fecha}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -177,9 +230,13 @@ function Kpi({
   destacado?: boolean;
 }) {
   return (
-    <div className="rounded-2xl border border-dc-line bg-dc-card px-4 py-3">
-      <p className="text-[11px] uppercase tracking-wider text-dc-muted">{etiqueta}</p>
-      <p className={`mt-1 font-display text-lg ${destacado ? "text-dc-pink" : "text-white"}`}>
+    <div className={`${CARD} px-4 py-3`}>
+      <p className="text-[11px] uppercase leading-tight tracking-wider text-dc-muted">
+        {etiqueta}
+      </p>
+      <p
+        className={`mt-1 font-display text-lg tabular-nums ${destacado ? "text-dc-pink" : "text-white"}`}
+      >
         {valor}
       </p>
     </div>

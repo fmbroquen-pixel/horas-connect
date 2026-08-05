@@ -39,10 +39,11 @@ const tooltip = {
   cornerRadius: 8,
 } as const;
 
-// Curva S del proyecto: plan contra realidad, ambas acumuladas semana a
+// Horas presupuestadas vs. horas de Time Tracker, ambas acumuladas semana a
 // semana. Lo que se lee de un vistazo es la separación entre las dos líneas
-// (cuánto se entregó vs. cuánto costó) y la pendiente (si el ritmo se sostiene).
-export function CurvaS({
+// (cuánto se entregó vs. cuánto costó) y la pendiente (si el ritmo se
+// sostiene). Ocupa todo el alto que le dé su contenedor.
+export function CurvaHoras({
   semanas,
   entregadas,
   reales,
@@ -53,7 +54,7 @@ export function CurvaS({
 }) {
   if (semanas.length === 0) {
     return (
-      <p className="py-10 text-center text-sm text-dc-muted">
+      <p className="flex h-full items-center justify-center py-6 text-center text-sm text-dc-muted">
         Todavía no hay tareas finalizadas ni horas cargadas para dibujar la curva.
       </p>
     );
@@ -92,7 +93,7 @@ export function CurvaS({
     labels: semanas,
     datasets: [
       {
-        label: "Hs presupuestadas entregadas",
+        label: "Hs Presupuestadas Entregadas",
         data: entregadas,
         borderColor: PERI,
         backgroundColor: "rgba(139,140,255,.15)",
@@ -115,7 +116,9 @@ export function CurvaS({
   };
 
   return (
-    <div className="h-72">
+    // Sin alto propio: lo pone el contenedor, así el mismo gráfico entra
+    // tanto en el Home del proyecto como en el de CORE.
+    <div className="h-full min-h-[180px]">
       <Line options={options} data={data} />
     </div>
   );
