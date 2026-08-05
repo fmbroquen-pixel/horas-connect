@@ -24,7 +24,8 @@ export type CampoTarea =
   | "fechaInicio"
   | "fechaFin"
   | "horasEstimadas"
-  | "estado";
+  | "estado"
+  | "personas";
 
 // El Roadmap alimenta los KPIs del proyecto y del Home. No toca el
 // desplegable de Concepto de Time Tracking: ese catálogo es independiente.
@@ -342,6 +343,17 @@ export async function actualizarCampoTarea(
       where: { id: tareaId },
       data: { estado: valor as EstadoTareaRoadmap },
     });
+    revalidar();
+    return {};
+  }
+
+  if (campo === "personas") {
+    // Solo 1 o 2: es una tarea acompañada o no, no un equipo arbitrario.
+    const personas = Number(valor);
+    if (personas !== 1 && personas !== 2) {
+      return { error: "Las personas involucradas deben ser 1 o 2." };
+    }
+    await prisma.tareaRoadmap.update({ where: { id: tareaId }, data: { personas } });
     revalidar();
     return {};
   }

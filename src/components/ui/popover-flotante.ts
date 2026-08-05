@@ -1,0 +1,74 @@
+"use client";
+
+import { useLayoutEffect, type RefObject } from "react";
+
+// Posiciona un popover que se dibuja en un portal sobre el <body>, anclado a
+// su trigger.
+//
+// El motivo: dentro de una tabla con scroll (el Roadmap, Time Tracking) un
+// popover posicionado en el flujo queda recortado por el `overflow` del
+// contenedor, o lo estira y genera scroll en la pantalla entera. Sacándolo a
+// un portal con `position: fixed` se dibuja sobre todo y el scroll sigue
+// siendo el del componente.
+//
+// La posición se escribe directamente en el estilo del nodo en vez de pasar
+// por estado: medir el DOM y devolverle el resultado ES sincronizar con un
+// sistema externo, que es para lo que sirven los efectos. Además evita un
+// segundo render y, al hacerse en un layout effect, no hay parpadeo.
+export function usePopoverFlotante(
+  abierto: boolean,
+  anclaRef: RefObject<HTMLElement | null>,
+  popRef: RefObject<HTMLElement | null>,
+  // Que el popover no sea más angosto que su trigger (lo usa el desplegable,
+  // para que el menú acompañe el ancho del campo).
+  igualarAnchoDelAncla = false,
+) {
+  useLayoutEffect(() => {
+    if (!abierto) return;
+
+    const MARGEN = 8; // aire mínimo contra el borde de la ventana
+    const SEPARACION = 6; // aire entre el trigger y el popover
+
+    const ubicar = () => {
+      const ancla = anclaRef.current?.getBoundingClientRect();
+      const pop = popRef.current;
+      if (!ancla || !pop) return;
+
+      // Antes de medir el alto: el ancho mínimo puede cambiarlo.
+      if (igualarAnchoDelAncla) pop.style.minWidth = `${ancla.width}px`;
+
+      const alto = pop.offsetHeight;
+      const ancho = pop.offsetWidth;
+
+      // Se abre hacia abajo salvo que no entre; ahí va hacia arriba.
+      const cabeAbajo =
+        ancla.bottom + SEPARACION + alto + MARGEN <= window.innerHeight;
+      const top = cabeAbajo
+        ? ancla.bottom + SEPARACION
+        : Math.max(MARGEN, ancla.top - alto - SEPARACION);
+
+      // Alineado a la izquierda del trigger, sin salirse de la ventana.
+      const left = Math.min(
+        Math.max(MARGEN, ancla.left),
+        Math.max(MARGEN, window.innerWidth - ancho - MARGEN),
+      );
+
+      pop.style.top = `${top}px`;
+      pop.style.left = `${left}px`;
+    };
+
+    ubicar();
+    window.addEventListener("resize", ubicar);
+    // capture: el scroll de un contenedor interno (la tabla) no burbujea, así
+    // que hay que escucharlo en fase de captura para seguir al trigger.
+    window.addEventListener("scroll", ubicar, true);
+    return () => {
+      window.removeEventListener("resize", ubicar);
+      window.removeEventListener("scroll", ubicar, true);
+    };
+  }, [abierto, anclaRef, popRef, igualarAnchoDelAncla]);
+}
+
+// Clases comunes del popover flotante: el posicionamiento lo pone el hook.
+export const POPOVER_FLOTANTE =
+  "dc-menu dc-pop-in fixed z-50 rounded-xl border border-dc-line bg-dc-deep shadow-[0_12px_32px_rgba(0,0,0,0.45)]";

@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  POPOVER_FLOTANTE,
+  usePopoverFlotante,
+} from "@/components/ui/popover-flotante";
 
 const DIAS = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
 const MESES = [
@@ -73,8 +78,14 @@ export function DatePicker({
   onCerrar?: () => void;
 }) {
   const [open, setOpen] = useState(autoAbrir);
+  // El calendario se dibuja en un portal sobre el <body>: dentro de una tabla
+  // con scroll, en el flujo normal quedaría recortado por el overflow del
+  // contenedor.
+  const popRef = useRef<HTMLDivElement>(null);
   const [cursor, setCursor] = useState<Date>(() => fromISO(value) ?? new Date());
   const ref = useRef<HTMLDivElement>(null);
+
+  usePopoverFlotante(open, ref, popRef);
 
   const maxDate = max ? fromISO(max) : null;
   const minDate = min ? fromISO(min) : null;
@@ -86,7 +97,12 @@ export function DatePicker({
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      // El calendario vive en un portal, así que no alcanza con mirar dentro
+      // del trigger: hay que excluirlo aparte.
+      const dentro =
+        ref.current?.contains(e.target as Node) ||
+        popRef.current?.contains(e.target as Node);
+      if (!dentro) {
         // No se llama a `cerrar` para no re-suscribir el listener en cada
         // render: onCerrar llega como prop y cambia de identidad siempre.
         setOpen(false);
@@ -208,12 +224,14 @@ export function DatePicker({
         </svg>
       </button>
 
-      {open && (
+      {open && typeof document !== "undefined" &&
+        createPortal(
         <div
+          ref={popRef}
           role="dialog"
           aria-label="Elegir fecha"
           onKeyDown={onKeyDown}
-          className="dc-menu dc-pop-in absolute z-40 mt-1.5 w-64 rounded-xl border border-dc-line bg-dc-deep p-3 shadow-[0_12px_32px_rgba(0,0,0,0.45)]"
+          className={`${POPOVER_FLOTANTE} w-64 p-3`}
         >
           <div className="mb-2 flex items-center justify-between">
             <button type="button" aria-label="Mes anterior" onClick={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))} className="rounded-lg p-1 text-dc-muted transition hover:bg-dc-line/50 hover:text-dc-text">
@@ -278,8 +296,9 @@ export function DatePicker({
               );
             })}
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </div>
   );
 }

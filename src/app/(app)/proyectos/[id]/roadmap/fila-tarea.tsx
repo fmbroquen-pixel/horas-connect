@@ -16,6 +16,7 @@ import {
   CeldaTexto,
 } from "@/components/tabla/celda-editable";
 import { BotonEliminarIcono } from "@/components/tabla/acciones-fila";
+import { SelectorPersonas } from "./selector-personas";
 
 // Fila del plan con edición inline: cada celda se guarda sola al salir o con
 // Enter. Cambiar Inicio o Fin recalcula, en el servidor, únicamente las
@@ -43,13 +44,20 @@ export function FilaTareaRoadmap({
           aria-label={`Seleccionar ${tarea.nombre}`}
         />
 
-        {/* Columna de texto largo: alineada a la izquierda, como el header. */}
-        <CeldaTexto
-          valor={tarea.nombre}
-          onGuardar={guardar("nombre")}
-          ariaLabel="Nombre de la tarea"
-          alinear="izquierda"
-        />
+        {/* Columna de texto largo: alineada a la izquierda, como el header.
+            Las personas van pegadas al nombre porque califican a la tarea; no
+            merecen una columna propia. */}
+        <span className="flex min-w-0 items-center gap-1">
+          <span className="min-w-0 flex-1">
+            <CeldaTexto
+              valor={tarea.nombre}
+              onGuardar={guardar("nombre")}
+              ariaLabel="Nombre de la tarea"
+              alinear="izquierda"
+            />
+          </span>
+          <SelectorPersonas tareaId={tarea.id} personas={tarea.personas} />
+        </span>
 
         <CeldaFecha
           valor={tarea.fechaInicio}

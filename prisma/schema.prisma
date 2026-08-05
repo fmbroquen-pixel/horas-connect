@@ -207,6 +207,11 @@ model TareaRoadmap {
   horasEstimadas Decimal            @map("horas_estimadas") @db.Decimal(6, 2)
   estado         EstadoTareaRoadmap @default(sin_iniciar)
 
+  // Cuántos mentores participan de la tarea (1 o 2). Por defecto 1: es el
+  // caso habitual, y así las tareas ya cargadas quedan con un valor correcto
+  // sin tener que revisarlas una por una.
+  personas Int @default(1)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

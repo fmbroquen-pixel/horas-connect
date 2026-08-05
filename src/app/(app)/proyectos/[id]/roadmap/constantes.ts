@@ -24,10 +24,10 @@ export const OPCIONES_ESTADO = Object.entries(ETIQUETA_ESTADO).map(
   ([value, label]) => ({ value, label }),
 );
 
-// (checkbox) · Tarea · Inicio · Fin · Horas est. · Estado · (acciones)
+// (checkbox) · Tarea (+ personas) · Inicio · Fin · Horas est. · Estado · (acciones)
 // La duración no tiene columna: se deriva de Inicio y Fin y se guarda sola.
 export const GRID_ROADMAP =
-  "grid min-w-[840px] grid-cols-[34px_minmax(200px,1fr)_120px_120px_110px_150px_80px] items-center gap-2";
+  "grid min-w-[880px] grid-cols-[34px_minmax(220px,1fr)_120px_120px_110px_150px_80px] items-center gap-2";
 
 export type TareaRoadmapFila = {
   id: string;
@@ -36,6 +36,7 @@ export type TareaRoadmapFila = {
   fechaFin: string; // YYYY-MM-DD
   horasEstimadas: string; // hs:min
   estado: string;
+  personas: number; // 1 o 2 mentores
 };
 
 // Avance y estado de una lista. Ninguno de los dos se edita a mano: son

@@ -40,6 +40,7 @@ export default async function ProyectoRoadmapPage({
       fechaFin: t.fechaFin.toISOString().slice(0, 10),
       horasEstimadas: formatHorasHsMin(Number(t.horasEstimadas)),
       estado: t.estado,
+      personas: t.personas,
     }));
     return { id: l.id, nombre: l.nombre, tareas };
   });

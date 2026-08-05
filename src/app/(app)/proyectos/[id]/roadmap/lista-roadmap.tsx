@@ -87,9 +87,22 @@ export function ListaRoadmapCard({
                 {lista.nombre}
               </h3>
             </button>
-            <span className="text-xs leading-none text-dc-muted">
-              {lista.tareas.length} tarea(s)
-              {seleccionadas > 0 && ` · ${seleccionadas} seleccionada(s)`}
+            {/* Cantidad de tareas: número + ícono, sin la palabra. */}
+            <span
+              className="flex items-center gap-1 text-xs leading-none text-dc-muted"
+              title="Cantidad de tareas"
+            >
+              {lista.tareas.length}
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 6h11M9 12h11M9 18h11" />
+                <path d="M3.5 6L5 7.5 7.5 5" />
+                <path d="M3.5 12L5 13.5 7.5 11" />
+                <path d="M3.5 18L5 19.5 7.5 17" />
+              </svg>
+              <span className="sr-only">tareas</span>
+              {seleccionadas > 0 && (
+                <span className="ml-1">· {seleccionadas} seleccionada(s)</span>
+              )}
             </span>
             <span onClick={(e) => e.stopPropagation()}>
               <BotonEditarIcono
@@ -158,7 +171,7 @@ export function ListaRoadmapCard({
       {abierta && (
         <div id={idContenido}>
           <div className="overflow-x-auto">
-            <div className="min-w-[840px]">
+            <div className="min-w-[880px]">
               <div className={`dc-thead ${GRID_ROADMAP} border-b border-dc-line px-4`}>
                 <input
                   type="checkbox"

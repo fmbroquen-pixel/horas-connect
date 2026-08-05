@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  POPOVER_FLOTANTE,
+  usePopoverFlotante,
+} from "@/components/ui/popover-flotante";
 
 export type OpcionDropdown = { value: string; label: string };
 
@@ -44,12 +49,20 @@ export function Dropdown({
   const ref = useRef<HTMLDivElement>(null);
   const listaRef = useRef<HTMLUListElement>(null);
 
+  // El menú se dibuja en un portal sobre el <body>: dentro de una tabla con
+  // scroll, en el flujo normal quedaría recortado por el overflow.
+  usePopoverFlotante(open, ref, listaRef, true);
+
   const seleccionada = options.find((o) => o.value === value);
 
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      // El menú vive en un portal: no alcanza con mirar dentro del trigger.
+      const dentro =
+        ref.current?.contains(e.target as Node) ||
+        listaRef.current?.contains(e.target as Node);
+      if (!dentro) {
         // No se llama a `cerrar` para no re-suscribir el listener en cada
         // render: onCerrar llega como prop y cambia de identidad siempre.
         setOpen(false);
@@ -132,11 +145,12 @@ export function Dropdown({
         </svg>
       </button>
 
-      {open && (
+      {open && typeof document !== "undefined" &&
+        createPortal(
         <ul
           ref={listaRef}
           role="listbox"
-          className="dc-menu dc-pop-in absolute z-40 mt-1.5 max-h-64 w-full min-w-max overflow-auto rounded-xl border border-dc-line bg-dc-deep p-1 shadow-[0_12px_32px_rgba(0,0,0,0.45)]"
+          className={`${POPOVER_FLOTANTE} max-h-64 min-w-max overflow-auto p-1`}
         >
           {options.map((o, i) => {
             const activa = o.value === value;
@@ -165,8 +179,9 @@ export function Dropdown({
               </li>
             );
           })}
-        </ul>
-      )}
+        </ul>,
+          document.body,
+        )}
     </div>
   );
 }
