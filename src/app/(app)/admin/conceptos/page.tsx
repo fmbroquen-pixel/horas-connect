@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { crearConcepto } from "./actions";
 import { FilaConcepto } from "./fila-concepto";
-import { GRID_CONCEPTOS } from "./constantes";
 import { AgregarModal } from "@/components/admin/agregar-modal";
 import { InfoButton } from "@/components/info-button";
 import { FiltroEstado, parseEstadoFiltro } from "@/components/admin/filtro-estado";
@@ -54,18 +53,20 @@ export default async function ConceptosPage({
         <FiltroEstado basePath="/admin/conceptos" actual={estado} />
       </div>
 
-      <div className="mt-4 flex min-h-0 flex-1 overflow-x-auto dc-panel">
-        <div className="flex min-h-0 min-w-[420px] flex-1 flex-col">
-          {/* shrink-0 fuera del contenedor con overflow: el encabezado queda
-              fijo y solo scrollea el cuerpo. */}
-          <div className={`dc-thead ${GRID_CONCEPTOS} shrink-0 border-b border-dc-line px-4`}>
-            {/* dc-col-izq: el header acompaña la alineación de su contenido. */}
-            <span className="dc-col-izq">Nombre</span>
-            <span>Orden</span>
-            <span>Estado</span>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto">
+      {/* Misma estructura que la tabla de Usuarios: <table> con anchos
+          porcentuales, encabezado pegajoso y scroll interno del panel. */}
+      <div className="mt-4 min-h-0 flex-1 overflow-auto dc-panel">
+        <table className="w-full min-w-[560px] table-fixed text-sm">
+          <thead className="sticky top-0 z-10">
+            <tr className="border-b border-dc-line">
+              <th className="w-[52%] px-4">Nombre</th>
+              <th className="w-[16%] px-4">Orden</th>
+              <th className="w-[20%] px-4">Estado</th>
+              {/* Acciones va sin título, como en Usuarios. */}
+              <th className="w-[12%] px-4" />
+            </tr>
+          </thead>
+          <tbody>
             {conceptos.map((c) => (
               <FilaConcepto
                 key={c.id}
@@ -77,16 +78,17 @@ export default async function ConceptosPage({
                 }}
               />
             ))}
-
             {conceptos.length === 0 && (
-              <p className="px-4 py-6 text-center text-sm text-dc-muted">
-                {estado === "todos"
-                  ? "Todavía no hay conceptos cargados."
-                  : "No hay conceptos que coincidan con este filtro."}
-              </p>
+              <tr>
+                <td className="px-4 py-6 text-center text-dc-muted" colSpan={4}>
+                  {estado === "todos"
+                    ? "Todavía no hay conceptos cargados."
+                    : "No hay conceptos que coincidan con este filtro."}
+                </td>
+              </tr>
             )}
-          </div>
-        </div>
+          </tbody>
+        </table>
       </div>
     </div>
   );

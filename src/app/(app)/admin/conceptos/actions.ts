@@ -67,34 +67,38 @@ export async function crearConcepto(
   return {};
 }
 
-export type CampoConcepto = "nombre" | "orden";
-
-export async function actualizarCampoConcepto(
+// Guarda los tres campos de una vez: la fila se edita como una unidad, así
+// que un nombre repetido no tiene por qué dejar el orden a medio guardar.
+export async function actualizarConcepto(
   id: string,
-  campo: CampoConcepto,
-  valor: string,
+  _prev: unknown,
+  formData: FormData,
 ): Promise<Resultado> {
   await requireAdmin();
 
-  if (campo === "orden") {
-    const orden = Number(valor);
-    if (!Number.isInteger(orden) || orden < 0) {
-      return { error: "El orden debe ser un número entero." };
-    }
-    await prisma.concepto.update({ where: { id }, data: { orden } });
-    revalidar();
-    return {};
+  const parsed = NombreSchema.safeParse(formData.get("nombre"));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+
+  const orden = Number(String(formData.get("orden") ?? "").trim());
+  if (!Number.isInteger(orden) || orden < 0) {
+    return { error: "El orden debe ser un número entero mayor o igual a 0." };
   }
 
-  const parsed = NombreSchema.safeParse(valor);
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message };
+  // Baja lógica: un concepto inactivo desaparece del desplegable pero sigue
+  // etiquetando las horas que ya lo usaron. Por eso no hay borrado real.
+  const activo = formData.get("activo") === "activo";
 
   const repetido = await nombreRepetido(parsed.data, id);
   if (repetido) return { error: repetido };
 
   try {
-    await prisma.concepto.update({ where: { id }, data: { nombre: parsed.data } });
+    await prisma.concepto.update({
+      where: { id },
+      data: { nombre: parsed.data, orden, activo },
+    });
   } catch (e) {
+    // Carrera entre el chequeo y el update: la restricción única de la base es
+    // la última defensa y también tiene que terminar en un aviso.
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
       return { error: "Ya existe un concepto con ese nombre." };
     }
@@ -103,15 +107,4 @@ export async function actualizarCampoConcepto(
 
   revalidar();
   return {};
-}
-
-// Baja lógica: un concepto retirado desaparece del desplegable pero sigue
-// etiquetando las horas que ya lo usaron. Por eso no hay borrado real.
-export async function alternarActivoConcepto(
-  id: string,
-  activo: boolean,
-): Promise<void> {
-  await requireAdmin();
-  await prisma.concepto.update({ where: { id }, data: { activo } });
-  revalidar();
 }

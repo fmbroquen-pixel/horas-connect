@@ -1,53 +1,138 @@
 "use client";
 
-import { useTransition } from "react";
-import { actualizarCampoConcepto, alternarActivoConcepto } from "./actions";
-import { CeldaTexto } from "@/components/tabla/celda-editable";
-import { BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
-import { GRID_CONCEPTOS, type ConceptoFila } from "./constantes";
+import { useActionState, useState } from "react";
+import { actualizarConcepto } from "./actions";
+import type { ConceptoFila } from "./constantes";
+import { Dropdown } from "@/components/dropdown";
+import { TAG_ON, TAG_OFF } from "@/lib/ui";
+import {
+  BotonEditarIcono,
+  BotonGuardarIcono,
+  BotonCancelarIcono,
+} from "@/components/tabla/acciones-fila";
 
-// Fila del catálogo con edición inline: nombre y orden se guardan solos al
-// salir del campo o con Enter, igual que en Time Tracking y Roadmap.
+const INPUT =
+  "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-center text-sm text-dc-text outline-none focus:border-dc-peri";
+
+// Fila del catálogo, con la misma estructura que la tabla de Usuarios: mismas
+// alturas, paddings, bordes y badges.
+//
+// A diferencia de Usuarios, el lápiz no navega a un detalle: son tres campos y
+// abrirles una pantalla propia sería desproporcionado. Abre la edición sobre
+// la misma fila, así la tabla se actualiza sin salir de la pantalla. El botón
+// es el mismo componente y el mismo ícono, para que no se note la diferencia.
 export function FilaConcepto({ concepto }: { concepto: ConceptoFila }) {
-  const [pending, start] = useTransition();
+  const [editando, setEditando] = useState(false);
 
-  const guardar = (campo: Parameters<typeof actualizarCampoConcepto>[1]) =>
-    async (valor: string) => actualizarCampoConcepto(concepto.id, campo, valor);
+  if (editando) {
+    return <FilaEdicion concepto={concepto} onCerrar={() => setEditando(false)} />;
+  }
 
   return (
     // dc-fila: realce sutil al pasar el cursor (ver globals.css).
-    <div className="dc-fila border-b border-dc-line px-4 py-2 transition-colors last:border-0">
-      <div className={GRID_CONCEPTOS}>
-        <CeldaTexto
-          valor={concepto.nombre}
-          onGuardar={guardar("nombre")}
-          ariaLabel="Nombre del concepto"
-          alinear="izquierda"
-        />
-        <CeldaTexto
-          valor={String(concepto.orden)}
-          onGuardar={guardar("orden")}
-          ariaLabel="Orden"
-        />
-        {/* items-center: el badge queda centrado en el alto de la fila, a la
-            misma altura que el texto de las otras columnas. */}
-        <span className="flex items-center justify-center">
-          {/* Baja lógica: el concepto retirado sale del desplegable pero sigue
-              etiquetando las horas que ya lo usaron. */}
-          <button
-            type="button"
-            disabled={pending}
-            onClick={() =>
-              start(async () => {
-                await alternarActivoConcepto(concepto.id, !concepto.activo);
-              })
-            }
-            className={concepto.activo ? BTN_PILL_ON : BTN_PILL_OFF}
-          >
-            {concepto.activo ? "Activo" : "Inactivo"}
-          </button>
+    <tr className="dc-fila border-b border-dc-line transition-colors last:border-0">
+      <td className="px-4 py-3 text-center">
+        <p className="truncate text-dc-text">{concepto.nombre}</p>
+      </td>
+      <td className="px-4 py-3 text-center tabular-nums text-dc-text">
+        {concepto.orden}
+      </td>
+      <td className="px-4 py-3 text-center">
+        <span className={concepto.activo ? TAG_ON : TAG_OFF}>
+          {concepto.activo ? "Activo" : "Inactivo"}
         </span>
-      </div>
-    </div>
+      </td>
+      <td className="px-4 py-3">
+        <span className="flex justify-center">
+          <BotonEditarIcono
+            onClick={() => setEditando(true)}
+            label="Editar concepto"
+          />
+        </span>
+      </td>
+    </tr>
+  );
+}
+
+function FilaEdicion({
+  concepto,
+  onCerrar,
+}: {
+  concepto: ConceptoFila;
+  onCerrar: () => void;
+}) {
+  const [activo, setActivo] = useState(concepto.activo ? "activo" : "inactivo");
+
+  const accion = actualizarConcepto.bind(null, concepto.id);
+  const [state, formAction, pending] = useActionState(
+    async (prev: { error?: string } | undefined, formData: FormData) => {
+      const r = await accion(prev, formData);
+      if (!r.error) onCerrar();
+      return r;
+    },
+    undefined,
+  );
+
+  // El formulario vive fuera de la fila (un <form> no puede envolver un <tr>)
+  // y los inputs se asocian por el atributo form.
+  const formId = `concepto-${concepto.id}`;
+
+  return (
+    <tr className="border-b border-dc-line bg-dc-card last:border-0">
+      <td className="px-4 py-3">
+        <form id={formId} action={formAction} />
+        <input
+          form={formId}
+          name="nombre"
+          defaultValue={concepto.nombre}
+          aria-label="Nombre del concepto"
+          autoComplete="off"
+          autoFocus
+          required
+          className={INPUT}
+        />
+      </td>
+      <td className="px-4 py-3">
+        <input
+          form={formId}
+          name="orden"
+          type="number"
+          min="0"
+          step="1"
+          inputMode="numeric"
+          defaultValue={concepto.orden}
+          aria-label="Orden"
+          autoComplete="off"
+          required
+          className={INPUT}
+        />
+      </td>
+      <td className="px-4 py-3">
+        {/* Sin `name`: el valor viaja en el input oculto de abajo, que sí
+            está asociado al formulario por id. */}
+        <Dropdown
+          value={activo}
+          onChange={setActivo}
+          options={[
+            { value: "activo", label: "Activo" },
+            { value: "inactivo", label: "Inactivo" },
+          ]}
+          className="w-full"
+          ariaLabel="Estado"
+        />
+        <input form={formId} type="hidden" name="activo" value={activo} />
+      </td>
+      <td className="px-4 py-3">
+        <span className="flex justify-center gap-1">
+          <BotonGuardarIcono pending={pending} form={formId} />
+          <BotonCancelarIcono onClick={onCerrar} />
+        </span>
+        {state?.error && (
+          <p className="mt-1 text-center text-xs text-dc-pink" role="alert">
+            {state.error}
+          </p>
+        )}
+      </td>
+    </tr>
   );
 }

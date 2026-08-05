@@ -109,10 +109,19 @@ export function BotonEliminarIcono({
 }
 
 // Guardar (submit) del formulario de edición inline: mismo lenguaje de ícono.
-export function BotonGuardarIcono({ pending }: { pending?: boolean }) {
+// `form` permite apuntar a un formulario por id, para los casos en que el
+// botón no puede estar dentro de él (una fila de <table>, por ejemplo).
+export function BotonGuardarIcono({
+  pending,
+  form,
+}: {
+  pending?: boolean;
+  form?: string;
+}) {
   return (
     <button
       type="submit"
+      form={form}
       disabled={pending}
       className={BTN_ICON_SM}
       title="Guardar"
