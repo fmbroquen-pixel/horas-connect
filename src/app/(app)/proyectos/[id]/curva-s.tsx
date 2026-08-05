@@ -1,0 +1,122 @@
+"use client";
+
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend,
+  type ChartOptions,
+} from "chart.js";
+import { Line } from "react-chartjs-2";
+import { formatHorasHsMin } from "@/lib/horas";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip,
+  Legend,
+);
+
+const PERI = "#8b8cff";
+const PINK = "#ff91ff";
+const GRID = "rgba(139,140,255,.14)";
+const TICK = "#a5a3d6";
+
+const tooltip = {
+  backgroundColor: "#18154a",
+  borderColor: "rgba(255,145,255,.5)",
+  borderWidth: 1,
+  titleColor: "#ff91ff",
+  bodyColor: "#eceafd",
+  padding: 10,
+  cornerRadius: 8,
+} as const;
+
+// Curva S del proyecto: plan contra realidad, ambas acumuladas semana a
+// semana. Lo que se lee de un vistazo es la separación entre las dos líneas
+// (cuánto se entregó vs. cuánto costó) y la pendiente (si el ritmo se sostiene).
+export function CurvaS({
+  semanas,
+  entregadas,
+  reales,
+}: {
+  semanas: string[]; // etiquetas dd/mm del lunes de cada semana
+  entregadas: number[]; // acumulado de horas estimadas de tareas finalizadas
+  reales: number[]; // acumulado de horas cargadas en Time Tracking
+}) {
+  if (semanas.length === 0) {
+    return (
+      <p className="py-10 text-center text-sm text-dc-muted">
+        Todavía no hay tareas finalizadas ni horas cargadas para dibujar la curva.
+      </p>
+    );
+  }
+
+  const options: ChartOptions<"line"> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: "index", intersect: false },
+    plugins: {
+      legend: {
+        labels: { color: TICK, usePointStyle: true, pointStyle: "line" },
+      },
+      tooltip: {
+        ...tooltip,
+        callbacks: {
+          title: (items) => `Semana del ${items[0]?.label ?? ""}`,
+          label: (c) => `${c.dataset.label}: ${formatHorasHsMin(Number(c.parsed.y))}`,
+        },
+      },
+    },
+    scales: {
+      x: {
+        ticks: { color: TICK, maxRotation: 0, autoSkipPadding: 16 },
+        grid: { color: GRID },
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { color: TICK, callback: (v) => formatHorasHsMin(Number(v)) },
+        grid: { color: GRID },
+      },
+    },
+  };
+
+  const data = {
+    labels: semanas,
+    datasets: [
+      {
+        label: "Hs presupuestadas entregadas",
+        data: entregadas,
+        borderColor: PERI,
+        backgroundColor: "rgba(139,140,255,.15)",
+        fill: true,
+        tension: 0.25,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+      },
+      {
+        label: "Hs Time Tracker",
+        data: reales,
+        borderColor: PINK,
+        backgroundColor: "rgba(255,145,255,.12)",
+        fill: true,
+        tension: 0.25,
+        pointRadius: 2,
+        pointHoverRadius: 5,
+      },
+    ],
+  };
+
+  return (
+    <div className="h-72">
+      <Line options={options} data={data} />
+    </div>
+  );
+}

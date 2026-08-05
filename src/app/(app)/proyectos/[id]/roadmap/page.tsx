@@ -4,11 +4,8 @@ import { getAccesoProyecto } from "@/lib/proyecto-acceso";
 import { asegurarRoadmap } from "@/lib/roadmap";
 import { formatHorasHsMin } from "@/lib/horas";
 import { InfoButton } from "@/components/info-button";
-import { mostrarFechaISO } from "../../../admin/clientes/constantes";
 import { RoadmapTablero } from "./tablero";
 import type { ListaRoadmapVista } from "./constantes";
-
-const CARD = "rounded-2xl border border-dc-line bg-dc-card px-4 py-3";
 
 // Pestaña Roadmap: el plan de trabajo del proyecto. Reemplaza al Gantt como
 // lugar donde se administran las tareas; la vista de cronograma se rediseñará
@@ -27,21 +24,13 @@ export default async function ProyectoRoadmapPage({
   // proyecto y no se vuelven a tocar.
   await asegurarRoadmap(acceso.cliente);
 
-  const [listas, horasReales] = await Promise.all([
-    prisma.listaRoadmap.findMany({
-      where: { clienteId: id },
-      orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
-      include: {
-        tareas: { orderBy: [{ orden: "asc" }, { createdAt: "asc" }] },
-      },
-    }),
-    // Horas efectivamente cargadas contra el proyecto en Time Tracking: es el
-    // contraste del presupuesto, no se puede cargar nada desde acá.
-    prisma.registroHoras.aggregate({
-      where: { clienteId: id, eliminadoEn: null },
-      _sum: { horas: true },
-    }),
-  ]);
+  const listas = await prisma.listaRoadmap.findMany({
+    where: { clienteId: id },
+    orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
+    include: {
+      tareas: { orderBy: [{ orden: "asc" }, { createdAt: "asc" }] },
+    },
+  });
 
   const vistas: ListaRoadmapVista[] = listas.map((l) => {
     const tareas = l.tareas.map((t) => ({
@@ -52,32 +41,11 @@ export default async function ProyectoRoadmapPage({
       horasEstimadas: formatHorasHsMin(Number(t.horasEstimadas)),
       estado: t.estado,
     }));
-    return {
-      id: l.id,
-      nombre: l.nombre,
-      tareas,
-      horasEstimadas: l.tareas.reduce((a, t) => a + Number(t.horasEstimadas), 0),
-      horasEntregadas: l.tareas.reduce(
-        (a, t) => a + (t.estado === "finalizada" ? Number(t.horasEstimadas) : 0),
-        0,
-      ),
-    };
+    return { id: l.id, nombre: l.nombre, tareas };
   });
 
-  const planificadas = vistas.reduce((a, l) => a + l.horasEstimadas, 0);
-  const entregadas = vistas.reduce((a, l) => a + l.horasEntregadas, 0);
-  const reales = Number(horasReales._sum.horas ?? 0);
-
-  const todas = listas.flatMap((l) => l.tareas);
-  const arranque = todas.length
-    ? new Date(Math.min(...todas.map((t) => t.fechaInicio.getTime())))
-    : null;
-  const cierre = todas.length
-    ? new Date(Math.max(...todas.map((t) => t.fechaFin.getTime())))
-    : null;
-
   return (
-    // Encabezado y KPIs fijos; solo la columna de listas scrollea.
+    // Encabezado fijo; solo la columna de listas scrollea.
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
@@ -91,60 +59,7 @@ export default async function ProyectoRoadmapPage({
         </div>
       </div>
 
-      <div className="grid shrink-0 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Kpi
-          titulo="Horas planificadas"
-          valor={formatHorasHsMin(planificadas)}
-          nota={`${todas.length} tarea(s) en ${vistas.length} lista(s)`}
-        />
-        <Kpi
-          titulo="Planificadas entregadas"
-          valor={formatHorasHsMin(entregadas)}
-          nota={
-            planificadas > 0
-              ? `${Math.round((entregadas / planificadas) * 100)}% del plan`
-              : "Sin plan cargado"
-          }
-        />
-        <Kpi
-          titulo="Horas reales"
-          valor={formatHorasHsMin(reales)}
-          nota="Cargadas en Time Tracking"
-        />
-        <Kpi
-          titulo="Fecha estimada de fin de proceso"
-          valor={
-            cierre ? mostrarFechaISO(cierre.toISOString().slice(0, 10)) : "—"
-          }
-          nota={
-            arranque
-              ? `Arranca el ${mostrarFechaISO(arranque.toISOString().slice(0, 10))}`
-              : "Sin tareas"
-          }
-        />
-      </div>
-
       <RoadmapTablero clienteId={id} listas={vistas} />
-    </div>
-  );
-}
-
-function Kpi({
-  titulo,
-  valor,
-  nota,
-}: {
-  titulo: string;
-  valor: string;
-  nota: string;
-}) {
-  return (
-    <div className={CARD}>
-      <p className="text-[11px] uppercase tracking-wide text-dc-muted">{titulo}</p>
-      <p className="mt-1 font-display text-lg tabular-nums text-white">{valor}</p>
-      <p className="mt-0.5 truncate text-xs text-dc-muted" title={nota}>
-        {nota}
-      </p>
     </div>
   );
 }

@@ -74,6 +74,4 @@ export type ListaRoadmapVista = {
   id: string;
   nombre: string;
   tareas: TareaRoadmapFila[];
-  horasEstimadas: number;
-  horasEntregadas: number;
 };
