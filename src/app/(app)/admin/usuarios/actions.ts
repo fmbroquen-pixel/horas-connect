@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
+import { MAX_BACKUPS } from "./constantes";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
 const UsuarioSchema = z.object({
@@ -217,23 +218,97 @@ async function asegurarTarifaCero(usuarioId: string) {
   }
 }
 
+export type ResultadoAsignacion = { error?: string; ok?: boolean };
+
+// Guarda los proyectos del usuario con su rol. Reglas, todas revalidadas acá
+// aunque la UI ya las bloquee: un único owner por proyecto, hasta dos backups,
+// y nadie puede ser owner y backup del mismo proyecto.
+//
+// Solo toca las filas CON rol: las asignaciones viejas sin rol declarado se
+// dejan intactas para no quitarle a nadie el permiso de cargar horas por
+// haber guardado este formulario. Se completan marcando el proyecto en una de
+// las dos solapas.
 export async function guardarProyectosAsignados(
   usuarioId: string,
+  _prev: unknown,
   formData: FormData,
-) {
+): Promise<ResultadoAsignacion> {
   // La asignación de clientes la centraliza el admin: ningún usuario (ni
   // siquiera sobre sí mismo) puede cambiar sus propios clientes asignados.
   await requireAdmin();
 
-  const clienteIds = formData.getAll("clienteId").map(String);
+  const owners = [...new Set(formData.getAll("owner").map(String))];
+  const backups = [...new Set(formData.getAll("backup").map(String))];
 
-  await prisma.$transaction([
-    prisma.proyectoAsignado.deleteMany({ where: { usuarioId } }),
-    prisma.proyectoAsignado.createMany({
-      data: clienteIds.map((clienteId) => ({ usuarioId, clienteId })),
-    }),
-  ]);
+  const enAmbos = owners.filter((id) => backups.includes(id));
+  if (enAmbos.length > 0) {
+    return {
+      error: "Un mismo usuario no puede ser Owner y Backup del mismo proyecto.",
+    };
+  }
+
+  const clienteIds = [...owners, ...backups];
+  if (clienteIds.length > 0) {
+    const existen = await prisma.cliente.count({ where: { id: { in: clienteIds } } });
+    if (existen !== clienteIds.length) return { error: "Proyecto inexistente." };
+  }
+
+  // Estado actual de los proyectos tocados, sin contar a este usuario: es
+  // contra esto que se validan los cupos.
+  const ajenas = await prisma.proyectoAsignado.findMany({
+    where: {
+      clienteId: { in: clienteIds },
+      usuarioId: { not: usuarioId },
+      rol: { not: null },
+    },
+    include: { cliente: { select: { nombre: true } }, usuario: { select: { nombre: true } } },
+  });
+
+  for (const clienteId of owners) {
+    const ocupado = ajenas.find((a) => a.clienteId === clienteId && a.rol === "owner");
+    if (ocupado) {
+      return {
+        error: `"${ocupado.cliente.nombre}" ya tiene a ${ocupado.usuario.nombre} como Mentor Owner. Sacáselo antes de reasignarlo.`,
+      };
+    }
+  }
+
+  for (const clienteId of backups) {
+    const otros = ajenas.filter((a) => a.clienteId === clienteId && a.rol === "backup");
+    if (otros.length >= MAX_BACKUPS) {
+      return {
+        error: `"${otros[0].cliente.nombre}" ya tiene ${MAX_BACKUPS} Mentores Backup (${otros
+          .map((o) => o.usuario.nombre)
+          .join(", ")}).`,
+      };
+    }
+  }
+
+  await prisma.$transaction(async (tx) => {
+    // Se borran solo las asignaciones CON rol de este usuario; las que no
+    // tienen rol sobreviven y conservan su permiso de carga.
+    await tx.proyectoAsignado.deleteMany({
+      where: { usuarioId, rol: { not: null } },
+    });
+    for (const [rol, ids] of [
+      ["owner", owners],
+      ["backup", backups],
+    ] as const) {
+      for (const clienteId of ids) {
+        // upsert y no create: el usuario puede tener ya una fila sin rol para
+        // ese proyecto, y hay una sola fila por (usuario, cliente).
+        await tx.proyectoAsignado.upsert({
+          where: { usuarioId_clienteId: { usuarioId, clienteId } },
+          create: { usuarioId, clienteId, rol },
+          update: { rol },
+        });
+      }
+    }
+  });
 
   revalidatePath(`/admin/usuarios/${usuarioId}`);
   revalidatePath("/mi-perfil");
+  revalidatePath("/proyectos", "layout");
+  revalidatePath("/dashboard");
+  return { ok: true };
 }

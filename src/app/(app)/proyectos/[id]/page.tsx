@@ -20,15 +20,15 @@ export default async function ProyectoHomePage({
   const acceso = await getAccesoProyecto(id);
   if (!acceso) notFound();
 
-  const [registros, tareas] = await Promise.all([
+  const [asignaciones, registros, tareas] = await Promise.all([
+    prisma.proyectoAsignado.findMany({
+      where: { clienteId: id, rol: { not: null } },
+      include: { usuario: { select: { nombre: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
     prisma.registroHoras.findMany({
       where: { clienteId: id, eliminadoEn: null },
-      select: {
-        fecha: true,
-        horas: true,
-        ownership: true,
-        usuario: { select: { nombre: true } },
-      },
+      select: { fecha: true, horas: true },
     }),
     prisma.tareaRoadmap.findMany({
       where: { lista: { clienteId: id } },
@@ -36,31 +36,14 @@ export default async function ProyectoHomePage({
     }),
   ]);
 
-  // Owner y Backup del proyecto no se declaran en ninguna pantalla: se
-  // deducen de quién cargó horas en cada rol, tomando al mentor con más horas
-  // acumuladas. Es el único dato real disponible y se mantiene solo.
-  const porMentor = new Map<string, { owner: number; backup: number }>();
-  for (const r of registros) {
-    const acc = porMentor.get(r.usuario.nombre) ?? { owner: 0, backup: 0 };
-    if (r.ownership === "owner") acc.owner += Number(r.horas);
-    else if (r.ownership === "backup") acc.backup += Number(r.horas);
-    porMentor.set(r.usuario.nombre, acc);
-  }
-  const mentorDe = (rol: "owner" | "backup") => {
-    const candidatos = [...porMentor.entries()]
-      .filter(([, h]) => h[rol] > 0)
-      .sort((a, b) => b[1][rol] - a[1][rol]);
-    return {
-      nombre: candidatos[0]?.[0] ?? "—",
-      nota: candidatos[0]
-        ? `${formatHorasHsMin(candidatos[0][1][rol])} cargadas${
-            candidatos.length > 1 ? ` · +${candidatos.length - 1} más` : ""
-          }`
-        : "Sin horas cargadas en este rol",
-    };
-  };
-  const owner = mentorDe("owner");
-  const backup = mentorDe("backup");
+  // Owner y Backup salen de la asignación explícita que hace el admin en
+  // Settings → Usuarios; no se deducen de las horas cargadas. Un proyecto
+  // tiene un único Owner y hasta dos Backup.
+  const owner =
+    asignaciones.find((a) => a.rol === "owner")?.usuario.nombre ?? "—";
+  const backups = asignaciones
+    .filter((a) => a.rol === "backup")
+    .map((a) => a.usuario.nombre);
 
   const presupuestadas = tareas.reduce((a, t) => a + Number(t.horasEstimadas), 0);
   const entregadas = tareas.reduce(
@@ -81,8 +64,22 @@ export default async function ProyectoHomePage({
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <Kpi titulo="Mentor Owner" valor={owner.nombre} nota={owner.nota} />
-        <Kpi titulo="Mentor Backup" valor={backup.nombre} nota={backup.nota} />
+        <Kpi
+          titulo="Mentor Owner"
+          valor={owner}
+          nota={owner === "—" ? "Sin asignar en Settings → Usuarios" : undefined}
+        />
+        <Kpi
+          titulo="Mentor Backup"
+          valor={backups[0] ?? "—"}
+          nota={
+            backups.length > 1
+              ? backups.slice(1).join(", ")
+              : backups.length === 0
+                ? "Sin asignar en Settings → Usuarios"
+                : undefined
+          }
+        />
         <Kpi
           titulo="Hs Presupuestadas Total"
           valor={formatHorasHsMin(presupuestadas)}

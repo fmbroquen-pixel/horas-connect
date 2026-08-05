@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/require-admin";
 import { actualizarUsuario, guardarTarifa, alternarActivoUsuario } from "../actions";
 import { TarifaForm } from "./tarifa-form";
 import { ProyectosForm } from "./proyectos-form";
+import type { ProyectoAsignable } from "../constantes";
 import { HistorialTarifas } from "@/components/perfil/historial-tarifas";
 import { SeccionDatosUsuario } from "@/components/perfil/seccion-datos";
 import { BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
@@ -37,14 +38,34 @@ export default async function UsuarioDetallePage({
     asignaProyectos
       ? prisma.cliente.findMany({ where: { activo: true }, orderBy: { nombre: "asc" } })
       : Promise.resolve([]),
+    // Todas las asignaciones, de cualquier usuario: hacen falta para saber
+    // qué proyectos ya tienen owner o los backups completos.
     asignaProyectos
-      ? prisma.proyectoAsignado.findMany({ where: { usuarioId: id } })
+      ? prisma.proyectoAsignado.findMany({
+          include: { usuario: { select: { nombre: true } } },
+        })
       : Promise.resolve([]),
   ]);
 
   const vigentes = tarifas.filter((t) => t.vigenteHasta === null);
   const historial = tarifas.filter((t) => t.vigenteHasta !== null);
-  const asignadosIds = new Set(asignados.map((a) => a.clienteId));
+  // Estado de cada proyecto para las solapas: el rol propio del usuario que
+  // se edita y los cupos que ocupan los demás.
+  const proyectosAsignables: ProyectoAsignable[] = clientes.map((c) => {
+    const delCliente = asignados.filter((a) => a.clienteId === c.id);
+    const propia = delCliente.find((a) => a.usuarioId === id);
+    const ajenas = delCliente.filter((a) => a.usuarioId !== id);
+    return {
+      id: c.id,
+      nombre: c.nombre,
+      rolPropio: propia?.rol ?? "",
+      sinRol: Boolean(propia) && !propia?.rol,
+      ownerAjeno: ajenas.find((a) => a.rol === "owner")?.usuario.nombre ?? null,
+      backupsAjenos: ajenas
+        .filter((a) => a.rol === "backup")
+        .map((a) => a.usuario.nombre),
+    };
+  });
 
   const buscarValor = (modalidad: string, ownership: string) => {
     const t = vigentes.find((v) => v.modalidad === modalidad && v.ownership === ownership);
@@ -112,13 +133,12 @@ export default async function UsuarioDetallePage({
           <p className="mt-1 text-xs text-dc-muted">
             {usuario.rol === "reader"
               ? "Limitan qué clientes puede ver en el informe de rentabilidad."
-              : "Limitan en qué clientes puede cargar horas."}
+              : "Limitan en qué clientes puede cargar horas y con qué rol. Cada proyecto tiene un único Mentor Owner y hasta dos Backup."}
           </p>
           <div className="mt-4">
             <ProyectosForm
               usuarioId={usuario.id}
-              clientes={clientes}
-              asignadosIds={asignadosIds}
+              proyectos={proyectosAsignables}
             />
           </div>
         </div>

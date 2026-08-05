@@ -7,9 +7,11 @@ import {
 } from "../../../admin/clientes/constantes";
 import { IconoCandado, SoloLecturaBadge } from "@/components/ui/solo-lectura-badge";
 
-// Pestaña Equipo de trabajo: SOLO LECTURA. La administración (alta, edición,
-// baja) se hace exclusivamente desde Settings → Clientes → Equipo; acá se
-// integra y muestra la misma fuente de datos.
+// Pestaña Equipo de trabajo: SOLO LECTURA, y con las dos mitades del equipo
+// juntas. Arriba los mentores de Embarca con su rol (asignados en Settings →
+// Usuarios) y abajo los contactos del lado del cliente (Settings → Clientes →
+// Equipo). Cada bloque lee su propia fuente, así que no hay nada que
+// sincronizar a mano: son la misma asignación vista desde acá.
 export default async function ProyectoEquipoPage({
   params,
 }: {
@@ -19,10 +21,26 @@ export default async function ProyectoEquipoPage({
   const acceso = await getAccesoProyecto(id);
   if (!acceso) notFound();
 
-  const miembros = await prisma.miembroEquipo.findMany({
-    where: { clienteId: id },
-    orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
-  });
+  const [miembros, asignaciones] = await Promise.all([
+    prisma.miembroEquipo.findMany({
+      where: { clienteId: id },
+      orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+    }),
+    prisma.proyectoAsignado.findMany({
+      where: { clienteId: id, rol: { not: null } },
+      include: { usuario: { select: { nombre: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  const mentores = [
+    ...asignaciones.filter((a) => a.rol === "owner"),
+    ...asignaciones.filter((a) => a.rol === "backup"),
+  ].map((a) => ({
+    id: a.id,
+    nombre: a.usuario.nombre,
+    rol: a.rol === "owner" ? "Mentor Owner" : "Mentor Backup",
+  }));
 
   return (
     // Título y nota fijos; solo la lista de integrantes scrollea.
@@ -35,11 +53,39 @@ export default async function ProyectoEquipoPage({
         <SoloLecturaBadge />
       </div>
       <p className="mt-1 shrink-0 text-xs text-dc-muted">
-        La administración del equipo se hace desde Settings → Clientes.
+        Los mentores se asignan en Settings → Usuarios; los contactos del
+        cliente, en Settings → Clientes.
+      </p>
+
+      <div className="mt-4 shrink-0">
+        <p className="text-[11px] uppercase tracking-wide text-dc-muted">
+          Mentores del proyecto
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {mentores.length > 0 ? (
+            mentores.map((m) => (
+              <span
+                key={m.id}
+                className="inline-flex items-center gap-2 rounded-full bg-dc-peri/15 px-3 py-1 text-xs text-dc-peri"
+              >
+                {m.nombre}
+                <span className="text-dc-muted">{m.rol}</span>
+              </span>
+            ))
+          ) : (
+            <span className="text-sm text-dc-muted">
+              Sin mentores asignados todavía.
+            </span>
+          )}
+        </div>
+      </div>
+
+      <p className="mt-5 shrink-0 text-[11px] uppercase tracking-wide text-dc-muted">
+        Contactos del cliente
       </p>
 
       {miembros.length > 0 ? (
-        <ul className="mt-4 min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
+        <ul className="mt-2 min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
           {miembros.map((m) => (
             <li
               key={m.id}

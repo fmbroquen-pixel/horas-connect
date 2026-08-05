@@ -299,19 +299,37 @@ model Usuario {
   @@map("usuarios")
 }
 
-// Restringe en que proyectos puede cargar horas un usuario "guest". Un
-// usuario sin filas acá (o admin/reader) no tiene esta restricción aplicada
-// en el formulario de carga.
+// Rol de un mentor dentro de un proyecto. Un proyecto tiene un único owner y
+// hasta dos backups; el mismo usuario no puede ocupar los dos roles, cosa que
+// ya garantiza la unicidad de (usuario, cliente): una sola fila por par.
+enum RolProyecto {
+  owner
+  backup
+}
+
+// Asignación de un mentor a un proyecto. Cumple dos funciones: restringe en
+// qué proyectos puede cargar horas un usuario "guest" (un usuario sin filas
+// acá, o admin/reader, no tiene esa restricción) y declara su rol.
+//
+// `rol` es nullable porque las asignaciones anteriores a esta función no
+// tienen un rol declarado: se hicieron solo para dar permiso de carga.
+// Inventarles uno sería afirmar quién es responsable de cada proyecto sin
+// ningún dato que lo respalde; quedan como "sin rol", conservan el permiso y
+// el admin las completa desde Settings → Usuarios.
 model ProyectoAsignado {
-  id        String  @id @default(cuid())
-  usuarioId String  @map("usuario_id")
-  usuario   Usuario @relation(fields: [usuarioId], references: [id])
-  clienteId String  @map("cliente_id")
-  cliente   Cliente @relation(fields: [clienteId], references: [id])
+  id        String       @id @default(cuid())
+  usuarioId String       @map("usuario_id")
+  usuario   Usuario      @relation(fields: [usuarioId], references: [id])
+  clienteId String       @map("cliente_id")
+  cliente   Cliente      @relation(fields: [clienteId], references: [id])
+  rol       RolProyecto?
 
   createdAt DateTime @default(now())
 
+  // La unicidad de un único owner por proyecto se garantiza además con un
+  // índice único parcial creado en la migración (Prisma no los expresa acá).
   @@unique([usuarioId, clienteId])
+  @@index([clienteId, rol])
   @@map("proyectos_asignados")
 }
 
