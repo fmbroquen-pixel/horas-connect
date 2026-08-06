@@ -43,32 +43,37 @@ export type TareaRoadmapFila = {
 // siempre una lectura de las tareas, así que cualquier cambio en ellas los
 // actualiza solo.
 //
-// Una tarea está "resuelta" cuando ya no queda trabajo por hacer, y eso
-// incluye las No ejecutadas: se decidió no hacerlas, así que no pueden dejar
-// una lista trabada en 90% para siempre.
+// Son dos preguntas distintas y por eso no usan el mismo criterio:
+//
+// · El PORCENTAJE mide cuánto se movió la lista: toda tarea que ya no está
+//   "sin iniciar" cuenta, incluidas las en curso. Es avance, no cierre.
+// · El ESTADO describe la situación de la lista: solo está finalizada cuando
+//   no queda nada por hacer, y ahí las No ejecutadas sí cuentan como cerradas
+//   (se decidió no hacerlas), pero las en curso no.
 export function progresoLista(tareas: { estado: string }[]): {
   porcentaje: number;
   estado: string;
-  resueltas: number;
+  arrancadas: number;
   total: number;
 } {
   const total = tareas.length;
-  const resueltas = tareas.filter(
+  const arrancadas = tareas.filter((t) => t.estado !== "sin_iniciar").length;
+  const cerradas = tareas.filter(
     (t) => t.estado === "finalizada" || t.estado === "no_ejecutada",
   ).length;
 
-  // Una lista vacía se considera sin iniciar: no hay nada resuelto todavía.
+  // Una lista vacía se considera sin iniciar: no arrancó nada todavía.
   const estado =
-    total === 0 || tareas.every((t) => t.estado === "sin_iniciar")
+    total === 0 || arrancadas === 0
       ? "sin_iniciar"
-      : resueltas === total
+      : cerradas === total
         ? "finalizada"
         : "en_curso";
 
   return {
-    porcentaje: total > 0 ? Math.round((resueltas / total) * 100) : 0,
+    porcentaje: total > 0 ? Math.round((arrancadas / total) * 100) : 0,
     estado,
-    resueltas,
+    arrancadas,
     total,
   };
 }

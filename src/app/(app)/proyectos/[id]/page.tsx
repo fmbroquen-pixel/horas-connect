@@ -52,8 +52,14 @@ export default async function ProyectoHomePage({
     0,
   );
   const reales = registros.reduce((a, r) => a + Number(r.horas), 0);
-  const avance =
-    presupuestadas > 0 ? Math.round((entregadas / presupuestadas) * 100) : 0;
+  // Las dos medidas van contra el MISMO denominador —lo estimado— para poder
+  // compararlas de un vistazo: cuánto del presupuesto se entregó y cuánto se
+  // consumió de verdad. Que la segunda barra pase a la primera es la señal de
+  // que el proyecto está gastando más horas de las que va entregando.
+  const pct = (valor: number) =>
+    presupuestadas > 0 ? Math.round((valor / presupuestadas) * 100) : 0;
+  const avanceEntregado = pct(entregadas);
+  const avanceReal = pct(reales);
 
   const curva = construirCurvaHoras(
     tareas
@@ -71,7 +77,7 @@ export default async function ProyectoHomePage({
         {/* Los dos backups van juntos: la card no lleva texto secundario. */}
         <Kpi titulo="Mentor Backup" valor={backups.join(", ") || "-"} />
         <Kpi
-          titulo="Hs Presupuestadas Total"
+          titulo="Horas estimadas de proyecto"
           valor={formatHorasHsMin(presupuestadas)}
         />
         <Kpi
@@ -85,28 +91,22 @@ export default async function ProyectoHomePage({
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-display text-sm uppercase text-white">Progreso</h2>
           <span className="text-xs text-dc-muted">
-            {formatHorasHsMin(entregadas)} de {formatHorasHsMin(presupuestadas)}{" "}
-            presupuestadas
+            sobre {formatHorasHsMin(presupuestadas)} estimadas
           </span>
         </div>
-        <div className="mt-2 flex items-center gap-3">
-          <span
-            role="progressbar"
-            aria-valuenow={avance}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Avance del presupuesto entregado"
-            className="block h-2.5 flex-1 overflow-hidden rounded-full bg-dc-line/60"
-          >
-            {/* Verde: el mismo que marca "finalizada" en el Roadmap. */}
-            <span
-              className="block h-full rounded-full bg-[#34d399] transition-[width] duration-300"
-              style={{ width: `${avance}%` }}
-            />
-          </span>
-          <span className="w-12 text-right font-display text-base tabular-nums text-white">
-            {avance}%
-          </span>
+        <div className="mt-2 space-y-1.5">
+          <BarraProgreso
+            etiqueta="Entregadas"
+            horas={formatHorasHsMin(entregadas)}
+            porcentaje={avanceEntregado}
+            color="#34d399"
+          />
+          <BarraProgreso
+            etiqueta="Time Tracker"
+            horas={formatHorasHsMin(reales)}
+            porcentaje={avanceReal}
+            color="#ff91ff"
+          />
         </div>
       </div>
 
@@ -125,6 +125,49 @@ export default async function ProyectoHomePage({
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+// Una medida del progreso contra lo estimado. El relleno se recorta al 100%
+// para no desbordar la barra, pero el número muestra el valor real: si el
+// consumo se pasó del presupuesto, esconderlo sería justo perder el dato que
+// importa.
+function BarraProgreso({
+  etiqueta,
+  horas,
+  porcentaje,
+  color,
+}: {
+  etiqueta: string;
+  horas: string;
+  porcentaje: number;
+  color: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-24 shrink-0 text-[11px] uppercase tracking-wide text-dc-muted">
+        {etiqueta}
+      </span>
+      <span
+        role="progressbar"
+        aria-valuenow={porcentaje}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${etiqueta}: ${horas} (${porcentaje}% de lo estimado)`}
+        className="block h-2.5 flex-1 overflow-hidden rounded-full bg-dc-line/60"
+      >
+        <span
+          className="block h-full rounded-full transition-[width] duration-300"
+          style={{ width: `${Math.min(porcentaje, 100)}%`, backgroundColor: color }}
+        />
+      </span>
+      <span className="w-20 text-right text-xs tabular-nums text-dc-muted">
+        {horas}
+      </span>
+      <span className="w-12 text-right font-display text-base tabular-nums text-white">
+        {porcentaje}%
+      </span>
     </div>
   );
 }
