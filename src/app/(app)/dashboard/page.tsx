@@ -248,10 +248,12 @@ export default async function DashboardPage({
           {/* Fila superior: el estado del portafolio a la izquierda y, a la
               derecha, las dos cards de agenda apiladas. */}
           <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
-            <div className="flex h-96 flex-col">
+            <div className="flex h-[30rem] flex-col">
               <EstadoProyectos clienteIds={ids} />
             </div>
-            <div className="grid gap-4 lg:h-96 lg:grid-rows-2">
+            {/* Cumpleaños toma el alto que necesita y Etapas próximas se queda
+                con el resto: es la que suele tener más ítems. */}
+            <div className="grid gap-4 lg:h-[30rem] lg:grid-rows-[minmax(0,2fr)_minmax(0,3fr)]">
               <div className="flex max-h-64 min-h-0 flex-col rounded-2xl border border-dc-line bg-dc-card p-5 lg:max-h-none">
                 <h2 className="mb-3 shrink-0 text-base font-semibold text-white">
                   Cumpleaños de la semana

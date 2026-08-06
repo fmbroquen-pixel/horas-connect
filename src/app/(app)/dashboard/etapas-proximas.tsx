@@ -111,7 +111,10 @@ export function EtapasProximas({
         <div className="min-h-0 flex-1 overflow-y-auto">
           {grupos.map((g) => (
             <div key={g.titulo}>
-              <p className="sticky top-0 bg-dc-card py-1 text-[11px] uppercase tracking-wide text-dc-muted">
+              {/* z-10: `sticky` con z-index auto NO crea contexto de
+                  apilado, así que sin esto la lista —que viene después en el
+                  DOM— se dibuja ENCIMA del título y los textos se pisan. */}
+              <p className="sticky top-0 z-10 bg-dc-card py-1 text-[11px] uppercase tracking-wide text-dc-muted">
                 {g.titulo}
               </p>
               <ul className="divide-y divide-dc-line">
