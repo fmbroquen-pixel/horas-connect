@@ -13,7 +13,10 @@ export type TareaEtapa = { id: string; nombre: string; lista: string };
 export type EtapaProyecto = {
   // Tarea en curso más avanzada, o null si no hay ninguna.
   actual: TareaEtapa | null;
-  // Todas las tareas del plan, en orden: son las opciones elegibles.
+  // Elegibles: la actual (para poder mostrarla) y todo lo que viene DESPUÉS
+  // en el plan. Ofrecer tareas anteriores invitaría a retroceder, que no es
+  // lo que se hace desde un tablero de estado: se avanza. Sin etapa actual
+  // todavía, el plan entero está disponible.
   opciones: TareaEtapa[];
 };
 
@@ -41,14 +44,24 @@ export async function getEtapasPorProyecto(
     },
   });
 
-  const salida: Record<string, EtapaProyecto> = {};
+  // Primero el plan completo por proyecto, en orden.
+  const planes = new Map<string, { tareas: TareaEtapa[]; actual: TareaEtapa | null }>();
   for (const t of tareas) {
     const clienteId = t.lista.clienteId;
-    salida[clienteId] ??= { actual: null, opciones: [] };
+    const plan = planes.get(clienteId) ?? { tareas: [], actual: null };
     const item = { id: t.id, nombre: t.nombre, lista: t.lista.nombre };
-    salida[clienteId].opciones.push(item);
+    plan.tareas.push(item);
     // Las tareas vienen en orden, así que la última en curso que se ve gana.
-    if (t.estado === "en_curso") salida[clienteId].actual = item;
+    if (t.estado === "en_curso") plan.actual = item;
+    planes.set(clienteId, plan);
+  }
+
+  const salida: Record<string, EtapaProyecto> = {};
+  for (const [clienteId, plan] of planes) {
+    const desde = plan.actual
+      ? plan.tareas.findIndex((t) => t.id === plan.actual!.id)
+      : 0;
+    salida[clienteId] = { actual: plan.actual, opciones: plan.tareas.slice(desde) };
   }
   return salida;
 }

@@ -116,16 +116,20 @@ export default async function DashboardPage({
       nombre: true,
       fechaInicio: true,
       personas: true,
-      lista: { select: { cliente: { select: { nombre: true } } } },
+      lista: { select: { clienteId: true, cliente: { select: { nombre: true } } } },
     },
   });
   const etapasProximas: EtapaProxima[] = tareasProximas.map((t) => ({
     id: t.id,
+    clienteId: t.lista.clienteId,
     proyecto: t.lista.cliente.nombre,
     tarea: t.nombre,
     fecha: `${String(t.fechaInicio.getUTCDate()).padStart(2, "0")}/${String(
       t.fechaInicio.getUTCMonth() + 1,
     ).padStart(2, "0")}`,
+    diasRestantes: Math.round(
+      (t.fechaInicio.getTime() - hoyUtc.getTime()) / DIA_MS,
+    ),
     personas: t.personas,
   }));
 
@@ -274,7 +278,12 @@ export default async function DashboardPage({
                 )}
               </div>
 
-              <EtapasProximas etapas={etapasProximas} />
+              <EtapasProximas
+                etapas={etapasProximas}
+                hasta={`${String(en14dias.getUTCDate()).padStart(2, "0")}/${String(
+                  en14dias.getUTCMonth() + 1,
+                ).padStart(2, "0")}`}
+              />
             </div>
           </div>
 
