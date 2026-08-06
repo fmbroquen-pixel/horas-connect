@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { cambiarSemaforo, marcarEtapaActual } from "../proyectos/actions";
+import type { CierreEtapa } from "../proyectos/actions";
 import { OPCIONES_SEMAFORO, COLOR_SEMAFORO } from "../proyectos/constantes";
 import { TagPopover, type OpcionTag } from "./tag-popover";
+import { CambioEtapaModal } from "./cambio-etapa-modal";
 
 const OPCIONES_SEMAFORO_TAG: OpcionTag[] = OPCIONES_SEMAFORO.map((o) => ({
   ...o,
@@ -28,9 +30,12 @@ export function FilaProyectoEstado({
   etapaId: string;
   etapas: OpcionTag[];
 }) {
-  const [, start] = useTransition();
+  const [guardando, start] = useTransition();
   const [semaforo, setSemaforo] = useState(semaforoInicial);
   const [etapaId, setEtapaId] = useState(etapaIdInicial);
+  // Etapa elegida esperando confirmación en el modal.
+  const [porConfirmar, setPorConfirmar] = useState<OpcionTag | null>(null);
+  const [errorEtapa, setErrorEtapa] = useState<string>();
 
   const elegirSemaforo = (valor: string) => {
     if (valor === semaforo) return;
@@ -40,15 +45,37 @@ export function FilaProyectoEstado({
     });
   };
 
+  // El estado local no se toca hasta que el servidor confirma: las dos
+  // escrituras van en una transacción y, si falla, en la base no cambió nada.
+  // Adelantarlo dejaría a la vista una etapa que no existe.
+  const aplicarEtapa = (valor: string, cierre: CierreEtapa) => {
+    start(async () => {
+      const r = await marcarEtapaActual(id, valor, cierre);
+      if (r?.error) {
+        setErrorEtapa(r.error);
+        return;
+      }
+      setEtapaId(valor);
+      setPorConfirmar(null);
+    });
+  };
+
   // Elegir la etapa marca esa tarea del Roadmap como "en curso": el Home no
   // guarda un estado propio, escribe sobre el mismo plan que se ve en
-  // Follow Up.
+  // Follow Up. Como además hay que cerrar la que estaba en curso —y con cuál
+  // de los tres estados no se puede adivinar desde acá— la elección abre un
+  // modal en vez de guardar en el acto.
   const elegirEtapa = (valor: string) => {
     if (valor === etapaId) return;
-    setEtapaId(valor);
-    start(async () => {
-      await marcarEtapaActual(id, valor);
-    });
+    const nueva = etapas.find((e) => e.value === valor);
+    if (!nueva) return;
+    setErrorEtapa(undefined);
+    // Sin etapa en curso no hay nada que cerrar: se aplica derecho.
+    if (!etapaId) {
+      aplicarEtapa(valor, "sin_iniciar");
+      return;
+    }
+    setPorConfirmar(nueva);
   };
 
   return (
@@ -104,6 +131,22 @@ export function FilaProyectoEstado({
           />
         </div>
       </div>
+
+      <CambioEtapaModal
+        abierto={porConfirmar !== null}
+        proyecto={nombre}
+        etapaActual={etapas.find((e) => e.value === etapaId)?.label ?? "La etapa actual"}
+        etapaNueva={porConfirmar?.label ?? ""}
+        guardando={guardando}
+        error={errorEtapa}
+        onCancelar={() => {
+          setPorConfirmar(null);
+          setErrorEtapa(undefined);
+        }}
+        onConfirmar={(cierre) => {
+          if (porConfirmar) aplicarEtapa(porConfirmar.value, cierre);
+        }}
+      />
     </div>
   );
 }

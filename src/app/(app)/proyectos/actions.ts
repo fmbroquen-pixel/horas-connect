@@ -72,16 +72,33 @@ export async function cambiarSemaforo(
 
 // ── Etapa actual ──────────────────────────────────────────────────────────
 
+// Con qué estado puede quedar la etapa que se está dejando atrás. "en_curso"
+// no está a propósito: si la anterior lo conservara habría dos etapas
+// actuales y el tablero dejaría de describir un plan secuencial.
+const CIERRES_ETAPA = ["sin_iniciar", "no_ejecutada", "finalizada"] as const;
+export type CierreEtapa = (typeof CIERRES_ETAPA)[number];
+
 // La etapa actual es la última tarea EN CURSO del Roadmap. Elegirla desde la
-// card del Home marca esa tarea como en curso y saca de ese estado a las
-// demás del proyecto: el plan es secuencial, así que dos tareas en curso a la
-// vez no describen nada. Las que salen vuelven a "sin iniciar"; las
-// finalizadas o no ejecutadas no se tocan, porque ya son historia.
+// card del Home hace dos cosas en un solo movimiento: cierra la que estaba en
+// curso con el estado que eligió quien la mueve —terminada, no ejecutada, o
+// de vuelta a sin iniciar si arrancó por error— y marca la nueva como en
+// curso.
+//
+// Las dos escrituras van en la misma transacción: a mitad de camino el
+// proyecto quedaría con dos etapas en curso o con ninguna, y las dos lecturas
+// son estados que la app muestra como si fueran verdad.
 export async function marcarEtapaActual(
   clienteId: string,
   tareaId: string,
+  cierreAnterior: CierreEtapa,
 ): Promise<Resultado> {
   await requireAcceso(clienteId);
+
+  // El popup solo ofrece los tres cierres válidos, pero la action es una
+  // entrada pública: se valida igual.
+  if (!CIERRES_ETAPA.includes(cierreAnterior)) {
+    return { error: "La etapa anterior no puede seguir En curso." };
+  }
 
   const tarea = await prisma.tareaRoadmap.findFirst({
     where: { id: tareaId, lista: { clienteId } },
@@ -90,9 +107,12 @@ export async function marcarEtapaActual(
   if (!tarea) return { error: "Esa tarea no pertenece al plan del proyecto." };
 
   await prisma.$transaction([
+    // Barre TODO el proyecto, no solo la lista de la etapa nueva: aunque el
+    // plan sea secuencial, un arrastre de datos podría dejar varias en curso
+    // en listas distintas y todas describen lo mismo.
     prisma.tareaRoadmap.updateMany({
       where: { lista: { clienteId }, estado: "en_curso", id: { not: tareaId } },
-      data: { estado: "sin_iniciar" },
+      data: { estado: cierreAnterior },
     }),
     prisma.tareaRoadmap.update({
       where: { id: tareaId },
