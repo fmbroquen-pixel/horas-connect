@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { getProyectosVisibles } from "@/lib/proyectos";
 import type { Usuario } from "@/generated/prisma/client";
 
@@ -71,7 +72,7 @@ export async function calcularReporte(
       where: {
         clienteId: { in: proyectoIds },
         fecha: { gte: desde, lt: hasta },
-        eliminadoEn: null,
+        ...SOLO_ACTIVOS,
       },
       include: { usuario: true },
     }),

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidarHoras } from "@/lib/registros-horas";
 import { prisma } from "@/lib/prisma";
 import { requireGuest } from "@/lib/require-guest";
 import { formatHorasHsMin } from "@/lib/horas";
@@ -80,9 +81,7 @@ export async function restaurarItem(
 
   if (tipo === "hora") {
     await prisma.registroHoras.updateMany({ where: { id, ...scope }, data });
-    revalidatePath("/timetracker");
-    revalidatePath("/dashboard");
-    revalidatePath("/proyectos", "layout");
+    revalidarHoras();
   } else {
     await prisma.vacacion.updateMany({ where: { id, ...scope }, data });
     revalidatePath("/vacaciones");

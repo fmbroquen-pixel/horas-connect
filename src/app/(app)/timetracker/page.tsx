@@ -7,6 +7,7 @@ import {
   resolverUsuarioDestino,
 } from "@/lib/registrar-para";
 import { getConceptosActivos } from "@/lib/conceptos";
+import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { formatHorasHsMin } from "@/lib/horas";
 import { hoyISO, rangoDefault30 } from "@/lib/formato";
 import { FiltroPopover } from "@/components/filtro-popover";
@@ -64,7 +65,7 @@ export default async function TimetrackerPage({
       prisma.registroHoras.findMany({
         where: {
           usuarioId: destino.id,
-          eliminadoEn: null,
+          ...SOLO_ACTIVOS,
           fecha: {
             gte: new Date(desde + "T00:00:00Z"),
             lte: new Date(hasta + "T00:00:00Z"),

@@ -1,11 +1,11 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { formatHorasHsMin, parseHorasHsMin } from "@/lib/horas";
+import { SOLO_ACTIVOS, revalidarHoras } from "@/lib/registros-horas";
 import { DIAS_VENTANA_EDICION } from "./constantes";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
@@ -29,14 +29,6 @@ export type CampoRegistro =
   | "horas";
 
 type Resultado = { error?: string; campo?: CampoRegistro };
-
-// Las horas alimentan el historial, los KPIs del Home y el contraste contra
-// el presupuesto del Roadmap: un cambio invalida las tres vistas.
-function revalidarHoras() {
-  revalidatePath("/timetracker");
-  revalidatePath("/dashboard");
-  revalidatePath("/proyectos", "layout");
-}
 
 function limiteVentana(): Date {
   const limite = new Date();
@@ -260,7 +252,7 @@ export async function eliminarRegistros(ids: string[]): Promise<void> {
   await prisma.registroHoras.updateMany({
     where: {
       id: { in: ids },
-      eliminadoEn: null,
+      ...SOLO_ACTIVOS,
       ...(esAdmin ? {} : { usuarioId: usuario.id }),
     },
     data: { eliminadoEn: new Date() },
@@ -286,7 +278,7 @@ export async function editarRegistros(
   const filas = await prisma.registroHoras.findMany({
     where: {
       id: { in: ids },
-      eliminadoEn: null,
+      ...SOLO_ACTIVOS,
       ...(esAdmin ? {} : { usuarioId: usuario.id }),
     },
   });

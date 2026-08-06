@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import {
   BTN_ICON_SM,
   BTN_ICON_DANGER_SM,
@@ -77,10 +77,17 @@ export function BotonEliminarIcono({
   onConfirm,
   label = "Eliminar",
 }: {
-  onConfirm: () => void;
+  // Puede devolver una promesa: se espera antes de soltar el botón para que
+  // la fila no vuelva a su estado normal antes de que el borrado termine.
+  onConfirm: () => void | Promise<unknown>;
   label?: string;
 }) {
   const [confirmando, setConfirmando] = useState(false);
+  // La confirmación corre dentro de una transición: es lo que hace que React
+  // aplique al árbol actual la revalidación que devuelve el server action.
+  // Llamarlo suelto dejaba la pantalla —y los KPIs de otras vistas— con los
+  // valores viejos hasta recargar.
+  const [pending, start] = useTransition();
 
   if (!confirmando) {
     return (
@@ -98,7 +105,13 @@ export function BotonEliminarIcono({
   return (
     <button
       type="button"
-      onClick={onConfirm}
+      disabled={pending}
+      onClick={() =>
+        start(async () => {
+          await onConfirm();
+          setConfirmando(false);
+        })
+      }
       className={BTN_ICON_CONFIRM_SM}
       title="Confirmar eliminación"
       aria-label="Confirmar eliminación"

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { getConceptosActivos } from "@/lib/conceptos";
+import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { parseHorasHsMin } from "@/lib/horas";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
@@ -155,7 +156,7 @@ async function procesar(usuarioId: string, archivo: File) {
 
   // Para detectar duplicados contra la base.
   const existentes = await prisma.registroHoras.findMany({
-    where: { usuarioId, eliminadoEn: null },
+    where: { usuarioId, ...SOLO_ACTIVOS },
     select: {
       fecha: true,
       clienteId: true,

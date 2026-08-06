@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosConRol } from "@/lib/proyecto-acceso";
+import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { formatHorasHsMin } from "@/lib/horas";
 import { construirCurvaHoras } from "@/lib/curva-horas";
 import { hoyISO, semanaActualISO } from "@/lib/formato";
@@ -62,7 +63,7 @@ export default async function DashboardPage({
   const [registros, tareas] = await Promise.all([
     // Sin filtro de usuario: el total incluye lo reportado por cualquiera.
     prisma.registroHoras.findMany({
-      where: { clienteId: { in: ids }, eliminadoEn: null, fecha: rangoFecha },
+      where: { clienteId: { in: ids }, ...SOLO_ACTIVOS, fecha: rangoFecha },
       select: { fecha: true, horas: true, usuarioId: true },
     }),
     // Las tareas entran al rango por su fecha de fin: es cuando se considera

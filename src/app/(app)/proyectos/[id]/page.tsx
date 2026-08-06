@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
+import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { formatHorasHsMin } from "@/lib/horas";
 import { construirCurvaHoras } from "@/lib/curva-horas";
 import { InfoButton } from "@/components/info-button";
@@ -28,7 +29,7 @@ export default async function ProyectoHomePage({
       orderBy: { createdAt: "asc" },
     }),
     prisma.registroHoras.findMany({
-      where: { clienteId: id, eliminadoEn: null },
+      where: { clienteId: id, ...SOLO_ACTIVOS },
       select: { fecha: true, horas: true },
     }),
     prisma.tareaRoadmap.findMany({

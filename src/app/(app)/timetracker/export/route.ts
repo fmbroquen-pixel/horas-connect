@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
+import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { rangoDefault30, esISO } from "@/lib/formato";
 
 const ETIQUETA_OWNERSHIP: Record<string, string> = {
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
   const registros = await prisma.registroHoras.findMany({
     where: {
       usuarioId: destino.id,
-      eliminadoEn: null,
+      ...SOLO_ACTIVOS,
       ownership: { not: "valor_cero" },
       fecha: {
         gte: new Date(desde + "T00:00:00Z"),
