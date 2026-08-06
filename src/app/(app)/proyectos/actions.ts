@@ -72,23 +72,34 @@ export async function cambiarSemaforo(
 
 // ── Etapa actual ──────────────────────────────────────────────────────────
 
-export async function cambiarEtapa(
+// La etapa actual es la última tarea EN CURSO del Roadmap. Elegirla desde la
+// card del Home marca esa tarea como en curso y saca de ese estado a las
+// demás del proyecto: el plan es secuencial, así que dos tareas en curso a la
+// vez no describen nada. Las que salen vuelven a "sin iniciar"; las
+// finalizadas o no ejecutadas no se tocan, porque ya son historia.
+export async function marcarEtapaActual(
   clienteId: string,
-  _prev: unknown,
-  formData: FormData,
+  tareaId: string,
 ): Promise<Resultado> {
-  const { usuario } = await requireAcceso(clienteId);
-  const etapaId = String(formData.get("etapaId") ?? "");
-  if (!etapaId) return { error: "Elegí una etapa." };
+  await requireAcceso(clienteId);
 
-  const etapa = await prisma.etapa.findFirst({
-    where: { id: etapaId, activo: true },
+  const tarea = await prisma.tareaRoadmap.findFirst({
+    where: { id: tareaId, lista: { clienteId } },
+    select: { id: true },
   });
-  if (!etapa) return { error: "Etapa inexistente." };
+  if (!tarea) return { error: "Esa tarea no pertenece al plan del proyecto." };
 
-  await prisma.etapaEvento.create({
-    data: { clienteId, etapaId, creadoPorId: usuario.id },
-  });
+  await prisma.$transaction([
+    prisma.tareaRoadmap.updateMany({
+      where: { lista: { clienteId }, estado: "en_curso", id: { not: tareaId } },
+      data: { estado: "sin_iniciar" },
+    }),
+    prisma.tareaRoadmap.update({
+      where: { id: tareaId },
+      data: { estado: "en_curso" },
+    }),
+  ]);
+
   revalidarProyectos();
   return { error: undefined };
 }

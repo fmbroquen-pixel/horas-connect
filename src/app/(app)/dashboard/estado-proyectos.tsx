@@ -1,33 +1,23 @@
 import { prisma } from "@/lib/prisma";
+import { getEtapasPorProyecto } from "@/lib/etapa-actual";
 import { FilaProyectoEstado } from "./fila-proyecto-estado";
 
 // Semáforo de proyectos: lista ejecutiva dentro de una card (sin tabla, sin
 // grid, sin dropdowns permanentes). El alcance lo decide el Home y llega en
 // `clienteIds`, para que el widget responda al mismo filtro de proyectos que
-// los KPIs y el gráfico. Semáforo y etapa son editables tanto por admin como
-// por el mentor con acceso al proyecto (mismo permiso que ya aplica en
-// Seguimiento vía cambiarSemaforo/cambiarEtapa); no se muestran mentores.
+// los KPIs y el gráfico. Semáforo y etapa son editables por admin y por el
+// mentor con acceso al proyecto; elegir una etapa escribe sobre el Roadmap,
+// así que Home y Follow Up nunca se contradicen.
 export async function EstadoProyectos({ clienteIds }: { clienteIds: string[] }) {
   const ids = clienteIds;
-  const clientes = await prisma.cliente.findMany({
-    where: { id: { in: ids } },
-    orderBy: { nombre: "asc" },
-  });
-
-  const [semaforos, etapaEventos, etapas] = await Promise.all([
+  const [clientes, semaforos, etapas] = await Promise.all([
+    prisma.cliente.findMany({ where: { id: { in: ids } }, orderBy: { nombre: "asc" } }),
     prisma.semaforoEvento.findMany({
       where: { clienteId: { in: ids } },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.etapaEvento.findMany({
-      where: { clienteId: { in: ids } },
-      orderBy: { createdAt: "desc" },
-      include: { etapa: { select: { etiqueta: true } } },
-    }),
-    prisma.etapa.findMany({
-      where: { activo: true },
-      orderBy: [{ grupo: "asc" }, { orden: "asc" }],
-    }),
+    // La etapa actual sale del Roadmap: es la última tarea en curso del plan.
+    getEtapasPorProyecto(ids),
   ]);
 
   // Vigente = primer evento (más reciente) por cliente.
@@ -35,12 +25,6 @@ export async function EstadoProyectos({ clienteIds }: { clienteIds: string[] }) 
   for (const s of semaforos) {
     if (!semaforoPorCliente.has(s.clienteId)) semaforoPorCliente.set(s.clienteId, s.estado);
   }
-  const etapaPorCliente = new Map<string, string>();
-  for (const e of etapaEventos) {
-    if (!etapaPorCliente.has(e.clienteId)) etapaPorCliente.set(e.clienteId, e.etapaId);
-  }
-
-  const opcionesEtapa = etapas.map((e) => ({ value: e.id, label: e.etiqueta }));
 
   return (
     // flex-1 min-h-0: ocupa el espacio que le deja Cumpleaños dentro del
@@ -71,8 +55,11 @@ export async function EstadoProyectos({ clienteIds }: { clienteIds: string[] }) 
                 id={c.id}
                 nombre={c.nombre}
                 semaforo={semaforoPorCliente.get(c.id) ?? ""}
-                etapaId={etapaPorCliente.get(c.id) ?? ""}
-                etapas={opcionesEtapa}
+                etapaId={etapas[c.id]?.actual?.id ?? ""}
+                etapas={(etapas[c.id]?.opciones ?? []).map((t) => ({
+                  value: t.id,
+                  label: `${t.lista} · ${t.nombre}`,
+                }))}
               />
             ))}
           </div>

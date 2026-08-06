@@ -5,11 +5,13 @@ import { asegurarRoadmap } from "@/lib/roadmap";
 import { formatHorasHsMin } from "@/lib/horas";
 import { InfoButton } from "@/components/info-button";
 import { RoadmapTablero } from "./tablero";
+import { CabeceraSeguimiento } from "./cabecera-seguimiento";
+import { formatFecha } from "@/lib/formato";
 import type { ListaRoadmapVista } from "./constantes";
 
-// Pestaña Roadmap: el plan de trabajo del proyecto. Reemplaza al Gantt como
-// lugar donde se administran las tareas; la vista de cronograma se rediseñará
-// más adelante sobre estos mismos datos.
+// Pestaña Follow Up: el seguimiento del proyecto. Arriba, el estado de un
+// vistazo (semáforo y tablero de trabajo, que antes vivían en una pestaña
+// propia); debajo, el plan de trabajo con sus listas.
 export default async function ProyectoRoadmapPage({
   params,
 }: {
@@ -23,6 +25,11 @@ export default async function ProyectoRoadmapPage({
   // trimestre contratado). A partir de ahí las listas son propias del
   // proyecto y no se vuelven a tocar.
   await asegurarRoadmap(acceso.cliente);
+
+  const semaforo = await prisma.semaforoEvento.findFirst({
+    where: { clienteId: id },
+    orderBy: { createdAt: "desc" },
+  });
 
   const listas = await prisma.listaRoadmap.findMany({
     where: { clienteId: id },
@@ -59,6 +66,13 @@ export default async function ProyectoRoadmapPage({
           </InfoButton>
         </div>
       </div>
+
+      <CabeceraSeguimiento
+        clienteId={id}
+        semaforo={semaforo?.estado ?? ""}
+        ultimoCambio={semaforo ? formatFecha(semaforo.createdAt) : ""}
+        tableroUrl={acceso.cliente.tableroUrl ?? ""}
+      />
 
       <RoadmapTablero clienteId={id} listas={vistas} />
     </div>

@@ -50,8 +50,7 @@ export default async function ProyectoDetalleLayout({
           containerClass=""
           tabs={[
             { href: base, label: "Home", exact: true },
-            { href: `${base}/seguimiento`, label: "Seguimiento" },
-            { href: `${base}/roadmap`, label: "Roadmap" },
+            { href: `${base}/follow-up`, label: "Follow Up" },
             { href: `${base}/equipo`, label: "Equipo" },
           ]}
         />

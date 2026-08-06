@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { cambiarSemaforo, cambiarEtapa } from "../proyectos/actions";
+import { cambiarSemaforo, marcarEtapaActual } from "../proyectos/actions";
 import { OPCIONES_SEMAFORO, COLOR_SEMAFORO } from "../proyectos/constantes";
 import { TagPopover, type OpcionTag } from "./tag-popover";
 
@@ -40,13 +40,14 @@ export function FilaProyectoEstado({
     });
   };
 
+  // Elegir la etapa marca esa tarea del Roadmap como "en curso": el Home no
+  // guarda un estado propio, escribe sobre el mismo plan que se ve en
+  // Follow Up.
   const elegirEtapa = (valor: string) => {
     if (valor === etapaId) return;
     setEtapaId(valor);
     start(async () => {
-      const fd = new FormData();
-      fd.append("etapaId", valor);
-      await cambiarEtapa(id, undefined, fd);
+      await marcarEtapaActual(id, valor);
     });
   };
 
@@ -96,7 +97,7 @@ export function FilaProyectoEstado({
           <TagPopover
             valor={etapaId}
             opciones={etapas}
-            placeholder="Sin etapa"
+            placeholder="-"
             onElegir={elegirEtapa}
             ariaLabel={`Etapa de ${nombre}`}
             anchoMenu="w-56"

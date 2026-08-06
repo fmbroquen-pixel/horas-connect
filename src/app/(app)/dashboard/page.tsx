@@ -8,8 +8,12 @@ import { construirCurvaHoras } from "@/lib/curva-horas";
 import { hoyISO, semanaActualISO } from "@/lib/formato";
 import { InfoButton } from "@/components/info-button";
 import { CurvaHoras } from "@/components/curva-horas";
+import { SemaforoEvolucion, NIVEL_SEMAFORO } from "@/components/semaforo-evolucion";
+import { lunesDe } from "@/lib/curva-horas";
+import { DIA_MS } from "@/lib/dias-habiles";
 import { FiltrosHome } from "./filtros-home";
 import { EstadoProyectos } from "./estado-proyectos";
+import { EtapasProximas, type EtapaProxima } from "./etapas-proximas";
 
 const MAX_DIAS_FILTRO = 365;
 const CARD = "rounded-2xl border border-dc-line bg-dc-card";
@@ -95,6 +99,80 @@ export default async function DashboardPage({
     { desde: rangoFecha.gte, hasta: rangoFecha.lte },
   );
 
+  // Etapas próximas: lo que arranca en los próximos 14 días y todavía no
+  // empezó. No usa el rango de fechas del filtro —que mira hacia atrás— sino
+  // una ventana fija hacia adelante: la pregunta es "qué se viene".
+  const hoyUtc = new Date(hoy + "T00:00:00Z");
+  const en14dias = new Date(hoyUtc.getTime() + 14 * DIA_MS);
+  const tareasProximas = await prisma.tareaRoadmap.findMany({
+    where: {
+      lista: { clienteId: { in: ids } },
+      estado: "sin_iniciar",
+      fechaInicio: { gte: hoyUtc, lte: en14dias },
+    },
+    orderBy: { fechaInicio: "asc" },
+    select: {
+      id: true,
+      nombre: true,
+      fechaInicio: true,
+      personas: true,
+      lista: { select: { cliente: { select: { nombre: true } } } },
+    },
+  });
+  const etapasProximas: EtapaProxima[] = tareasProximas.map((t) => ({
+    id: t.id,
+    proyecto: t.lista.cliente.nombre,
+    tarea: t.nombre,
+    fecha: `${String(t.fechaInicio.getUTCDate()).padStart(2, "0")}/${String(
+      t.fechaInicio.getUTCMonth() + 1,
+    ).padStart(2, "0")}`,
+    personas: t.personas,
+  }));
+
+  // Evolución del semáforo: una serie por proyecto sobre el eje semanal del
+  // rango filtrado. Para cada semana vale el último evento ocurrido hasta
+  // ella —incluidos los anteriores al rango, o el gráfico arrancaría vacío
+  // aunque el proyecto ya tuviera un estado.
+  const eventosSemaforo = await prisma.semaforoEvento.findMany({
+    where: { clienteId: { in: ids }, createdAt: { lte: rangoFecha.lte } },
+    orderBy: { createdAt: "asc" },
+    select: {
+      clienteId: true,
+      estado: true,
+      createdAt: true,
+      cliente: { select: { nombre: true } },
+    },
+  });
+
+  const semanasSemaforo: string[] = [];
+  const finesDeSemana: number[] = [];
+  for (
+    let t = lunesDe(rangoFecha.gte).getTime();
+    t <= lunesDe(rangoFecha.lte).getTime();
+    t += 7 * DIA_MS
+  ) {
+    const d = new Date(t);
+    semanasSemaforo.push(
+      `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`,
+    );
+    // El corte de cada semana es su domingo a la noche.
+    finesDeSemana.push(t + 7 * DIA_MS - 1);
+  }
+
+  const porProyecto = new Map<string, { nombre: string; eventos: typeof eventosSemaforo }>();
+  for (const e of eventosSemaforo) {
+    const acc = porProyecto.get(e.clienteId) ?? { nombre: e.cliente.nombre, eventos: [] };
+    acc.eventos.push(e);
+    porProyecto.set(e.clienteId, acc);
+  }
+  const seriesSemaforo = [...porProyecto.values()].map(({ nombre, eventos }) => ({
+    proyecto: nombre,
+    niveles: finesDeSemana.map((corte) => {
+      const vigente = eventos.filter((e) => e.createdAt.getTime() <= corte).at(-1);
+      return vigente ? (NIVEL_SEMAFORO[vigente.estado] ?? null) : null;
+    }),
+  }));
+
   // Cumpleaños de la semana (lunes a domingo): mismo comportamiento de
   // siempre, acotado a los proyectos visibles.
   const semana = semanaActualISO();
@@ -119,8 +197,8 @@ export default async function DashboardPage({
     .sort((a, b) => a.posicion - b.posicion || a.nombre.localeCompare(b.nombre));
 
   return (
-    // Una sola pantalla: encabezado y KPIs fijos; gráfico, semáforo y
-    // cumpleaños se reparten el alto restante y scrollean por dentro.
+    // El encabezado y los filtros quedan fijos; todo el contenido scrollea
+    // por dentro, así la navegación no se va de pantalla.
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-xl uppercase text-white">
@@ -142,8 +220,8 @@ export default async function DashboardPage({
             : "No estás asignado como Mentor Owner ni Backup en ningún proyecto. Un admin puede asignarlos desde Settings → Usuarios."}
         </p>
       ) : (
-        <>
-          <div className="mt-4 grid shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pb-2">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Kpi
               etiqueta="Horas Presupuestadas Total"
               valor={formatHorasHsMin(presupuestadas)}
@@ -163,61 +241,75 @@ export default async function DashboardPage({
             />
           </div>
 
-          <div className="mt-4 flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
-            <div className="flex min-h-0 flex-col gap-4 lg:w-[68%]">
-              <div
-                className={`${CARD} flex h-64 shrink-0 flex-col px-5 py-3 lg:h-auto lg:min-h-0 lg:flex-1`}
-              >
-                <div className="flex shrink-0 items-center gap-2">
-                  <h2 className="font-display text-sm uppercase text-white">
-                    Horas Presupuestadas vs Horas Time Tracker
-                  </h2>
-                  <InfoButton>Acumulado por semana</InfoButton>
-                </div>
-                <div className="mt-2 min-h-0 flex-1">
-                  <CurvaHoras
-                    semanas={curva.semanas}
-                    entregadas={curva.entregadas}
-                    reales={curva.reales}
-                  />
-                </div>
-              </div>
-
-              <div className="flex min-h-0 flex-col lg:flex-1">
-                <EstadoProyectos clienteIds={ids} />
-              </div>
+          {/* Fila superior: el estado del portafolio a la izquierda y, a la
+              derecha, las dos cards de agenda apiladas. */}
+          <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
+            <div className="flex h-96 flex-col">
+              <EstadoProyectos clienteIds={ids} />
             </div>
+            <div className="grid gap-4 lg:h-96 lg:grid-rows-2">
+              <div className="flex max-h-64 min-h-0 flex-col rounded-2xl border border-dc-line bg-dc-card p-5 lg:max-h-none">
+                <h2 className="mb-3 shrink-0 text-base font-semibold text-white">
+                  Cumpleaños de la semana
+                </h2>
+                {cumpleanosSemana.length === 0 ? (
+                  <p className="text-sm text-dc-muted">No hay cumpleaños esta semana.</p>
+                ) : (
+                  <ul className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
+                    {cumpleanosSemana.map((c) => (
+                      <li
+                        key={c.id}
+                        className="flex items-center justify-between gap-3 py-2.5 text-sm first:pt-0 last:pb-0"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-dc-text">{c.nombre}</p>
+                          <p className="truncate text-xs text-dc-muted">{c.proyecto}</p>
+                        </div>
+                        <span className="shrink-0 tabular-nums text-dc-peri">
+                          {c.fecha}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
 
-            {/* Cumpleaños: título fijo, lista con scroll propio. */}
-            <div
-              className={`${CARD} flex max-h-64 min-h-0 flex-col p-5 lg:max-h-none lg:w-[32%]`}
-            >
-              <h2 className="mb-3 shrink-0 text-base font-semibold text-white">
-                Cumpleaños de la semana
-              </h2>
-              {cumpleanosSemana.length === 0 ? (
-                <p className="text-sm text-dc-muted">No hay cumpleaños esta semana.</p>
-              ) : (
-                <ul className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
-                  {cumpleanosSemana.map((c) => (
-                    <li
-                      key={c.id}
-                      className="flex items-center justify-between gap-3 py-2.5 text-sm first:pt-0 last:pb-0"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-dc-text">{c.nombre}</p>
-                        <p className="truncate text-xs text-dc-muted">{c.proyecto}</p>
-                      </div>
-                      <span className="shrink-0 tabular-nums text-dc-peri">
-                        {c.fecha}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <EtapasProximas etapas={etapasProximas} />
             </div>
           </div>
-        </>
+
+          {/* Debajo, los dos gráficos, uno por fila. */}
+          <div className={`${CARD} flex h-72 flex-col px-5 py-3`}>
+            <div className="flex shrink-0 items-center gap-2">
+              <h2 className="font-display text-sm uppercase text-white">
+                Horas Presupuestadas vs Horas Time Tracker
+              </h2>
+              <InfoButton>Acumulado por semana</InfoButton>
+            </div>
+            <div className="mt-2 min-h-0 flex-1">
+              <CurvaHoras
+                semanas={curva.semanas}
+                entregadas={curva.entregadas}
+                reales={curva.reales}
+              />
+            </div>
+          </div>
+
+          <div className={`${CARD} flex h-72 flex-col px-5 py-3`}>
+            <div className="flex shrink-0 items-center gap-2">
+              <h2 className="font-display text-sm uppercase text-white">
+                Evolución del Semáforo
+              </h2>
+              <InfoButton>
+                Cada cambio se sostiene hasta el siguiente; por eso la línea es
+                escalonada y no una diagonal entre estados.
+              </InfoButton>
+            </div>
+            <div className="mt-2 min-h-0 flex-1">
+              <SemaforoEvolucion fechas={semanasSemaforo} series={seriesSemaforo} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
