@@ -47,9 +47,15 @@ export function usePopoverFlotante(
         ? ancla.bottom + SEPARACION
         : Math.max(MARGEN, ancla.top - alto - SEPARACION);
 
-      // Alineado a la izquierda del trigger, sin salirse de la ventana.
+      // Por defecto crece hacia la derecha desde el borde izquierdo del
+      // trigger. Si de ese lado no entra, se abre hacia la izquierda: el borde
+      // derecho del popover se alinea con el del trigger. El clamp posterior
+      // es la última red —lo deja dentro de la ventana aunque ninguno de los
+      // dos lados alcance—, para que nunca genere scroll horizontal.
+      const cabeDerecha = ancla.left + ancho + MARGEN <= window.innerWidth;
+      const deseado = cabeDerecha ? ancla.left : ancla.right - ancho;
       const left = Math.min(
-        Math.max(MARGEN, ancla.left),
+        Math.max(MARGEN, deseado),
         Math.max(MARGEN, window.innerWidth - ancho - MARGEN),
       );
 
