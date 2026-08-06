@@ -13,9 +13,10 @@ import { EstadoProyectos } from "./estado-proyectos";
 const MAX_DIAS_FILTRO = 365;
 const CARD = "rounded-2xl border border-dc-line bg-dc-card";
 
-// Home de CORE: el panorama del portafolio del usuario. Alcance estricto —los
-// proyectos donde está asignado como Mentor Owner o Backup— y un único juego
-// de filtros (fechas + proyectos) que gobierna KPIs, gráfico y semáforo.
+// Home de CORE: el panorama del portafolio del usuario. Un mentor ve los
+// proyectos donde está asignado como Owner o Backup; un admin, todos. Un
+// único juego de filtros (fechas + proyectos) gobierna KPIs, gráfico y
+// semáforo.
 export default async function DashboardPage({
   searchParams,
 }: {
@@ -135,8 +136,9 @@ export default async function DashboardPage({
 
       {idsAccesibles.length === 0 ? (
         <p className={`${CARD} mt-6 px-5 py-8 text-center text-sm text-dc-muted`}>
-          No estás asignado como Mentor Owner ni Backup en ningún proyecto. Un
-          admin puede asignarlos desde Settings → Usuarios.
+          {usuario.rol === "admin"
+            ? "No hay proyectos activos. Creá uno desde Settings → Clientes."
+            : "No estás asignado como Mentor Owner ni Backup en ningún proyecto. Un admin puede asignarlos desde Settings → Usuarios."}
         </p>
       ) : (
         <>

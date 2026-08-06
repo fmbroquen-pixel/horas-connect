@@ -66,7 +66,6 @@ export default async function UsuariosPage({
               <tr key={u.id} className="border-b border-dc-line last:border-0">
                 <td className="px-4 py-3 text-center">
                   <p className="truncate text-dc-text">{u.nombre}</p>
-                  <p className="truncate text-xs text-dc-muted">{u.email}</p>
                 </td>
                 <td className="px-4 py-3 text-center">
                   <span className="rounded-full bg-dc-line px-3 py-1 text-xs text-dc-text">

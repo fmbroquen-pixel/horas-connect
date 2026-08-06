@@ -42,11 +42,24 @@ export async function getClientesProyectos(usuario: Usuario): Promise<Cliente[]>
 }
 
 // Proyectos donde el usuario tiene un rol declarado (Mentor Owner o Backup).
-// Es el alcance del Home de CORE: a diferencia de getProyectosPermitidos —que
-// habilita la carga de horas y cae en "todos" si no hay asignaciones— acá la
-// regla es estricta, sin fallback: si no está asignado con rol, el proyecto no
-// aparece.
+// Es el alcance del Home de CORE: para un mentor la regla es estricta, sin
+// fallback, y si no está asignado con rol el proyecto no aparece.
+//
+// El admin es la excepción: ve todos los activos, tenga o no asignaciones.
+// Administra el portafolio completo, así que ponerlo como Backup de un
+// proyecto no puede achicarle la vista al resto.
 export async function getProyectosConRol(usuarioId: string): Promise<Cliente[]> {
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { rol: true },
+  });
+  if (usuario?.rol === "admin") {
+    return prisma.cliente.findMany({
+      where: { activo: true },
+      orderBy: { nombre: "asc" },
+    });
+  }
+
   const asignados = await prisma.proyectoAsignado.findMany({
     where: { usuarioId, rol: { not: null }, cliente: { activo: true } },
     include: { cliente: true },
