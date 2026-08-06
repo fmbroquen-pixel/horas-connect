@@ -128,7 +128,7 @@ export function ListaRoadmapCard({
 
           <span
             className="flex items-center gap-2"
-            title={`${avance.arrancadas} de ${avance.total} tarea(s) ya arrancaron`}
+            title={`${avance.cerradas} de ${avance.total} tarea(s) cerradas (finalizadas o no ejecutadas)`}
           >
             <span
               role="progressbar"

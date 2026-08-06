@@ -43,37 +43,37 @@ export type TareaRoadmapFila = {
 // siempre una lectura de las tareas, así que cualquier cambio en ellas los
 // actualiza solo.
 //
-// Son dos preguntas distintas y por eso no usan el mismo criterio:
+// El PORCENTAJE mide cuánto está CERRADO, no cuánto arrancó: una tarea en
+// curso todavía no entregó nada, así que no suma. Las No ejecutadas sí
+// cuentan como cerradas —se decidió no hacerlas— o dejarían una lista trabada
+// en 90% para siempre.
 //
-// · El PORCENTAJE mide cuánto se movió la lista: toda tarea que ya no está
-//   "sin iniciar" cuenta, incluidas las en curso. Es avance, no cierre.
-// · El ESTADO describe la situación de la lista: solo está finalizada cuando
-//   no queda nada por hacer, y ahí las No ejecutadas sí cuentan como cerradas
-//   (se decidió no hacerlas), pero las en curso no.
+// El ESTADO usa la misma cuenta, más el matiz de que una lista donde nada
+// arrancó está "sin iniciar" y no "en curso".
 export function progresoLista(tareas: { estado: string }[]): {
   porcentaje: number;
   estado: string;
-  arrancadas: number;
+  cerradas: number;
   total: number;
 } {
   const total = tareas.length;
-  const arrancadas = tareas.filter((t) => t.estado !== "sin_iniciar").length;
   const cerradas = tareas.filter(
     (t) => t.estado === "finalizada" || t.estado === "no_ejecutada",
   ).length;
+  const arrancoAlgo = tareas.some((t) => t.estado !== "sin_iniciar");
 
   // Una lista vacía se considera sin iniciar: no arrancó nada todavía.
   const estado =
-    total === 0 || arrancadas === 0
+    total === 0 || !arrancoAlgo
       ? "sin_iniciar"
       : cerradas === total
         ? "finalizada"
         : "en_curso";
 
   return {
-    porcentaje: total > 0 ? Math.round((arrancadas / total) * 100) : 0,
+    porcentaje: total > 0 ? Math.round((cerradas / total) * 100) : 0,
     estado,
-    arrancadas,
+    cerradas,
     total,
   };
 }
