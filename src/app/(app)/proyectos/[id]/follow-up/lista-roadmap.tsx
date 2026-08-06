@@ -169,45 +169,44 @@ export function ListaRoadmapCard({
       </header>
 
       {abierta && (
+        // Sin overflow propio: el ancho mínimo de la grilla lo garantiza el
+        // contenedor de listas, que es el único que scrollea. Una barra
+        // horizontal por lista, además de duplicarse, desalineaba las
+        // columnas entre listas al mover solo una.
         <div id={idContenido}>
-          <div className="overflow-x-auto">
-            <div className="min-w-[880px]">
-              <div className={`dc-thead ${GRID_ROADMAP} border-b border-dc-line px-4`}>
-                <input
-                  type="checkbox"
-                  checked={todasSel}
-                  onChange={() => onToggleLista(ids, !todasSel)}
-                  disabled={ids.length === 0}
-                  className="h-4 w-4 accent-dc-purple"
-                  aria-label={`Seleccionar todas las tareas de ${lista.nombre}`}
-                />
-                <span className="dc-col-izq">Tarea</span>
-                <span>Inicio</span>
-                <span>Fin</span>
-                <span>Horas est.</span>
-                <span>Estado</span>
-                <span />
-              </div>
-
-              {lista.tareas.map((t) => (
-                <FilaTareaRoadmap
-                  key={t.id}
-                  tarea={t}
-                  seleccionada={sel.has(t.id)}
-                  onToggle={onToggle}
-                />
-              ))}
-
-              {lista.tareas.length === 0 && (
-                <div className="px-4 py-6 text-center text-sm text-dc-muted">
-                  Esta lista todavía no tiene tareas.
-                </div>
-              )}
-            </div>
+          <div className={`dc-thead ${GRID_ROADMAP} border-b border-dc-line px-4`}>
+            <input
+              type="checkbox"
+              checked={todasSel}
+              onChange={() => onToggleLista(ids, !todasSel)}
+              disabled={ids.length === 0}
+              className="h-4 w-4 accent-dc-purple"
+              aria-label={`Seleccionar todas las tareas de ${lista.nombre}`}
+            />
+            <span className="dc-col-izq">Tarea</span>
+            <span>Inicio</span>
+            <span>Fin</span>
+            <span>Horas est.</span>
+            <span>Estado</span>
+            <span />
           </div>
 
-          {/* Alta al pie de la lista, fuera del scroll horizontal para que
-              ocupe siempre el ancho visible de la card. */}
+          {lista.tareas.map((t) => (
+            <FilaTareaRoadmap
+              key={t.id}
+              tarea={t}
+              seleccionada={sel.has(t.id)}
+              onToggle={onToggle}
+            />
+          ))}
+
+          {lista.tareas.length === 0 && (
+            <div className="px-4 py-6 text-center text-sm text-dc-muted">
+              Esta lista todavía no tiene tareas.
+            </div>
+          )}
+
+          {/* Alta al pie de la lista, después de la última tarea. */}
           <NuevaTareaBoton listaId={lista.id} />
         </div>
       )}

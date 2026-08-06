@@ -151,26 +151,40 @@ export function RoadmapTablero({
         </div>
       )}
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pb-2">
-        {listas.map((lista) => (
-          <ListaRoadmapCard
-            key={lista.id}
-            lista={lista}
-            sel={sel}
-            onToggle={toggle}
-            onToggleLista={toggleLista}
-          />
-        ))}
+      {/* Único scroll de la pantalla. Los dos ejes viven acá: antes cada
+          lista traía su propio overflow-x y, además de duplicar barras,
+          scrollear una no movía a las otras, así que las columnas de las
+          listas se desalineaban entre sí.
 
-        {listas.length === 0 && (
-          <p className="px-4 py-6 text-center text-sm text-dc-muted">
-            Este proyecto no tiene listas en el Roadmap. Agregá una para armar
-            el plan de trabajo.
-          </p>
-        )}
+          Son dos divs a propósito: el de afuera recorta contra el radio y el
+          de adentro scrollea. Con el overflow y el border-radius en el mismo
+          elemento, la barra de desplazamiento se dibuja sobre la esquina y
+          se le come el redondeo arriba y abajo. */}
+      <div className="min-h-0 flex-1 overflow-hidden rounded-2xl">
+        <div className="h-full overflow-auto overscroll-contain">
+          <div className="min-w-[880px] space-y-4">
+            {listas.map((lista) => (
+              <ListaRoadmapCard
+                key={lista.id}
+                lista={lista}
+                sel={sel}
+                onToggle={toggle}
+                onToggleLista={toggleLista}
+              />
+            ))}
 
-        {/* Agregar va siempre al final del plan, después de la última lista. */}
-        <NuevaListaBoton clienteId={clienteId} />
+            {listas.length === 0 && (
+              <p className="px-4 py-6 text-center text-sm text-dc-muted">
+                Este proyecto no tiene listas en el Roadmap. Agregá una para
+                armar el plan de trabajo.
+              </p>
+            )}
+
+            {/* Agregar va siempre al final del plan, después de la última
+                lista. */}
+            <NuevaListaBoton clienteId={clienteId} />
+          </div>
+        </div>
       </div>
     </div>
   );
