@@ -38,7 +38,8 @@ function IconoPersonas({ dos }: { dos: boolean }) {
 // del filtro de fechas es lo que evita la duda de si la card lo respeta.
 //
 // Cada ítem enlaza al Follow Up de su proyecto: la card no es un aviso, es
-// un punto de entrada al trabajo que se viene.
+// un punto de entrada al trabajo que se viene. La lista va ordenada por
+// fecha y sin cortes por semana; la urgencia la marca el color de la fecha.
 export function EtapasProximas({
   etapas,
   hasta,
@@ -53,18 +54,11 @@ export function EtapasProximas({
       ? etapas
       : etapas.filter((e) => String(e.personas) === filtro);
 
-  // Un corte por urgencia: en una lista ordenada por fecha todo pesa igual,
-  // y lo de esta semana es lo único sobre lo que todavía se puede hacer algo.
-  const grupos = [
-    { titulo: "Esta semana", items: visibles.filter((e) => e.diasRestantes <= 7) },
-    { titulo: "La que viene", items: visibles.filter((e) => e.diasRestantes > 7) },
-  ].filter((g) => g.items.length > 0);
-
   return (
     <div className="flex min-h-0 flex-col rounded-2xl border border-dc-line bg-dc-card p-5">
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex items-baseline gap-1.5">
-          <h2 className="text-base font-semibold text-white">Etapas próximas</h2>
+          <h2 className="text-base font-semibold text-white">Próximas dos semanas</h2>
           <span className="text-xs text-dc-muted">hasta {hasta}</span>
           <InfoButton>
             Tareas sin iniciar que arrancan en los próximos 14 días. Esta card
@@ -108,17 +102,8 @@ export function EtapasProximas({
             : "Ninguna coincide con este filtro."}
         </p>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {grupos.map((g) => (
-            <div key={g.titulo}>
-              {/* z-10: `sticky` con z-index auto NO crea contexto de
-                  apilado, así que sin esto la lista —que viene después en el
-                  DOM— se dibuja ENCIMA del título y los textos se pisan. */}
-              <p className="sticky top-0 z-10 bg-dc-card py-1 text-[11px] uppercase tracking-wide text-dc-muted">
-                {g.titulo}
-              </p>
-              <ul className="divide-y divide-dc-line">
-                {g.items.map((e) => (
+        <ul className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
+          {visibles.map((e) => (
                   <li key={e.id}>
                     <Link
                       href={`/proyectos/${e.clienteId}/follow-up`}
@@ -150,11 +135,8 @@ export function EtapasProximas({
                       </span>
                     </Link>
                   </li>
-                ))}
-              </ul>
-            </div>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );

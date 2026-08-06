@@ -164,10 +164,15 @@ export default async function AppLayout({
                scrollean por componente. Con min-h-full el wrapper podía
                crecer sin límite y el scroll se iba a la pantalla entera.
                Las pantallas de contenido largo (Analytics, perfiles)
-               desbordan ese h-full y las scrollea el contenedor de arriba. */}
+               desbordan ese h-full y las scrollea el contenedor de arriba.
+
+            El eje horizontal va en `hidden`: la pantalla scrollea SOLO en
+            vertical. Lo ancho —las tablas con min-w— vive dentro de su
+            propio contenedor `overflow-x-auto`, así que sigue siendo
+            alcanzable ahí adentro en vez de arrastrar la página entera. */}
         <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-dc-line bg-dc-main shadow-[0_8px_28px_rgba(0,0,0,0.28)]">
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-10 pt-8 md:px-10">
-            <div className="mx-auto flex h-full w-full max-w-[1440px] flex-col">
+          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 pb-10 pt-8 md:px-10">
+            <div className="mx-auto flex h-full w-full min-w-0 max-w-[1440px] flex-col">
               <PageTransition>{children}</PageTransition>
             </div>
           </div>

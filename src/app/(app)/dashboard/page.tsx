@@ -12,6 +12,7 @@ import { SemaforoEvolucion, NIVEL_SEMAFORO } from "@/components/semaforo-evoluci
 import { lunesDe } from "@/lib/curva-horas";
 import { DIA_MS } from "@/lib/dias-habiles";
 import { FiltrosHome } from "./filtros-home";
+import { MODULOS } from "@/lib/modulos";
 import { EstadoProyectos } from "./estado-proyectos";
 import { EtapasProximas, type EtapaProxima } from "./etapas-proximas";
 
@@ -178,13 +179,17 @@ export default async function DashboardPage({
   }));
 
   // Cumpleaños de la semana (lunes a domingo): mismo comportamiento de
-  // siempre, acotado a los proyectos visibles.
+  // siempre, acotado a los proyectos visibles. La card está oculta detrás de
+  // MODULOS.cumpleanos; mientras lo esté ni siquiera se consulta la base,
+  // pero el cálculo queda intacto para cuando se reactive.
   const semana = semanaActualISO();
   const diasSemanaMD = new Set(semana.map((iso) => iso.slice(5))); // "MM-DD"
-  const miembrosEquipo = await prisma.miembroEquipo.findMany({
-    where: { clienteId: { in: ids }, cumpleanos: { not: null } },
-    include: { cliente: { select: { nombre: true } } },
-  });
+  const miembrosEquipo = MODULOS.cumpleanos
+    ? await prisma.miembroEquipo.findMany({
+        where: { clienteId: { in: ids }, cumpleanos: { not: null } },
+        include: { cliente: { select: { nombre: true } } },
+      })
+    : [];
   const md = (d: Date) =>
     `${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
   const cumpleanosSemana = miembrosEquipo
@@ -246,14 +251,23 @@ export default async function DashboardPage({
           </div>
 
           {/* Fila superior: el estado del portafolio a la izquierda y, a la
-              derecha, las dos cards de agenda apiladas. */}
-          <div className="grid gap-4 lg:grid-cols-[1fr_20rem]">
-            <div className="flex h-[30rem] flex-col">
+              derecha, la agenda. min-w-0 en las dos columnas: sin eso una
+              celda larga estira su track y aparece scroll horizontal de
+              pantalla en vez de recortarse dentro de la card. */}
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="flex h-[30rem] min-w-0 flex-col">
               <EstadoProyectos clienteIds={ids} />
             </div>
-            {/* Cumpleaños toma el alto que necesita y Etapas próximas se queda
-                con el resto: es la que suele tener más ítems. */}
-            <div className="grid gap-4 lg:h-[30rem] lg:grid-rows-[minmax(0,2fr)_minmax(0,3fr)]">
+            {/* Con Cumpleaños oculto, Etapas próximas ocupa la columna
+                entera; al reactivarlo vuelven las dos filas de siempre. */}
+            <div
+              className={`grid min-w-0 gap-4 lg:h-[30rem] ${
+                MODULOS.cumpleanos
+                  ? "lg:grid-rows-[minmax(0,2fr)_minmax(0,3fr)]"
+                  : "lg:grid-rows-1"
+              }`}
+            >
+              {MODULOS.cumpleanos && (
               <div className="flex max-h-64 min-h-0 flex-col rounded-2xl border border-dc-line bg-dc-card p-5 lg:max-h-none">
                 <h2 className="mb-3 shrink-0 text-base font-semibold text-white">
                   Cumpleaños de la semana
@@ -279,6 +293,7 @@ export default async function DashboardPage({
                   </ul>
                 )}
               </div>
+              )}
 
               <EtapasProximas
                 etapas={etapasProximas}
