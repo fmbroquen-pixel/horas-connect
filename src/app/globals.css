@@ -189,6 +189,29 @@ input[type="number"]::-webkit-inner-spin-button {
   }
 }
 
+/* Entrada del overlay y la card de un modal. Es una animación y no una
+   transición a propósito: una transición necesita que el elemento se pinte
+   primero con el estado inicial y recién después con el final, y eso obliga a
+   esperar un frame. En una pestaña en segundo plano no hay frames, así que el
+   modal no llegaba a montarse nunca. Una animación arranca sola al aparecer
+   el elemento, sin depender de requestAnimationFrame. */
+@keyframes dc-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.dc-fade-in {
+  animation: dc-fade-in 0.2s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dc-fade-in {
+    animation: none;
+  }
+}
+
 /* Transición de entrada al cambiar de solapa. */
 @keyframes dc-page-in {
   from {
