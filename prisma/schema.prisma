@@ -416,10 +416,16 @@ model RegistroHoras {
 
   // Referencias de etapas anteriores del modelo, conservadas para no perder
   // el detalle histórico de con qué se cargó cada registro. Ya no se escriben:
-  // tareaId apuntaba a una tarea concreta del Roadmap (migrado a categoriaId)
+  // tareaId apuntaba a una tarea concreta del Roadmap (migrado a conceptoId)
   // y etapaId al catálogo de Etapas, anterior al Roadmap.
+  //
+  // onDelete: SetNull y no el Restrict por defecto: el Roadmap borra tareas y
+  // listas de verdad (no hay borrado lógico ahí), así que con Restrict una
+  // tarea con horas históricas colgadas hacía fallar el borrado con un error
+  // de clave foránea. El registro de horas no depende de la tarea —su dato
+  // vivo es cliente + concepto—, así que perder la referencia es correcto.
   tareaId String?       @map("tarea_id")
-  tarea   TareaRoadmap? @relation(fields: [tareaId], references: [id])
+  tarea   TareaRoadmap? @relation(fields: [tareaId], references: [id], onDelete: SetNull)
   etapaId String?       @map("tema_id")
   etapa   Etapa?        @relation(fields: [etapaId], references: [id])
 
