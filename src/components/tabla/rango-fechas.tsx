@@ -182,12 +182,17 @@ export function RangoFechas({
               aria-label={columna === "inicio" ? "Fecha de inicio" : "Fecha de fin"}
               // Con el calendario abierto, las DOS celdas se marcan: el rango
               // es una sola decisión, así que destacar solo la que se tocó
-              // sugeriría que la otra no está en juego. El énfasis va con
-              // fondo y un ring INSET: nada que ocupe espacio, para que la
-              // grilla no se mueva un píxel al abrir.
+              // sugeriría que la otra no está en juego.
+              //
+              // El énfasis es un GLOW sobre la fecha misma: la luz sale del
+              // número, en tres capas cada vez más difusas. Nada de fondo,
+              // borde ni sombra de caja —cualquiera de los tres vuelve a
+              // dibujar un recuadro alrededor de la fecha, que es lo que se
+              // quería evitar. Es solo text-shadow, que no ocupa espacio: la
+              // grilla no se mueve un píxel al abrir.
               className={`flex w-full items-center justify-center rounded-md px-1.5 py-1 text-center text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 ${
                 abierto
-                  ? "bg-dc-peri/20 text-white ring-1 ring-inset ring-dc-peri/50"
+                  ? "text-white [text-shadow:0_0_6px_rgba(255,255,255,0.55),0_0_14px_rgba(139,140,255,0.95),0_0_28px_rgba(139,140,255,0.7)]"
                   : "hover:bg-dc-peri/10"
               }`}
             >
