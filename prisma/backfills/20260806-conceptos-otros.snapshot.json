@@ -1,0 +1,254 @@
+[
+ {
+  "id": "cmri1vxsg000904l4lssihd8r",
+  "conceptoId": null,
+  "etapaId": "cmrgmq0sw000gqobg5vo4g2gk",
+  "eliminadoEn": null,
+  "etapa": {
+   "etiqueta": "Kickoff"
+  }
+ },
+ {
+  "id": "cmrimx4q1000004lapwobfsm5",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1fm000mqobg6esz4v5o",
+  "eliminadoEn": null,
+  "etapa": {
+   "etiqueta": "Retrospectiva"
+  }
+ },
+ {
+  "id": "cmrin9zz4000004lgrh0mf4g5",
+  "conceptoId": null,
+  "etapaId": "cmrgmq10j000iqobgr18xepwm",
+  "eliminadoEn": null,
+  "etapa": {
+   "etiqueta": "Seteo trimestral"
+  }
+ },
+ {
+  "id": "cmrinc06c000004kzmj2pbdew",
+  "conceptoId": null,
+  "etapaId": "cmrgmq0x3000hqobgy069ogbo",
+  "eliminadoEn": null,
+  "etapa": {
+   "etiqueta": "Nuevo seteo"
+  }
+ },
+ {
+  "id": "cmrktcwxf000i04iez7jkayt2",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1fm000mqobg6esz4v5o",
+  "eliminadoEn": "2026-07-15T12:08:49.320Z",
+  "etapa": {
+   "etiqueta": "Retrospectiva"
+  }
+ },
+ {
+  "id": "cmrktcwxf000o04iee37lwgty",
+  "conceptoId": null,
+  "etapaId": "cmrgmq10j000iqobgr18xepwm",
+  "eliminadoEn": "2026-07-15T12:08:49.320Z",
+  "etapa": {
+   "etiqueta": "Seteo trimestral"
+  }
+ },
+ {
+  "id": "cmrl7rh40000004l7z0mk3uze",
+  "conceptoId": null,
+  "etapaId": "cmrgmq25a000uqobg488lgiy1",
+  "eliminadoEn": "2026-07-16T14:53:38.630Z",
+  "etapa": {
+   "etiqueta": "Tarea interna Embarca"
+  }
+ },
+ {
+  "id": "cmrnmrlb3000l04joe26fzj12",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1fm000mqobg6esz4v5o",
+  "eliminadoEn": null,
+  "etapa": {
+   "etiqueta": "Retrospectiva"
+  }
+ },
+ {
+  "id": "cmrz9x4sk000004lcjci29v09",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1z0000sqobgjb7plcvi",
+  "eliminadoEn": null,
+  "etapa": {
+   "etiqueta": "Capacitación"
+  }
+ },
+ {
+  "id": "cmrz9xn8o000104lc6o24ag62",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1z0000sqobgjb7plcvi",
+  "eliminadoEn": null,
+  "etapa": {
+   "etiqueta": "Capacitación"
+  }
+ },
+ {
+  "id": "cmrz9xs1p000004ief9c11aok",
+  "conceptoId": null,
+  "etapaId": "cmrgmq226000tqobg07qc8i6s",
+  "eliminadoEn": null,
+  "etapa": {
+   "etiqueta": "Viaje / traslado"
+  }
+ },
+ {
+  "id": "cmrz9xz68000204lc7sddnuds",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1vy000rqobgjsfivjq3",
+  "eliminadoEn": null,
+  "etapa": {
+   "etiqueta": "Certificación"
+  }
+ },
+ {
+  "id": "cmrz9y37a000304lckja7guuq",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1z0000sqobgjb7plcvi",
+  "eliminadoEn": null,
+  "etapa": {
+   "etiqueta": "Capacitación"
+  }
+ },
+ {
+  "id": "cmrz9yc3q000104iebr9bufm9",
+  "conceptoId": null,
+  "etapaId": "cmrgmq25a000uqobg488lgiy1",
+  "eliminadoEn": null,
+  "etapa": {
+   "etiqueta": "Tarea interna Embarca"
+  }
+ },
+ {
+  "id": "cmrnmpu9k000104jmh2fp1iab",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1vy000rqobgjsfivjq3",
+  "eliminadoEn": "2026-08-05T01:38:05.463Z",
+  "etapa": {
+   "etiqueta": "Certificación"
+  }
+ },
+ {
+  "id": "cmrqlm9x4000004k0cfwgxgig",
+  "conceptoId": null,
+  "etapaId": "cmrgmq25a000uqobg488lgiy1",
+  "eliminadoEn": "2026-08-05T01:38:05.463Z",
+  "etapa": {
+   "etiqueta": "Tarea interna Embarca"
+  }
+ },
+ {
+  "id": "cmsf2y1n3000004jofcd93h0r",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1fm000mqobg6esz4v5o",
+  "eliminadoEn": "2026-08-05T01:38:05.463Z",
+  "etapa": {
+   "etiqueta": "Retrospectiva"
+  }
+ },
+ {
+  "id": "cmrktcwxf000n04ielq844535",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1j6000nqobg319g2po2",
+  "eliminadoEn": "2026-08-06T00:53:21.958Z",
+  "etapa": {
+   "etiqueta": "Cierre de tablero"
+  }
+ },
+ {
+  "id": "cmrinac9v000004kzh0ct4hec",
+  "conceptoId": null,
+  "etapaId": "cmrgmq10j000iqobgr18xepwm",
+  "eliminadoEn": "2026-08-06T00:53:21.958Z",
+  "etapa": {
+   "etiqueta": "Seteo trimestral"
+  }
+ },
+ {
+  "id": "cmrjhnhr5000004l4dezk2fug",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1j6000nqobg319g2po2",
+  "eliminadoEn": "2026-08-06T00:53:21.958Z",
+  "etapa": {
+   "etiqueta": "Cierre de tablero"
+  }
+ },
+ {
+  "id": "cmrktcwxf000h04ieyjibmmnl",
+  "conceptoId": null,
+  "etapaId": "cmrgmq16z000kqobg7hmcssbn",
+  "eliminadoEn": "2026-08-06T00:53:21.958Z",
+  "etapa": {
+   "etiqueta": "1:1"
+  }
+ },
+ {
+  "id": "cmrktcwxf000j04ie7yn0wgnn",
+  "conceptoId": null,
+  "etapaId": "cmrgmq0x3000hqobgy069ogbo",
+  "eliminadoEn": "2026-08-06T00:53:21.958Z",
+  "etapa": {
+   "etiqueta": "Nuevo seteo"
+  }
+ },
+ {
+  "id": "cmrktcwxf000k04ieez80ir46",
+  "conceptoId": null,
+  "etapaId": "cmrgmq0sw000gqobg5vo4g2gk",
+  "eliminadoEn": "2026-08-06T00:53:21.958Z",
+  "etapa": {
+   "etiqueta": "Kickoff"
+  }
+ },
+ {
+  "id": "cmrktcwxf000l04iezwjflp1h",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1fm000mqobg6esz4v5o",
+  "eliminadoEn": "2026-08-06T00:53:21.958Z",
+  "etapa": {
+   "etiqueta": "Retrospectiva"
+  }
+ },
+ {
+  "id": "cmrktcwxf000m04ieumyi8che",
+  "conceptoId": null,
+  "etapaId": "cmrgmq10j000iqobgr18xepwm",
+  "eliminadoEn": "2026-08-06T00:53:21.958Z",
+  "etapa": {
+   "etiqueta": "Seteo trimestral"
+  }
+ },
+ {
+  "id": "cmrmegd34000004kyp5i03a9y",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1j6000nqobg319g2po2",
+  "eliminadoEn": "2026-08-06T00:53:21.958Z",
+  "etapa": {
+   "etiqueta": "Cierre de tablero"
+  }
+ },
+ {
+  "id": "cmrmehcmq000004jrefx67ztp",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1j6000nqobg319g2po2",
+  "eliminadoEn": "2026-08-06T00:53:21.958Z",
+  "etapa": {
+   "etiqueta": "Cierre de tablero"
+  }
+ },
+ {
+  "id": "cmrv3g3qo000004l2t5u8vjxk",
+  "conceptoId": null,
+  "etapaId": "cmrgmq1pn000pqobgmblyhsjt",
+  "eliminadoEn": "2026-08-06T00:53:21.958Z",
+  "etapa": {
+   "etiqueta": "Directorio"
+  }
+ }
+]
