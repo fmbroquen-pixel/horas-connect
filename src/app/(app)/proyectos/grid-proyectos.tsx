@@ -62,7 +62,7 @@ export function GridProyectos({ proyectos }: { proyectos: ProyectoCard[] }) {
         {filtrados.length === 0 ? (
           <p className="py-10 text-center text-sm text-dc-muted">
             {proyectos.length === 0
-              ? "Todavía no tenés proyectos asignados."
+              ? "Todavía no tenés proyectos asignados. Pedile a un administrador que te asigne los tuyos."
               : "No encontramos proyectos con ese nombre."}
           </p>
         ) : (

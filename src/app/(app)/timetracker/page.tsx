@@ -113,6 +113,10 @@ export default async function TimetrackerPage({
     }));
 
   const sinTarifa = Object.keys(tarifas).length === 0;
+  // Sin proyectos asignados no hay nada contra qué cargar: se avisa y se
+  // esconde la barra, en vez de dejar un desplegable de clientes vacío que
+  // solo falla al guardar.
+  const sinProyectos = proyectos.length === 0;
   const esOtroUsuario = destino.id !== actor.id;
 
   const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
@@ -133,6 +137,14 @@ export default async function TimetrackerPage({
           {esOtroUsuario
             ? `${destino.nombre} no tiene una tarifa configurada, así que no se le pueden cargar horas.`
             : "Todavía no tenés una tarifa configurada, así que no podés cargar horas. Pedile al administrador que la configure."}
+        </p>
+      )}
+
+      {!sinTarifa && sinProyectos && (
+        <p className="mt-4 shrink-0 rounded-xl border border-dc-pink/40 bg-dc-pink/10 px-4 py-3 text-sm text-dc-pink">
+          {esOtroUsuario
+            ? `${destino.nombre} no tiene proyectos asignados, así que no se le pueden cargar horas.`
+            : "Todavía no tenés proyectos asignados, así que no podés cargar horas. Pedile a un administrador que te asigne los tuyos."}
         </p>
       )}
 
@@ -169,7 +181,7 @@ export default async function TimetrackerPage({
       </div>
 
       {/* Barra de captura permanente, inmediatamente encima del historial. */}
-      {!sinTarifa && (
+      {!sinTarifa && !sinProyectos && (
         <div className="mt-4">
           {/* key por usuario: al cambiar de mentor se remonta la barra y no
               quedan cargados el cliente ni la etapa del anterior. */}

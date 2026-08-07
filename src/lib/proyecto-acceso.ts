@@ -4,9 +4,11 @@ import type { Cliente, Usuario } from "@/generated/prisma/client";
 
 // Clientes con el estado (activo/inactivo) pedido, con el mismo alcance de
 // visibilidad para admin/mentor en ambos casos: admin ve todos; un mentor ve
-// los que tiene asignados (filtrados por ese estado), o —si no tiene ninguna
-// asignación— todos los del estado pedido (mismo fallback que
-// getProyectosPermitidos, generalizado al parámetro `activo`).
+// los que tiene asignados, filtrados por ese estado.
+//
+// Sin asignaciones la lista es VACÍA, igual que en getProyectosPermitidos: un
+// permiso no se amplía por ausencia de datos. Lo que un mentor ve acá tiene
+// que coincidir con lo que puede cargar en Time Tracking.
 async function getClientesPorEstado(
   usuario: Usuario,
   activo: boolean,
@@ -22,16 +24,10 @@ async function getClientesPorEstado(
     where: { usuarioId: usuario.id },
     include: { cliente: true },
   });
-  if (asignados.length > 0) {
-    return asignados
-      .map((a) => a.cliente)
-      .filter((c) => c.activo === activo)
-      .sort((a, b) => a.nombre.localeCompare(b.nombre));
-  }
-  return prisma.cliente.findMany({
-    where: { activo },
-    orderBy: { nombre: "asc" },
-  });
+  return asignados
+    .map((a) => a.cliente)
+    .filter((c) => c.activo === activo)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 
 // Proyectos activos que un usuario puede VER en la sección Proyectos: misma
