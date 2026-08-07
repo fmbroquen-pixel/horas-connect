@@ -184,15 +184,16 @@ export function RangoFechas({
               // es una sola decisión, así que destacar solo la que se tocó
               // sugeriría que la otra no está en juego.
               //
-              // El énfasis es un GLOW sobre la fecha misma: la luz sale del
-              // número, en tres capas cada vez más difusas. Nada de fondo,
-              // borde ni sombra de caja —cualquiera de los tres vuelve a
-              // dibujar un recuadro alrededor de la fecha, que es lo que se
-              // quería evitar. Es solo text-shadow, que no ocupa espacio: la
-              // grilla no se mueve un píxel al abrir.
+              // El énfasis es una SOMBRA OSCURA detrás de la fecha, en tres
+              // capas cada vez más difusas, sobre el violeta más profundo de
+              // la paleta (--dc-sidebar). El número se despega de la fila y
+              // gana peso sin encerrarse: nada de fondo, borde ni sombra de
+              // caja, porque cualquiera de los tres vuelve a dibujar un
+              // recuadro. Es solo text-shadow, que no ocupa espacio, así que
+              // la grilla no se mueve un píxel al abrir.
               className={`flex w-full items-center justify-center rounded-md px-1.5 py-1 text-center text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 ${
                 abierto
-                  ? "text-white [text-shadow:0_0_6px_rgba(255,255,255,0.55),0_0_14px_rgba(139,140,255,0.95),0_0_28px_rgba(139,140,255,0.7)]"
+                  ? "text-white [text-shadow:0_1px_2px_rgba(11,9,48,0.95),0_0_10px_rgba(11,9,48,0.9),0_0_20px_rgba(11,9,48,0.75)]"
                   : "hover:bg-dc-peri/10"
               }`}
             >
