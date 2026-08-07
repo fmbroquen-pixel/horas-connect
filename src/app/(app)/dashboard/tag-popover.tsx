@@ -1,19 +1,22 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { POPOVER_FLOTANTE, usePopoverFlotante } from "@/components/ui/popover-flotante";
 
 export type OpcionTag = { value: string; label: string; dot?: string };
-
-// Altura máxima del listado (debe coincidir con max-h-60 más abajo): se usa
-// para decidir si conviene abrir el popover hacia arriba.
-const MAX_ALTURA_MENU = 240;
 
 // Tag clickeable que abre un popover chico con las opciones disponibles.
 // A diferencia de Dropdown (components/dropdown.tsx), el trigger no se ve
 // como un input con borde: es una pastilla, pensada para vivir dentro de una
 // lista ejecutiva sin parecer un formulario. Guarda al elegir y cierra solo.
-// Se reposiciona hacia arriba solo si no hay espacio debajo (filas al pie
-// del widget), para no quedar cortado por el borde de la ventana.
+//
+// El menú se dibuja en un portal sobre el <body>: la lista de proyectos del
+// Home tiene su propio scroll, y un popover en el flujo quedaba recortado por
+// ese overflow en las últimas filas. El hook lo ubica solo —abajo si entra,
+// arriba si no; centrado sobre la pastilla— y lo mantiene dentro del
+// viewport. Es el mismo mecanismo del desplegable, el date picker y el info
+// button: un solo popover en toda la app.
 export function TagPopover({
   valor,
   opciones,
@@ -30,23 +33,19 @@ export function TagPopover({
   anchoMenu?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [abrirArriba, setAbrirArriba] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
 
-  // Decide la dirección ANTES de pintar, para que no se vea un salto.
-  useLayoutEffect(() => {
-    if (!open || !triggerRef.current) return;
-    const rect = triggerRef.current.getBoundingClientRect();
-    const espacioAbajo = window.innerHeight - rect.bottom;
-    const espacioArriba = rect.top;
-    setAbrirArriba(espacioAbajo < MAX_ALTURA_MENU && espacioArriba > espacioAbajo);
-  }, [open]);
+  usePopoverFlotante(open, triggerRef, menuRef, { centrar: true });
 
   useEffect(() => {
     if (!open) return;
+    // El menú vive en el portal, fuera del trigger: "afuera" es afuera de los
+    // dos, o un click sobre una opción lo cerraría antes de elegirla.
     const onClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (triggerRef.current?.contains(t) || menuRef.current?.contains(t)) return;
+      setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -62,7 +61,7 @@ export function TagPopover({
   const seleccionada = opciones.find((o) => o.value === valor);
 
   return (
-    <div className="relative inline-block w-full" ref={ref}>
+    <div className="inline-block w-full">
       <button
         ref={triggerRef}
         type="button"
@@ -90,46 +89,47 @@ export function TagPopover({
         <span className="truncate">{seleccionada?.label ?? placeholder}</span>
       </button>
 
-      {open && (
-        <ul
-          role="listbox"
-          className={`dc-menu dc-pop-in absolute left-1/2 z-40 max-h-60 -translate-x-1/2 space-y-1 overflow-y-auto rounded-xl border border-dc-line bg-dc-deep p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.45)] ${anchoMenu} ${
-            abrirArriba ? "bottom-full mb-1.5" : "top-full mt-1.5"
-          }`}
-        >
-          {opciones.map((o) => {
-            const activa = o.value === valor;
-            return (
-              <li key={o.value}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onElegir(o.value);
-                    setOpen(false);
-                  }}
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
-                    activa
-                      ? "bg-dc-peri/20 text-white"
-                      : "text-dc-muted hover:bg-dc-line/60 hover:text-dc-text"
-                  }`}
-                >
-                  {o.dot && (
-                    <span
-                      aria-hidden
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{
-                        backgroundColor: o.dot,
-                        boxShadow: `0 0 6px ${o.dot}`,
-                      }}
-                    />
-                  )}
-                  <span className="truncate">{o.label}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {open &&
+        createPortal(
+          <ul
+            ref={menuRef}
+            role="listbox"
+            className={`${POPOVER_FLOTANTE} max-h-60 space-y-1 overflow-y-auto p-1.5 ${anchoMenu}`}
+          >
+            {opciones.map((o) => {
+              const activa = o.value === valor;
+              return (
+                <li key={o.value}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onElegir(o.value);
+                      setOpen(false);
+                    }}
+                    className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
+                      activa
+                        ? "bg-dc-peri/20 text-white"
+                        : "text-dc-muted hover:bg-dc-line/60 hover:text-dc-text"
+                    }`}
+                  >
+                    {o.dot && (
+                      <span
+                        aria-hidden
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{
+                          backgroundColor: o.dot,
+                          boxShadow: `0 0 6px ${o.dot}`,
+                        }}
+                      />
+                    )}
+                    <span className="truncate">{o.label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>,
+          document.body,
+        )}
     </div>
   );
 }

@@ -51,7 +51,7 @@ export function Dropdown({
 
   // El menú se dibuja en un portal sobre el <body>: dentro de una tabla con
   // scroll, en el flujo normal quedaría recortado por el overflow.
-  usePopoverFlotante(open, ref, listaRef, true);
+  usePopoverFlotante(open, ref, listaRef, { igualarAnchoDelAncla: true });
 
   const seleccionada = options.find((o) => o.value === value);
 

@@ -5,9 +5,9 @@ import { useLayoutEffect, type RefObject } from "react";
 // Posiciona un popover que se dibuja en un portal sobre el <body>, anclado a
 // su trigger.
 //
-// El motivo: dentro de una tabla con scroll (el Roadmap, Time Tracking) un
-// popover posicionado en el flujo queda recortado por el `overflow` del
-// contenedor, o lo estira y genera scroll en la pantalla entera. Sacándolo a
+// El motivo: dentro de un contenedor con scroll (las tablas, las cards del
+// Home) un popover posicionado en el flujo queda recortado por el `overflow`,
+// o lo estira y genera scroll horizontal en la pantalla entera. Sacándolo a
 // un portal con `position: fixed` se dibuja sobre todo y el scroll sigue
 // siendo el del componente.
 //
@@ -15,14 +15,25 @@ import { useLayoutEffect, type RefObject } from "react";
 // por estado: medir el DOM y devolverle el resultado ES sincronizar con un
 // sistema externo, que es para lo que sirven los efectos. Además evita un
 // segundo render y, al hacerse en un layout effect, no hay parpadeo.
+
+export type OpcionesPopover = {
+  // Que el popover no sea más angosto que su trigger (lo usa el desplegable,
+  // para que el menú acompañe el ancho del campo).
+  igualarAnchoDelAncla?: boolean;
+  // Centrado sobre el trigger en vez de alineado a su borde. Lo usan los tags
+  // del Home, que viven centrados en su columna: alinearlos a un borde los
+  // haría ver descolgados de la pastilla que los abre.
+  centrar?: boolean;
+};
+
 export function usePopoverFlotante(
   abierto: boolean,
   anclaRef: RefObject<HTMLElement | null>,
   popRef: RefObject<HTMLElement | null>,
-  // Que el popover no sea más angosto que su trigger (lo usa el desplegable,
-  // para que el menú acompañe el ancho del campo).
-  igualarAnchoDelAncla = false,
+  opciones: OpcionesPopover = {},
 ) {
+  const { igualarAnchoDelAncla = false, centrar = false } = opciones;
+
   useLayoutEffect(() => {
     if (!abierto) return;
 
@@ -47,13 +58,18 @@ export function usePopoverFlotante(
         ? ancla.bottom + SEPARACION
         : Math.max(MARGEN, ancla.top - alto - SEPARACION);
 
-      // Por defecto crece hacia la derecha desde el borde izquierdo del
-      // trigger. Si de ese lado no entra, se abre hacia la izquierda: el borde
-      // derecho del popover se alinea con el del trigger. El clamp posterior
-      // es la última red —lo deja dentro de la ventana aunque ninguno de los
-      // dos lados alcance—, para que nunca genere scroll horizontal.
+      // Centrado sobre el trigger, o creciendo hacia la derecha desde su
+      // borde izquierdo. Si de ese lado no entra, se abre hacia la izquierda:
+      // el borde derecho del popover se alinea con el del trigger. El clamp
+      // posterior es la última red —lo deja dentro de la ventana aunque
+      // ninguno de los dos lados alcance—, para que nunca genere scroll
+      // horizontal.
       const cabeDerecha = ancla.left + ancho + MARGEN <= window.innerWidth;
-      const deseado = cabeDerecha ? ancla.left : ancla.right - ancho;
+      const deseado = centrar
+        ? ancla.left + ancla.width / 2 - ancho / 2
+        : cabeDerecha
+          ? ancla.left
+          : ancla.right - ancho;
       const left = Math.min(
         Math.max(MARGEN, deseado),
         Math.max(MARGEN, window.innerWidth - ancho - MARGEN),
@@ -72,7 +88,7 @@ export function usePopoverFlotante(
       window.removeEventListener("resize", ubicar);
       window.removeEventListener("scroll", ubicar, true);
     };
-  }, [abierto, anclaRef, popRef, igualarAnchoDelAncla]);
+  }, [abierto, anclaRef, popRef, igualarAnchoDelAncla, centrar]);
 }
 
 // Clases comunes del popover flotante: el posicionamiento lo pone el hook.
