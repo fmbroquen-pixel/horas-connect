@@ -32,11 +32,17 @@ export function RangoFechas({
   onGuardar,
   mostrar,
   editable = true,
+  onAbiertoChange,
 }: {
   rango: Rango;
   onGuardar: (r: Rango) => Promise<{ error?: string }>;
   mostrar: (iso: string) => string;
   editable?: boolean;
+  // Avisa cuándo el calendario está abierto, para que la fila entera pueda
+  // destacarse. El calendario se dibuja en un portal y termina tapando parte
+  // de la tabla: sin la fila marcada se pierde de vista sobre qué tarea se
+  // está operando.
+  onAbiertoChange?: (abierto: boolean) => void;
 }) {
   const [servidor, setServidor] = useState(rango);
   const [local, setLocal] = useState(rango);
@@ -69,6 +75,7 @@ export function RangoFechas({
 
   const abrir = (columna: "inicio" | "fin") => {
     if (!editable) return;
+    onAbiertoChange?.(true);
     setDesdeColumna(columna);
     setParcial(null);
     setHover(null);
@@ -77,6 +84,7 @@ export function RangoFechas({
   };
 
   const cerrar = () => {
+    onAbiertoChange?.(false);
     setAbierto(false);
     setParcial(null);
     setHover(null);
@@ -172,7 +180,16 @@ export function RangoFechas({
               aria-haspopup="dialog"
               aria-expanded={abierto && desdeColumna === columna}
               aria-label={columna === "inicio" ? "Fecha de inicio" : "Fecha de fin"}
-              className="flex w-full items-center justify-center rounded-md px-1.5 py-1 text-center text-sm transition hover:bg-dc-peri/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40"
+              // Con el calendario abierto, las DOS celdas se marcan: el rango
+              // es una sola decisión, así que destacar solo la que se tocó
+              // sugeriría que la otra no está en juego. El énfasis va con
+              // fondo y un ring INSET: nada que ocupe espacio, para que la
+              // grilla no se mueva un píxel al abrir.
+              className={`flex w-full items-center justify-center rounded-md px-1.5 py-1 text-center text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 ${
+                abierto
+                  ? "bg-dc-peri/20 text-white ring-1 ring-inset ring-dc-peri/50"
+                  : "hover:bg-dc-peri/10"
+              }`}
             >
               <span className="truncate tabular-nums">{mostrar(valor)}</span>
             </button>

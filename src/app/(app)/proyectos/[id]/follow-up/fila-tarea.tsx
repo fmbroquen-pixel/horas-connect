@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { actualizarCampoTarea, actualizarRangoTarea, eliminarTarea } from "./actions";
 import {
   GRID_ROADMAP,
@@ -32,11 +33,26 @@ export function FilaTareaRoadmap({
   seleccionada: boolean;
   onToggle: (id: string) => void;
 }) {
+  // El calendario de rango se dibuja en un portal y tapa parte de la tabla:
+  // con la fila marcada no se pierde de vista sobre qué tarea se está
+  // operando. Solo puede haber una marcada a la vez porque solo puede haber
+  // un calendario abierto: abrir otro cierra el anterior.
+  const [editandoFechas, setEditandoFechas] = useState(false);
+
   const guardar = (campo: Parameters<typeof actualizarCampoTarea>[1]) =>
     async (valor: string) => actualizarCampoTarea(tarea.id, campo, valor);
 
   return (
-    <div className="border-b border-dc-line px-4 py-2 last:border-0">
+    // El realce es fondo + una barra lateral por inset shadow. Ninguno de los
+    // dos ocupa espacio: la fila no cambia de alto ni empuja a las de abajo
+    // al abrir el calendario.
+    <div
+      className={`border-b border-dc-line px-4 py-2 transition-colors duration-150 last:border-0 ${
+        editandoFechas
+          ? "bg-dc-peri/[0.07] shadow-[inset_3px_0_0_0_var(--color-dc-peri)]"
+          : ""
+      }`}
+    >
       <div className={GRID_ROADMAP}>
         <input
           type="checkbox"
@@ -65,6 +81,7 @@ export function FilaTareaRoadmap({
           rango={{ inicio: tarea.fechaInicio, fin: tarea.fechaFin }}
           onGuardar={(r) => actualizarRangoTarea(tarea.id, r.inicio, r.fin)}
           mostrar={mostrarFechaISO}
+          onAbiertoChange={setEditandoFechas}
         />
 
         <CeldaHoras
