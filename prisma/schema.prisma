@@ -87,7 +87,6 @@ model Cliente {
   equipo          MiembroEquipo[]
   semaforoEventos SemaforoEvento[]
   etapaEventos    EtapaEvento[]
-  tareas          TareaProyecto[]
   listasRoadmap   ListaRoadmap[]
 
   @@map("clientes")
@@ -131,32 +130,6 @@ model EtapaEvento {
   @@map("etapa_eventos")
 }
 
-enum EstadoTarea {
-  pendiente
-  en_curso
-  hecha
-}
-
-// Tareas/hitos del Gantt. La sección se retiró de la app (se rediseñará más
-// adelante) y el plan de trabajo vive ahora en ListaRoadmap/TareaRoadmap; el
-// modelo se conserva para no borrar los cronogramas ya cargados.
-model TareaProyecto {
-  id          String      @id @default(cuid())
-  clienteId   String      @map("cliente_id")
-  cliente     Cliente     @relation(fields: [clienteId], references: [id])
-  titulo      String
-  fechaInicio DateTime    @map("fecha_inicio") @db.Date
-  fechaFin    DateTime    @map("fecha_fin") @db.Date
-  estado      EstadoTarea @default(pendiente)
-  responsable String?
-  orden       Int         @default(0)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([clienteId, fechaInicio])
-  @@map("tareas_proyecto")
-}
 
 // ── Roadmap del proyecto ───────────────────────────────────────────────────
 // El plan de trabajo: listas de tareas (Onboarding, un tablero por trimestre)
