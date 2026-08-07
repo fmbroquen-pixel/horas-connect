@@ -1,6 +1,6 @@
 "use client";
 
-import { actualizarCampoTarea, eliminarTarea } from "./actions";
+import { actualizarCampoTarea, actualizarRangoTarea, eliminarTarea } from "./actions";
 import {
   GRID_ROADMAP,
   ETIQUETA_ESTADO,
@@ -10,17 +10,19 @@ import {
 } from "./constantes";
 import { mostrarFechaISO } from "../../../admin/clientes/constantes";
 import {
-  CeldaFecha,
   CeldaHoras,
   CeldaOpciones,
   CeldaTexto,
 } from "@/components/tabla/celda-editable";
+import { RangoFechas } from "@/components/tabla/rango-fechas";
 import { BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 import { SelectorPersonas } from "./selector-personas";
 
 // Fila del plan con edición inline: cada celda se guarda sola al salir o con
-// Enter. Cambiar Inicio o Fin recalcula, en el servidor, únicamente las
-// tareas posteriores.
+// Enter. Inicio y Fin son la excepción: siguen siendo dos columnas, pero se
+// editan desde un único calendario de rango y se guardan de una. Cualquier
+// cambio de fechas recalcula, en el servidor, únicamente las tareas
+// posteriores.
 export function FilaTareaRoadmap({
   tarea,
   seleccionada,
@@ -59,18 +61,10 @@ export function FilaTareaRoadmap({
           <SelectorPersonas tareaId={tarea.id} personas={tarea.personas} />
         </span>
 
-        <CeldaFecha
-          valor={tarea.fechaInicio}
-          onGuardar={guardar("fechaInicio")}
-          ariaLabel="Fecha de inicio"
+        <RangoFechas
+          rango={{ inicio: tarea.fechaInicio, fin: tarea.fechaFin }}
+          onGuardar={(r) => actualizarRangoTarea(tarea.id, r.inicio, r.fin)}
           mostrar={mostrarFechaISO}
-        />
-        <CeldaFecha
-          valor={tarea.fechaFin}
-          onGuardar={guardar("fechaFin")}
-          ariaLabel="Fecha de fin"
-          mostrar={mostrarFechaISO}
-          min={tarea.fechaInicio}
         />
 
         <CeldaHoras

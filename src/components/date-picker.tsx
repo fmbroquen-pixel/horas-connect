@@ -6,33 +6,16 @@ import {
   POPOVER_FLOTANTE,
   usePopoverFlotante,
 } from "@/components/ui/popover-flotante";
+import {
+  DIAS_SEMANA,
+  MESES,
+  fmtDisplay,
+  fromISO,
+  offsetLunes,
+  toISO,
+} from "@/lib/fecha-iso";
 
-const DIAS = ["Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do"];
-const MESES = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-];
-
-function toISO(d: Date) {
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${d.getFullYear()}-${m}-${dd}`;
-}
-function fromISO(s: string): Date | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
-  const [a, m, d] = s.split("-").map(Number);
-  const date = new Date(a, m - 1, d);
-  return isNaN(date.getTime()) ? null : date;
-}
-function fmtDisplay(s: string) {
-  const d = fromISO(s);
-  if (!d) return "";
-  return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-}
-// Lunes = 0 … Domingo = 6
-function offsetLunes(d: Date) {
-  return (d.getDay() + 6) % 7;
-}
+const DIAS = DIAS_SEMANA;
 
 // Selector de fecha propio (no <input type="date"> nativo): mismo lenguaje
 // visual que Dropdown (bordes, radios, colores, menú flotante dc-menu) y

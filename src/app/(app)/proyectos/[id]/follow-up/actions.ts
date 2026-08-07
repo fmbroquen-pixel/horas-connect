@@ -7,6 +7,7 @@ import { getAccesoProyecto } from "@/lib/proyecto-acceso";
 import { parseHorasHsMin } from "@/lib/horas";
 import {
   diasHabilesEntre,
+  esDiaHabil,
   fechaDesdeISO,
   finTrasDiasHabiles,
   hoyUTC,
@@ -30,10 +31,11 @@ function enSecuencia<T>(fn: (tx: DB) => Promise<T>): Promise<T> {
 }
 
 // Campos que la tabla del Roadmap edita de a uno, en el lugar.
+// Las fechas NO están acá: se editan juntas desde el calendario de rango
+// (actualizarRangoTarea). Tener además un camino por campo suelto significaba
+// dos formas de escribir lo mismo, con distinta normalización de la duración.
 export type CampoTarea =
   | "nombre"
-  | "fechaInicio"
-  | "fechaFin"
   | "horasEstimadas"
   | "estado"
   | "personas";
@@ -333,17 +335,8 @@ export async function crearTarea(
   return {};
 }
 
-// Guardado de UN campo, disparado por la edición inline de la tabla.
-//
-// La duración ya no es un campo visible: se deriva del par Inicio/Fin y se
-// guarda internamente, que es lo que la secuencia necesita para encadenar.
-// De ahí las dos reglas:
-//   · mover el Inicio no cambia el tamaño de la tarea → conserva la duración
-//     y se recalcula el Fin;
-//   · mover el Fin sí la redimensiona → la duración pasa a ser los días
-//     hábiles entre Inicio y Fin.
-// En los dos casos se reencadena desde esta tarea hacia adelante; lo anterior
-// nunca se toca.
+// Guardado de UN campo, disparado por la edición inline de la tabla. Ninguno
+// de estos campos toca la secuencia, así que no hace falta reencadenar.
 export async function actualizarCampoTarea(
   tareaId: string,
   campo: CampoTarea,
@@ -397,24 +390,42 @@ export async function actualizarCampoTarea(
     return {};
   }
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(valor)) return { error: "Fecha inválida." };
-  const fecha = fechaDesdeISO(valor);
+  return { error: "Campo no editable." };
+}
 
-  let fechaInicio: Date;
-  let duracionDias: number;
+// Inicio y Fin de una tarea se guardan JUNTOS: son una sola decisión sobre
+// cuándo va la tarea. Separarlos obligaba a dos escrituras, dos recálculos de
+// la cadena y un estado intermedio incoherente en el medio —el fin viejo
+// conviviendo con el inicio nuevo, que además podía quedar invertido.
+//
+// La duración se deriva del rango y de ahí en adelante manda ella: es lo que
+// la secuencia usa para encadenar.
+export async function actualizarRangoTarea(
+  tareaId: string,
+  inicioISO: string,
+  finISO: string,
+): Promise<Resultado> {
+  const tarea = await tareaConAcceso(tareaId);
+  if (!tarea) return { error: "Tarea inexistente." };
 
-  if (campo === "fechaInicio") {
-    fechaInicio = fecha;
-    duracionDias = tarea.duracionDias;
-  } else {
-    fechaInicio = tarea.fechaInicio;
-    if (fecha < fechaInicio) {
-      return { error: "El fin no puede ser anterior al inicio." };
-    }
-    // Mínimo un día hábil: un rango que cae entero en fin de semana
-    // igual ocupa una jornada.
-    duracionDias = Math.max(1, diasHabilesEntre(fechaInicio, fecha));
+  const patron = /^\d{4}-\d{2}-\d{2}$/;
+  if (!patron.test(inicioISO) || !patron.test(finISO)) {
+    return { error: "Fecha inválida." };
   }
+
+  const fechaInicio = fechaDesdeISO(inicioISO);
+  const fechaFin = fechaDesdeISO(finISO);
+  if (fechaFin < fechaInicio) {
+    return { error: "El fin no puede ser anterior al inicio." };
+  }
+  // El calendario ya deshabilita sábados y domingos, pero la action es una
+  // entrada pública: se valida igual.
+  if (!esDiaHabil(fechaInicio) || !esDiaHabil(fechaFin)) {
+    return { error: "Las tareas solo pueden empezar y terminar en días hábiles." };
+  }
+
+  // Mínimo un día hábil: una tarea que empieza y termina el mismo día dura 1.
+  const duracionDias = Math.max(1, diasHabilesEntre(fechaInicio, fechaFin));
 
   await enSecuencia(async (tx) => {
     await tx.tareaRoadmap.update({
@@ -422,10 +433,14 @@ export async function actualizarCampoTarea(
       data: {
         fechaInicio,
         duracionDias,
+        // Se recalcula en vez de guardar el fin tal cual: la aritmética de
+        // días hábiles es la que manda sobre la cadena.
         fechaFin: finTrasDiasHabiles(fechaInicio, duracionDias),
       },
     });
 
+    // Ancla en esta tarea: lo anterior queda quieto, lo posterior se
+    // reencadena.
     await resecuenciar(tarea.lista.clienteId, tareaId, undefined, tx);
   });
 
