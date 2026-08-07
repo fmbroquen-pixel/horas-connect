@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { MAX_BACKUPS } from "./constantes";
+import { Prisma } from "@/generated/prisma/client";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
 const UsuarioSchema = z.object({
@@ -284,27 +285,64 @@ export async function guardarProyectosAsignados(
     }
   }
 
-  await prisma.$transaction(async (tx) => {
-    // Se borran solo las asignaciones CON rol de este usuario; las que no
-    // tienen rol sobreviven y conservan su permiso de carga.
-    await tx.proyectoAsignado.deleteMany({
-      where: { usuarioId, rol: { not: null } },
-    });
-    for (const [rol, ids] of [
-      ["owner", owners],
-      ["backup", backups],
-    ] as const) {
-      for (const clienteId of ids) {
-        // upsert y no create: el usuario puede tener ya una fila sin rol para
-        // ese proyecto, y hay una sola fila por (usuario, cliente).
-        await tx.proyectoAsignado.upsert({
-          where: { usuarioId_clienteId: { usuarioId, clienteId } },
-          create: { usuarioId, clienteId, rol },
-          update: { rol },
+  // Las validaciones de arriba son la vía amable: nombran al ocupante y al
+  // proyecto. Pero corren antes de la transacción, así que dos admins
+  // guardando a la vez podrían pasarlas los dos. El cierre real es por abajo:
+  //
+  //   · un solo owner por proyecto lo garantiza un índice único parcial en la
+  //     base (proyectos_asignados_owner_unico_por_cliente), y acá se traduce
+  //     el P2002 a un mensaje legible en vez de dejar salir un 500 crudo;
+  //   · el cupo de backups no se puede expresar como índice, así que se
+  //     vuelve a contar DENTRO de la transacción, ya con las filas viejas
+  //     borradas y viendo lo que haya escrito el otro admin.
+  const CUPO_SUPERADO = "CUPO_BACKUPS";
+  try {
+    await prisma.$transaction(async (tx) => {
+      // Se borran solo las asignaciones CON rol de este usuario; las que no
+      // tienen rol sobreviven y conservan su permiso de carga.
+      await tx.proyectoAsignado.deleteMany({
+        where: { usuarioId, rol: { not: null } },
+      });
+
+      for (const clienteId of backups) {
+        const ocupados = await tx.proyectoAsignado.count({
+          where: { clienteId, rol: "backup", usuarioId: { not: usuarioId } },
         });
+        if (ocupados >= MAX_BACKUPS) throw new Error(CUPO_SUPERADO);
       }
+
+      for (const [rol, ids] of [
+        ["owner", owners],
+        ["backup", backups],
+      ] as const) {
+        for (const clienteId of ids) {
+          // upsert y no create: el usuario puede tener ya una fila sin rol para
+          // ese proyecto, y hay una sola fila por (usuario, cliente).
+          await tx.proyectoAsignado.upsert({
+            where: { usuarioId_clienteId: { usuarioId, clienteId } },
+            create: { usuarioId, clienteId, rol },
+            update: { rol },
+          });
+        }
+      }
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message === CUPO_SUPERADO) {
+      return {
+        error: `Alguno de los proyectos ya tiene ${MAX_BACKUPS} Mentores Backup. Actualizá la pantalla y volvé a intentar.`,
+      };
     }
-  });
+    if (
+      e instanceof Prisma.PrismaClientKnownRequestError &&
+      e.code === "P2002"
+    ) {
+      return {
+        error:
+          "Alguno de los proyectos ya tiene un Mentor Owner. Actualizá la pantalla y volvé a intentar.",
+      };
+    }
+    throw e;
+  }
 
   revalidatePath(`/admin/usuarios/${usuarioId}`);
   revalidatePath("/mi-perfil");
