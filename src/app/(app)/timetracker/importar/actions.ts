@@ -7,6 +7,7 @@ import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { getConceptosActivos } from "@/lib/conceptos";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { parseHorasHsMin } from "@/lib/horas";
+import { fechaDesdeISO, hoyUTC } from "@/lib/dias-habiles";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
 // Columnas editables de la tabla (USD/Hora y USD Total se calculan solos y
@@ -151,8 +152,8 @@ async function procesar(usuarioId: string, archivo: File) {
     conceptos.map((c) => [normalizar(c.nombre), c.id]),
   );
 
-  const hoy = new Date();
-  hoy.setHours(23, 59, 59, 999);
+  // En UTC, igual que la carga manual y que la columna @db.Date.
+  const hoy = hoyUTC();
 
   // Para detectar duplicados contra la base.
   const existentes = await prisma.registroHoras.findMany({
@@ -203,7 +204,7 @@ async function procesar(usuarioId: string, archivo: File) {
 
     const fechaISO = parseFecha(rawFecha);
     if (!fechaISO) errores.push("Fecha inválida");
-    else if (new Date(fechaISO + "T00:00:00") > hoy) errores.push("Fecha futura");
+    else if (fechaDesdeISO(fechaISO) > hoy) errores.push("Fecha futura");
 
     const proy = proyPorNombre.get(normalizar(proyecto));
     if (!proyecto) errores.push("Falta el cliente");
@@ -259,7 +260,7 @@ async function procesar(usuarioId: string, archivo: File) {
 
     if (errores.length === 0 && fechaISO && proy && conceptoId && ownership && modalidad && horas !== null && tarifa !== undefined) {
       validas.push({
-        fecha: new Date(fechaISO + "T00:00:00Z"),
+        fecha: fechaDesdeISO(fechaISO),
         clienteId: proy.id,
         conceptoId,
         ownership,

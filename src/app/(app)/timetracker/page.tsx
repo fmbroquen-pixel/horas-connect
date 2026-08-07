@@ -16,7 +16,7 @@ import { TablaRegistros } from "./tabla-registros";
 import { AccionesMenu } from "./acciones-menu";
 import { BarraCaptura } from "./barra-captura";
 import { SelectorUsuario } from "./selector-usuario";
-import { DIAS_VENTANA_EDICION } from "./constantes";
+import { DIAS_VENTANA_EDICION, limiteVentana } from "./constantes";
 import type { MapaTarifas, RegistroFila } from "./tipos";
 
 export default async function TimetrackerPage({
@@ -87,9 +87,10 @@ export default async function TimetrackerPage({
     tarifas[`${t.modalidad}-${t.ownership}`] = Number(t.valorUsd);
   }
 
-  const limite = new Date();
-  limite.setDate(limite.getDate() - DIAS_VENTANA_EDICION);
-  limite.setHours(0, 0, 0, 0);
+  // Mismo corte que valida el servidor al guardar, del mismo helper: si se
+  // calculara acá aparte, la tabla podría mostrar como editable una fila que
+  // la action después rechaza.
+  const limite = limiteVentana();
 
   // Etiqueta de la columna Concepto: el nombre guardado, aunque el concepto
   // esté dado de baja y ya no figure en el desplegable. Si el registro es

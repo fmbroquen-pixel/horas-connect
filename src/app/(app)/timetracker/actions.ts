@@ -6,7 +6,8 @@ import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { formatHorasHsMin, parseHorasHsMin } from "@/lib/horas";
 import { SOLO_ACTIVOS, revalidarHoras } from "@/lib/registros-horas";
-import { DIAS_VENTANA_EDICION } from "./constantes";
+import { fechaDesdeISO, hoyUTC } from "@/lib/dias-habiles";
+import { DIAS_VENTANA_EDICION, limiteVentana } from "./constantes";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
 const RegistroSchema = z.object({
@@ -30,20 +31,18 @@ export type CampoRegistro =
 
 type Resultado = { error?: string; campo?: CampoRegistro };
 
-function limiteVentana(): Date {
-  const limite = new Date();
-  limite.setDate(limite.getDate() - DIAS_VENTANA_EDICION);
-  limite.setHours(0, 0, 0, 0);
-  return limite;
-}
-
+// Todo en UTC, como el resto del sistema: la columna es @db.Date y Prisma la
+// lee y escribe a medianoche UTC. Construir la fecha con la hora local del
+// proceso mezclaba dos criterios —el import ya usaba UTC y la carga manual
+// no— y en un servidor con offset positivo la misma fecha se habría guardado
+// un día antes.
 function validarFecha(fechaISO: string): { fecha?: Date; error?: string } {
-  const fecha = new Date(fechaISO + "T00:00:00");
+  const fecha = fechaDesdeISO(fechaISO);
   if (isNaN(fecha.getTime())) return { error: "Fecha inválida." };
 
-  const hoy = new Date();
-  hoy.setHours(23, 59, 59, 999);
-  if (fecha > hoy) return { error: "No se pueden cargar horas futuras." };
+  // Hoy sí se puede cargar: la comparación es contra la medianoche de hoy y
+  // el corte queda estrictamente después.
+  if (fecha > hoyUTC()) return { error: "No se pueden cargar horas futuras." };
 
   if (fecha < limiteVentana()) {
     return {
