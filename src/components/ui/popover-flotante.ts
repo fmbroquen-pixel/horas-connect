@@ -92,5 +92,13 @@ export function usePopoverFlotante(
 }
 
 // Clases comunes del popover flotante: el posicionamiento lo pone el hook.
+//
+// z-70 y no z-50: un popover siempre lo abre algo que está por debajo, así
+// que tiene que quedar por encima de TODO lo que puede contener su trigger.
+// El modal centra su card en z-60 (ver ui/modal.tsx), y con el popover en 50
+// el menú de un desplegable dentro de un formulario modal se dibujaba detrás
+// de la card: el trigger respondía, el menú se abría y no se veía ni se podía
+// clickear. En el flujo esto no pasaba porque el menú era hijo del trigger;
+// apareció al sacarlos a un portal.
 export const POPOVER_FLOTANTE =
-  "dc-menu dc-pop-in fixed z-50 rounded-xl border border-dc-line bg-dc-deep shadow-[0_12px_32px_rgba(0,0,0,0.45)]";
+  "dc-menu dc-pop-in fixed z-[70] rounded-xl border border-dc-line bg-dc-deep shadow-[0_12px_32px_rgba(0,0,0,0.45)]";
