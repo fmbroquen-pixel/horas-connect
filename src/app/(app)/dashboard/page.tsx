@@ -15,6 +15,7 @@ import { FiltrosHome } from "./filtros-home";
 import { MODULOS } from "@/lib/modulos";
 import { EstadoProyectos } from "./estado-proyectos";
 import { EtapasProximas, type EtapaProxima } from "./etapas-proximas";
+import { RecalculoProvider, ZonaRecalculable } from "./recalculo";
 
 const MAX_DIAS_FILTRO = 365;
 const CARD = "rounded-2xl border border-dc-line bg-dc-card";
@@ -218,6 +219,10 @@ export default async function DashboardPage({
   return (
     // El encabezado y los filtros quedan fijos; todo el contenido scrollea
     // por dentro, así la navegación no se va de pantalla.
+    //
+    // El provider envuelve a los dos lados: el filtro dispara la navegación y
+    // la zona de abajo se atenúa mientras el servidor recalcula.
+    <RecalculoProvider>
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-xl uppercase text-white">
@@ -239,7 +244,7 @@ export default async function DashboardPage({
             : "No estás asignado como Mentor Owner ni Backup en ningún proyecto. Un admin puede asignarlos desde Settings → Usuarios."}
         </p>
       ) : (
-        <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pb-2">
+        <ZonaRecalculable className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pb-2">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Kpi
               etiqueta="Horas estimadas de proyectos"
@@ -347,9 +352,10 @@ export default async function DashboardPage({
               <SemaforoEvolucion fechas={semanasSemaforo} series={seriesSemaforo} />
             </div>
           </div>
-        </div>
+        </ZonaRecalculable>
       )}
     </div>
+    </RecalculoProvider>
   );
 }
 

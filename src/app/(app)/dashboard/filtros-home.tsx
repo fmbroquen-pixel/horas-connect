@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { DatePicker } from "@/components/date-picker";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
+import { useRecalculo } from "./recalculo";
 
 type Proyecto = { id: string; nombre: string };
 
@@ -30,7 +30,7 @@ export function FiltrosHome({
   proyectos: Proyecto[];
   seleccionados: string[];
 }) {
-  const router = useRouter();
+  const { recalculando, navegar } = useRecalculo();
   const [open, setOpen] = useState(false);
   const [desdeSel, setDesdeSel] = useState(desde);
   const [hastaSel, setHastaSel] = useState(hasta);
@@ -65,15 +65,16 @@ export function FiltrosHome({
       params.set("proyectos", [...sel].join(","));
     }
     const qs = params.toString();
-    router.push(qs ? `/dashboard?${qs}` : "/dashboard");
+    navegar(qs ? `/dashboard?${qs}` : "/dashboard");
     setOpen(false);
   };
 
-  const limpiar = () => {
-    setSel(new Set(proyectos.map((p) => p.id)));
-    router.push("/dashboard");
-    setOpen(false);
-  };
+  // Limpiar vacía la selección y NO cierra ni navega: es el punto de partida
+  // para armar un filtro nuevo, no un "volver a todos". Antes hacía las tres
+  // cosas al revés —marcaba todos los proyectos, navegaba y cerraba—, así que
+  // el botón que promete limpiar terminaba aplicando el filtro más amplio
+  // posible y sacándote del popup.
+  const limpiar = () => setSel(new Set());
 
   const parcial = seleccionados.length < proyectos.length;
 
@@ -174,16 +175,21 @@ export function FiltrosHome({
             </div>
 
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={limpiar} className={BTN_SECONDARY_SM}>
+              <button
+                type="button"
+                onClick={limpiar}
+                disabled={sel.size === 0}
+                className={`${BTN_SECONDARY_SM} disabled:cursor-not-allowed disabled:opacity-50`}
+              >
                 Limpiar
               </button>
               <button
                 type="button"
                 onClick={aplicar}
-                disabled={sel.size === 0}
+                disabled={sel.size === 0 || recalculando}
                 className={`${BTN_PRIMARY_SM} disabled:cursor-not-allowed disabled:opacity-50`}
               >
-                Aplicar
+                {recalculando ? "Aplicando…" : "Aplicar"}
               </button>
             </div>
           </div>
