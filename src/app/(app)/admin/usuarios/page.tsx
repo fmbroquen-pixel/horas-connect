@@ -29,6 +29,7 @@ export default async function UsuariosPage({
   const usuarios = await prisma.usuario.findMany({
     where: estado === "todos" ? {} : { activo: estado === "activos" },
     orderBy: { nombre: "asc" },
+    include: { _count: { select: { proyectosAsignados: true } } },
   });
 
   return (
@@ -39,8 +40,9 @@ export default async function UsuariosPage({
           <InfoButton>
             Lista blanca de personas autorizadas a entrar con Google o email.
             Los usuarios solo los crea el administrador; nadie puede ingresar si
-            no tiene un usuario creado. Los mentores (guest) necesitan una tarifa
-            configurada antes de poder cargar horas facturables.
+            no tiene un usuario creado. Para cargar horas, un mentor necesita
+            dos cosas: una tarifa configurada y al menos un proyecto asignado.
+            Si le falta alguna, se avisa en su fila.
           </InfoButton>
         </div>
         <NuevoUsuarioBoton />
@@ -66,6 +68,13 @@ export default async function UsuariosPage({
               <tr key={u.id} className="border-b border-dc-line last:border-0">
                 <td className="px-4 py-3 text-center">
                   <p className="truncate text-dc-text">{u.nombre}</p>
+                  {/* Sin proyectos asignados un mentor no puede cargar horas.
+                      El admin no tenía forma de verlo sin entrar a la ficha. */}
+                  {u.rol === "guest" && u._count.proyectosAsignados === 0 && (
+                    <span className="mt-1 inline-flex items-center rounded-full bg-dc-pink/15 px-2.5 py-0.5 text-[11px] text-dc-pink">
+                      Sin proyectos
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-center">
                   <span className="rounded-full bg-dc-line px-3 py-1 text-xs text-dc-text">

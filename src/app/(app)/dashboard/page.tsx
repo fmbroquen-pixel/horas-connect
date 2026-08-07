@@ -65,21 +65,31 @@ export default async function DashboardPage({
     lte: new Date(hasta + "T00:00:00Z"),
   };
 
-  const [registros, tareas] = await Promise.all([
+  const [registros, tareas, plan] = await Promise.all([
     // Sin filtro de usuario: el total incluye lo reportado por cualquiera.
     prisma.registroHoras.findMany({
       where: { clienteId: { in: ids }, ...SOLO_ACTIVOS, fecha: rangoFecha },
       select: { fecha: true, horas: true, usuarioId: true },
     }),
     // Las tareas entran al rango por su fecha de fin: es cuando se considera
-    // entregado el presupuesto.
+    // entregado el presupuesto. Alimenta lo ENTREGADO y la curva, que son
+    // magnitudes de flujo y por eso sí siguen al filtro.
     prisma.tareaRoadmap.findMany({
       where: { lista: { clienteId: { in: ids } }, fechaFin: rangoFecha },
       select: { horasEstimadas: true, estado: true, fechaFin: true },
     }),
+    // Lo ESTIMADO es el plan completo y no se filtra por fecha: es el tamaño
+    // del compromiso, no algo que ocurra en un período. Con el filtro puesto
+    // el número daba casi siempre 0 —el rango por defecto mira 90 días hacia
+    // atrás y el Roadmap planifica hacia adelante— y encima significaba otra
+    // cosa que el KPI del mismo nombre en el Home de Proyecto.
+    prisma.tareaRoadmap.aggregate({
+      where: { lista: { clienteId: { in: ids } } },
+      _sum: { horasEstimadas: true },
+    }),
   ]);
 
-  const presupuestadas = tareas.reduce((a, t) => a + Number(t.horasEstimadas), 0);
+  const presupuestadas = Number(plan._sum.horasEstimadas ?? 0);
   const entregadas = tareas.reduce(
     (a, t) => a + (t.estado === "finalizada" ? Number(t.horasEstimadas) : 0),
     0,
@@ -234,10 +244,12 @@ export default async function DashboardPage({
             <Kpi
               etiqueta="Horas estimadas de proyectos"
               valor={formatHorasHsMin(presupuestadas)}
+              info="El plan completo de los proyectos elegidos, no lo que cae en el rango: el filtro de fechas no lo mueve. Las tareas no ejecutadas siguen contando, porque esas horas estaban comprometidas con el cliente."
             />
             <Kpi
               etiqueta="Hs Presupuestadas Entregadas"
               valor={formatHorasHsMin(entregadas)}
+              info="Horas estimadas de las tareas finalizadas cuyo fin cae dentro del rango elegido. Las no ejecutadas no suman acá, aunque en la barra de avance de cada lista sí cuenten como cerradas."
             />
             <Kpi
               etiqueta="Hs Time Tracker Total"
@@ -345,15 +357,21 @@ function Kpi({
   etiqueta,
   valor,
   destacado,
+  info,
 }: {
   etiqueta: string;
   valor: string;
   destacado?: boolean;
+  // Los dos KPIs de horas del plan tienen criterios que no se adivinan
+  // (qué entra al filtro y qué hace una tarea no ejecutada): se explican acá
+  // en vez de dejar que se deduzcan comparando números.
+  info?: string;
 }) {
   return (
     <div className={`${CARD} px-4 py-3`}>
-      <p className="text-[11px] uppercase leading-tight tracking-wider text-dc-muted">
+      <p className="flex items-start gap-1.5 text-[11px] uppercase leading-tight tracking-wider text-dc-muted">
         {etiqueta}
+        {info && <InfoButton>{info}</InfoButton>}
       </p>
       <p
         className={`mt-1 font-display text-lg tabular-nums ${destacado ? "text-dc-pink" : "text-white"}`}
