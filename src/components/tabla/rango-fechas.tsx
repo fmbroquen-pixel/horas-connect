@@ -184,16 +184,21 @@ export function RangoFechas({
               // es una sola decisión, así que destacar solo la que se tocó
               // sugeriría que la otra no está en juego.
               //
-              // El énfasis es una SOMBRA OSCURA detrás de la fecha, en tres
-              // capas cada vez más difusas, sobre el violeta más profundo de
-              // la paleta (--dc-sidebar). El número se despega de la fila y
-              // gana peso sin encerrarse: nada de fondo, borde ni sombra de
-              // caja, porque cualquiera de los tres vuelve a dibujar un
-              // recuadro. Es solo text-shadow, que no ocupa espacio, así que
-              // la grilla no se mueve un píxel al abrir.
+              // El énfasis es una sombra oscura y difusa detrás de la fecha,
+              // sobre --dc-sidebar (el violeta más profundo de la paleta, no
+              // negro puro: así no ensucia el fondo). La fecha conserva su
+              // color de siempre; lo único que cambia es que gana profundidad.
+              //
+              // Dos capas de blur grande y sin desplazamiento: un offset corto
+              // marcaría un contorno nítido, y lo que se busca es lo contrario
+              // —que la sombra se disuelva y no se lea como un borde ni como
+              // un recuadro. Nada de fondo ni de box-shadow, por lo mismo.
+              //
+              // Es solo text-shadow, que no ocupa espacio: la grilla no se
+              // mueve un píxel al abrir.
               className={`flex w-full items-center justify-center rounded-md px-1.5 py-1 text-center text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 ${
                 abierto
-                  ? "text-white [text-shadow:0_1px_2px_rgba(11,9,48,0.95),0_0_10px_rgba(11,9,48,0.9),0_0_20px_rgba(11,9,48,0.75)]"
+                  ? "[text-shadow:0_0_12px_rgba(11,9,48,0.85),0_0_26px_rgba(11,9,48,0.6)]"
                   : "hover:bg-dc-peri/10"
               }`}
             >
