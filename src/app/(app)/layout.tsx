@@ -16,8 +16,9 @@ const ETIQUETA_ROL: Record<string, string> = {
 };
 
 // Navegación única y persistente en la sidebar. Orden: Home · Proyectos ·
-// Time Tracking · Time Off · Analytics · Settings (desplegable).
-// Time Off aparece solo si MODULOS.timeOff está habilitado (ver lib/modulos).
+// Time Tracking · Expenses · Time Off · Analytics · Settings (desplegable).
+// Expenses y Time Off aparecen solo si su flag está habilitado (ver
+// lib/modulos): el ítem y la ruta se encienden y se apagan juntos.
 const ITEM_PROYECTOS: ItemSidebar = {
   href: "/proyectos",
   label: "Proyectos",
@@ -32,6 +33,9 @@ const ITEMS_CARGA: ItemSidebar[] = [
   { href: "/dashboard", label: "Home", icono: "home" },
   ITEM_PROYECTOS,
   { href: "/timetracker", label: "Time Tracking", icono: "reloj" },
+  ...(MODULOS.expenses
+    ? [{ href: "/viaticos", label: "Expenses", icono: "auto" }]
+    : []),
   ...(MODULOS.timeOff
     ? [{ href: "/vacaciones", label: "Time Off", icono: "sombrilla" }]
     : []),

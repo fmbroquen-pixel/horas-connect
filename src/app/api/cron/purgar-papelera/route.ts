@@ -7,10 +7,10 @@ import { DIA_MS } from "@/lib/dias-habiles";
 // RETENCION_DIAS días y después se borra; hasta acá esa segunda mitad no
 // existía y los registros quedaban para siempre con el contador en cero.
 //
-// Alcance: horas y vacaciones, que son los dos tipos que la papelera muestra
-// y permite restaurar (ver papelera/actions.ts). Los viáticos NO se tocan: su
-// módulo se retiró de la UI y nadie puede verlos ni recuperarlos, así que
-// borrarlos sería destruir datos a ciegas en vez de cumplir una política.
+// Alcance: los tres tipos que la papelera muestra y permite restaurar (ver
+// papelera/actions.ts). Los viáticos habían quedado afuera mientras su módulo
+// no estaba en la UI —purgar lo que nadie puede ver ni recuperar es destruir
+// datos a ciegas, no cumplir una política— y vuelven con él.
 //
 // Se dispara desde el cron de Vercel (vercel.json). Vercel manda el header
 // Authorization: Bearer $CRON_SECRET cuando esa variable está definida en el
@@ -31,14 +31,19 @@ export async function GET(request: NextRequest) {
   const corte = new Date(Date.now() - RETENCION_DIAS * DIA_MS);
   const vencidos = { eliminadoEn: { lt: corte } };
 
-  const [horas, vacaciones] = await prisma.$transaction([
+  const [horas, viaticos, vacaciones] = await prisma.$transaction([
     prisma.registroHoras.deleteMany({ where: vencidos }),
+    prisma.viatico.deleteMany({ where: vencidos }),
     prisma.vacacion.deleteMany({ where: vencidos }),
   ]);
 
   return NextResponse.json({
     corte: corte.toISOString(),
     retencionDias: RETENCION_DIAS,
-    borrados: { horas: horas.count, vacaciones: vacaciones.count },
+    borrados: {
+      horas: horas.count,
+      viaticos: viaticos.count,
+      vacaciones: vacaciones.count,
+    },
   });
 }
