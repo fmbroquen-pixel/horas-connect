@@ -12,11 +12,22 @@ import {
   hoyUTC,
   isoDesdeFecha,
 } from "@/lib/dias-habiles";
-import { PLANTILLAS, getTareasEnOrden, resecuenciar } from "@/lib/roadmap";
+import { PLANTILLAS, getTareasEnOrden, resecuenciar, type DB } from "@/lib/roadmap";
 import { ETIQUETA_ESTADO } from "./constantes";
 import type { EstadoTareaRoadmap } from "@/generated/prisma/client";
 
 type Resultado = { error?: string };
+
+// Toda escritura que mueva la secuencia va en una transacción junto con el
+// reencadenado de fechas: son un solo hecho. Si el resecuenciado fallara
+// después de la escritura, el plan quedaría con la tarea ya borrada (o creada)
+// y las fechas viejas de todo lo que sigue, sin ninguna señal de error.
+//
+// El timeout va holgado porque resecuenciar escribe una fila por tarea movida,
+// y un plan largo con la primera tarea corrida las toca todas.
+function enSecuencia<T>(fn: (tx: DB) => Promise<T>): Promise<T> {
+  return prisma.$transaction(fn, { timeout: 20_000, maxWait: 10_000 });
+}
 
 // Campos que la tabla del Roadmap edita de a uno, en el lugar.
 export type CampoTarea =
@@ -65,8 +76,9 @@ async function tareaConAcceso(tareaId: string) {
 async function anclaPrevia(
   clienteId: string,
   tareaId: string,
+  db: DB = prisma,
 ): Promise<string | undefined> {
-  const tareas = await getTareasEnOrden(clienteId);
+  const tareas = await getTareasEnOrden(clienteId, db);
   const i = tareas.findIndex((t) => t.id === tareaId);
   return i > 0 ? tareas[i - 1].id : undefined;
 }
@@ -77,13 +89,14 @@ async function anclaPrevia(
 async function anclaAntesDeLista(
   clienteId: string,
   listaId: string,
+  db: DB = prisma,
 ): Promise<string | undefined> {
-  const primera = await prisma.tareaRoadmap.findFirst({
+  const primera = await db.tareaRoadmap.findFirst({
     where: { listaId },
     orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
     select: { id: true },
   });
-  return primera ? anclaPrevia(clienteId, primera.id) : undefined;
+  return primera ? anclaPrevia(clienteId, primera.id, db) : undefined;
 }
 
 // ── Listas ────────────────────────────────────────────────────────────────
@@ -105,38 +118,42 @@ export async function crearLista(
   const plantillaNombre = String(formData.get("plantilla") ?? "");
   const plantilla = PLANTILLAS.find((p) => p.nombre === plantillaNombre);
 
-  const ultima = await prisma.listaRoadmap.findFirst({
-    where: { clienteId },
-    orderBy: { orden: "desc" },
-    select: { orden: true },
-  });
-
-  const lista = await prisma.listaRoadmap.create({
-    data: {
-      clienteId,
-      nombre: parsed.data,
-      orden: (ultima?.orden ?? -1) + 1,
-    },
-  });
-
-  if (plantilla) {
-    // Fechas provisorias: resecuenciar las reescribe encadenándolas al final
-    // del plan. Se necesita un valor porque las columnas no son opcionales.
-    const provisoria = cliente.fechaInicio ?? new Date();
-    await prisma.tareaRoadmap.createMany({
-      data: plantilla.tareas.map((t, i) => ({
-        listaId: lista.id,
-        nombre: t.nombre,
-        orden: i,
-        duracionDias: t.duracionDias,
-        horasEstimadas: t.horasEstimadas,
-        fechaInicio: provisoria,
-        fechaFin: provisoria,
-      })),
+  await enSecuencia(async (tx) => {
+    const ultima = await tx.listaRoadmap.findFirst({
+      where: { clienteId },
+      orderBy: { orden: "desc" },
+      select: { orden: true },
     });
-  }
 
-  await resecuenciar(clienteId, await anclaAntesDeLista(clienteId, lista.id));
+    const lista = await tx.listaRoadmap.create({
+      data: {
+        clienteId,
+        nombre: parsed.data,
+        orden: (ultima?.orden ?? -1) + 1,
+      },
+    });
+
+    if (plantilla) {
+      // Fechas provisorias: resecuenciar las reescribe encadenándolas al final
+      // del plan. Se necesita un valor porque las columnas no son opcionales.
+      const provisoria = cliente.fechaInicio ?? new Date();
+      await tx.tareaRoadmap.createMany({
+        data: plantilla.tareas.map((t, i) => ({
+          listaId: lista.id,
+          nombre: t.nombre,
+          orden: i,
+          duracionDias: t.duracionDias,
+          horasEstimadas: t.horasEstimadas,
+          fechaInicio: provisoria,
+          fechaFin: provisoria,
+        })),
+      });
+    }
+
+    const ancla = await anclaAntesDeLista(clienteId, lista.id, tx);
+    await resecuenciar(clienteId, ancla, undefined, tx);
+  });
+
   revalidar();
   return {};
 }
@@ -164,15 +181,19 @@ export async function eliminarLista(listaId: string): Promise<void> {
   const lista = await listaConAcceso(listaId);
   if (!lista) return;
 
-  // El ancla se resuelve antes de borrar, mientras las tareas todavía están
-  // en la secuencia.
-  const ancla = await anclaAntesDeLista(lista.clienteId, listaId);
+  await enSecuencia(async (tx) => {
+    // El ancla se resuelve antes de borrar, mientras las tareas todavía están
+    // en la secuencia.
+    const ancla = await anclaAntesDeLista(lista.clienteId, listaId, tx);
 
-  // Las horas cargadas no se tocan: apuntan a una CATEGORÍA, que sobrevive a
-  // la lista. El historial sigue clasificado aunque el plan cambie.
-  await prisma.listaRoadmap.delete({ where: { id: listaId } });
+    // Las horas cargadas no se tocan: su dato vivo es cliente + concepto, que
+    // sobreviven a la lista. El historial sigue clasificado aunque el plan
+    // cambie.
+    await tx.listaRoadmap.delete({ where: { id: listaId } });
 
-  await resecuenciar(lista.clienteId, ancla);
+    await resecuenciar(lista.clienteId, ancla, undefined, tx);
+  });
+
   revalidar();
 }
 
@@ -186,39 +207,40 @@ export async function duplicarLista(listaId: string): Promise<void> {
   if (!lista) return;
   await requireAcceso(lista.clienteId);
 
-  const ultima = await prisma.listaRoadmap.findFirst({
-    where: { clienteId: lista.clienteId },
-    orderBy: { orden: "desc" },
-    select: { orden: true },
-  });
-
-  const copia = await prisma.listaRoadmap.create({
-    data: {
-      clienteId: lista.clienteId,
-      nombre: `${lista.nombre} (copia)`,
-      orden: (ultima?.orden ?? -1) + 1,
-    },
-  });
-
-  if (lista.tareas.length > 0) {
-    await prisma.tareaRoadmap.createMany({
-      data: lista.tareas.map((t, i) => ({
-        listaId: copia.id,
-        nombre: t.nombre,
-        orden: i,
-        duracionDias: t.duracionDias,
-        horasEstimadas: t.horasEstimadas,
-        // El estado no se copia: la lista nueva arranca sin ejecutar.
-        fechaInicio: t.fechaInicio,
-        fechaFin: t.fechaFin,
-      })),
+  await enSecuencia(async (tx) => {
+    const ultima = await tx.listaRoadmap.findFirst({
+      where: { clienteId: lista.clienteId },
+      orderBy: { orden: "desc" },
+      select: { orden: true },
     });
-  }
 
-  await resecuenciar(
-    lista.clienteId,
-    await anclaAntesDeLista(lista.clienteId, copia.id),
-  );
+    const copia = await tx.listaRoadmap.create({
+      data: {
+        clienteId: lista.clienteId,
+        nombre: `${lista.nombre} (copia)`,
+        orden: (ultima?.orden ?? -1) + 1,
+      },
+    });
+
+    if (lista.tareas.length > 0) {
+      await tx.tareaRoadmap.createMany({
+        data: lista.tareas.map((t, i) => ({
+          listaId: copia.id,
+          nombre: t.nombre,
+          orden: i,
+          duracionDias: t.duracionDias,
+          horasEstimadas: t.horasEstimadas,
+          // El estado no se copia: la lista nueva arranca sin ejecutar.
+          fechaInicio: t.fechaInicio,
+          fechaFin: t.fechaFin,
+        })),
+      });
+    }
+
+    const ancla = await anclaAntesDeLista(lista.clienteId, copia.id, tx);
+    await resecuenciar(lista.clienteId, ancla, undefined, tx);
+  });
+
   revalidar();
 }
 
@@ -291,18 +313,22 @@ export async function crearTarea(
   const r = parseTarea(formData);
   if (r.error || !r.datos) return { error: r.error };
 
-  const ultima = await prisma.tareaRoadmap.findFirst({
-    where: { listaId },
-    orderBy: { orden: "desc" },
-    select: { orden: true },
+  await enSecuencia(async (tx) => {
+    const ultima = await tx.tareaRoadmap.findFirst({
+      where: { listaId },
+      orderBy: { orden: "desc" },
+      select: { orden: true },
+    });
+
+    const tarea = await tx.tareaRoadmap.create({
+      data: { listaId, orden: (ultima?.orden ?? -1) + 1, ...r.datos },
+    });
+
+    // La tarea nueva se suma al final de su lista y arrastra a las siguientes.
+    const ancla = await anclaPrevia(lista.clienteId, tarea.id, tx);
+    await resecuenciar(lista.clienteId, ancla, undefined, tx);
   });
 
-  const tarea = await prisma.tareaRoadmap.create({
-    data: { listaId, orden: (ultima?.orden ?? -1) + 1, ...r.datos },
-  });
-
-  // La tarea nueva se suma al final de su lista y arrastra a las siguientes.
-  await resecuenciar(lista.clienteId, await anclaPrevia(lista.clienteId, tarea.id));
   revalidar();
   return {};
 }
@@ -390,16 +416,19 @@ export async function actualizarCampoTarea(
     duracionDias = Math.max(1, diasHabilesEntre(fechaInicio, fecha));
   }
 
-  await prisma.tareaRoadmap.update({
-    where: { id: tareaId },
-    data: {
-      fechaInicio,
-      duracionDias,
-      fechaFin: finTrasDiasHabiles(fechaInicio, duracionDias),
-    },
+  await enSecuencia(async (tx) => {
+    await tx.tareaRoadmap.update({
+      where: { id: tareaId },
+      data: {
+        fechaInicio,
+        duracionDias,
+        fechaFin: finTrasDiasHabiles(fechaInicio, duracionDias),
+      },
+    });
+
+    await resecuenciar(tarea.lista.clienteId, tareaId, undefined, tx);
   });
 
-  await resecuenciar(tarea.lista.clienteId, tareaId);
   revalidar();
   return {};
 }
@@ -459,20 +488,23 @@ export async function eliminarTareas(ids: string[]): Promise<void> {
   const idsValidos = tareas.map((t) => t.id);
   const aBorrar = new Set(idsValidos);
 
-  // Las anclas se resuelven ANTES de borrar: es la tarea anterior a la
-  // primera eliminada de cada proyecto, y por definición no está en el lote.
-  const anclas = new Map<string, string | undefined>();
-  for (const clienteId of clientes) {
-    const orden = await getTareasEnOrden(clienteId);
-    const i = orden.findIndex((t) => aBorrar.has(t.id));
-    anclas.set(clienteId, i > 0 ? orden[i - 1].id : undefined);
-  }
+  await enSecuencia(async (tx) => {
+    // Las anclas se resuelven ANTES de borrar: es la tarea anterior a la
+    // primera eliminada de cada proyecto, y por definición no está en el lote.
+    const anclas = new Map<string, string | undefined>();
+    for (const clienteId of clientes) {
+      const orden = await getTareasEnOrden(clienteId, tx);
+      const i = orden.findIndex((t) => aBorrar.has(t.id));
+      anclas.set(clienteId, i > 0 ? orden[i - 1].id : undefined);
+    }
 
-  await prisma.tareaRoadmap.deleteMany({ where: { id: { in: idsValidos } } });
+    await tx.tareaRoadmap.deleteMany({ where: { id: { in: idsValidos } } });
 
-  for (const clienteId of clientes) {
-    await resecuenciar(clienteId, anclas.get(clienteId));
-  }
+    for (const clienteId of clientes) {
+      await resecuenciar(clienteId, anclas.get(clienteId), undefined, tx);
+    }
+  });
+
   revalidar();
 }
 
@@ -481,13 +513,16 @@ export async function eliminarTarea(tareaId: string): Promise<void> {
   if (!tarea) return;
   const clienteId = tarea.lista.clienteId;
 
-  // El ancla se calcula ANTES de borrar: después, la tarea ya no está en la
-  // secuencia y no se podría ubicar su anterior.
-  const ancla = await anclaPrevia(clienteId, tareaId);
+  await enSecuencia(async (tx) => {
+    // El ancla se calcula ANTES de borrar: después, la tarea ya no está en la
+    // secuencia y no se podría ubicar su anterior.
+    const ancla = await anclaPrevia(clienteId, tareaId, tx);
 
-  // Las horas cargadas no se tocan: apuntan a una categoría, no a esta tarea.
-  await prisma.tareaRoadmap.delete({ where: { id: tareaId } });
+    // Las horas cargadas no se tocan: su dato vivo es cliente + concepto.
+    await tx.tareaRoadmap.delete({ where: { id: tareaId } });
 
-  await resecuenciar(clienteId, ancla);
+    await resecuenciar(clienteId, ancla, undefined, tx);
+  });
+
   revalidar();
 }

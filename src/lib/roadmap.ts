@@ -7,7 +7,14 @@ import {
   hoyUTC,
   siguienteDiaHabil,
 } from "@/lib/dias-habiles";
-import type { Cliente } from "@/generated/prisma/client";
+import type { Cliente, Prisma } from "@/generated/prisma/client";
+
+// Cliente de Prisma o cliente de transacción. Las funciones que leen y
+// reescriben la secuencia lo reciben para poder correr dentro de la misma
+// transacción que la escritura que las disparó: borrar una tarea y
+// reencadenar las fechas son un solo hecho, y a mitad de camino el plan queda
+// con las fechas viejas de las tareas que siguen.
+export type DB = Prisma.TransactionClient;
 
 // ── Plantillas por defecto ────────────────────────────────────────────────
 // Fuente: "Tareas CORE.xlsx" (una solapa por plantilla, una fila por tarea).
@@ -131,8 +138,8 @@ export function planificar(
 // Todas las tareas del proyecto en el orden en que se ejecutan: por lista y,
 // dentro de cada lista, por orden. Esa secuencia única es la cadena de
 // dependencias del roadmap.
-export async function getTareasEnOrden(clienteId: string) {
-  const listas = await prisma.listaRoadmap.findMany({
+export async function getTareasEnOrden(clienteId: string, db: DB = prisma) {
+  const listas = await db.listaRoadmap.findMany({
     where: { clienteId },
     orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
     include: {
@@ -149,40 +156,39 @@ export async function resecuenciar(
   clienteId: string,
   anclaId?: string,
   inicioForzado?: Date,
+  db: DB = prisma,
 ): Promise<void> {
-  const tareas = await getTareasEnOrden(clienteId);
+  const tareas = await getTareasEnOrden(clienteId, db);
   if (tareas.length === 0) return;
 
   const indice = anclaId ? tareas.findIndex((t) => t.id === anclaId) : -1;
   const desde = indice >= 0 ? indice : 0;
   const inicio =
     inicioForzado ??
-    (indice >= 0 ? tareas[desde].fechaInicio : await inicioProyecto(clienteId));
+    (indice >= 0 ? tareas[desde].fechaInicio : await inicioProyecto(clienteId, db));
 
   const plan = planificar(tareas, desde, inicio);
 
-  const cambios = plan.flatMap(({ fechaInicio, fechaFin }, i) => {
+  // En serie sobre `db` y no en un $transaction propio: cuando esto corre
+  // dentro de una transacción abrir otra no está permitido, y cuando corre
+  // suelto el llamador ya decidió que no la necesita.
+  for (const [i, { fechaInicio, fechaFin }] of plan.entries()) {
     const tarea = tareas[desde + i];
     const igual =
       tarea.fechaInicio.getTime() === fechaInicio.getTime() &&
       tarea.fechaFin.getTime() === fechaFin.getTime();
-    return igual
-      ? []
-      : [
-          prisma.tareaRoadmap.update({
-            where: { id: tarea.id },
-            data: { fechaInicio, fechaFin },
-          }),
-        ];
-  });
-
-  if (cambios.length > 0) await prisma.$transaction(cambios);
+    if (igual) continue;
+    await db.tareaRoadmap.update({
+      where: { id: tarea.id },
+      data: { fechaInicio, fechaFin },
+    });
+  }
 }
 
 // Arranque del plan: la fecha de inicio del contrato si está cargada; si no,
 // el próximo día hábil.
-async function inicioProyecto(clienteId: string): Promise<Date> {
-  const cliente = await prisma.cliente.findUnique({
+async function inicioProyecto(clienteId: string, db: DB = prisma): Promise<Date> {
+  const cliente = await db.cliente.findUnique({
     where: { id: clienteId },
     select: { fechaInicio: true },
   });
