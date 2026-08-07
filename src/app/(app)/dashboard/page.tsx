@@ -66,7 +66,16 @@ export default async function DashboardPage({
     lte: new Date(hasta + "T00:00:00Z"),
   };
 
-  const [registros, tareas, plan] = await Promise.all([
+  // Ventana fija hacia adelante de "Próximas dos semanas". Se calcula acá
+  // arriba porque su consulta se une al mismo lote que el resto.
+  const hoyUtc = new Date(hoy + "T00:00:00Z");
+  const en14dias = new Date(hoyUtc.getTime() + 14 * DIA_MS);
+
+  // Todo en un solo lote. Son consultas independientes y contra una base
+  // remota lo que se paga es la ida y vuelta, no el trabajo: en serie, cada
+  // una esperaba a la anterior sin necesitarla.
+  const [registros, tareas, plan, tareasProximas, eventosSemaforo, miembrosEquipo] =
+    await Promise.all([
     // Sin filtro de usuario: el total incluye lo reportado por cualquiera.
     prisma.registroHoras.findMany({
       where: { clienteId: { in: ids }, ...SOLO_ACTIVOS, fecha: rangoFecha },
@@ -88,6 +97,46 @@ export default async function DashboardPage({
       where: { lista: { clienteId: { in: ids } } },
       _sum: { horasEstimadas: true },
     }),
+    // Etapas próximas: lo que arranca en los próximos 14 días y todavía no
+    // empezó. No usa el rango del filtro —que mira hacia atrás— sino una
+    // ventana fija hacia adelante: la pregunta es "qué se viene".
+    prisma.tareaRoadmap.findMany({
+      where: {
+        lista: { clienteId: { in: ids } },
+        estado: "sin_iniciar",
+        fechaInicio: { gte: hoyUtc, lte: en14dias },
+      },
+      orderBy: { fechaInicio: "asc" },
+      select: {
+        id: true,
+        nombre: true,
+        fechaInicio: true,
+        personas: true,
+        lista: { select: { clienteId: true, cliente: { select: { nombre: true } } } },
+      },
+    }),
+    // Evolución del semáforo: para cada semana vale el último evento ocurrido
+    // hasta ella —incluidos los anteriores al rango, o el gráfico arrancaría
+    // vacío aunque el proyecto ya tuviera un estado.
+    prisma.semaforoEvento.findMany({
+      where: { clienteId: { in: ids }, createdAt: { lte: rangoFecha.lte } },
+      orderBy: { createdAt: "asc" },
+      select: {
+        clienteId: true,
+        estado: true,
+        createdAt: true,
+        cliente: { select: { nombre: true } },
+      },
+    }),
+    // Cumpleaños de la semana. La card está oculta detrás de
+    // MODULOS.cumpleanos; mientras lo esté ni siquiera se consulta la base,
+    // pero el cálculo queda intacto para cuando se reactive.
+    MODULOS.cumpleanos
+      ? prisma.miembroEquipo.findMany({
+          where: { clienteId: { in: ids }, cumpleanos: { not: null } },
+          include: { cliente: { select: { nombre: true } } },
+        })
+      : Promise.resolve([]),
   ]);
 
   const presupuestadas = Number(plan._sum.horasEstimadas ?? 0);
@@ -111,26 +160,6 @@ export default async function DashboardPage({
     { desde: rangoFecha.gte, hasta: rangoFecha.lte },
   );
 
-  // Etapas próximas: lo que arranca en los próximos 14 días y todavía no
-  // empezó. No usa el rango de fechas del filtro —que mira hacia atrás— sino
-  // una ventana fija hacia adelante: la pregunta es "qué se viene".
-  const hoyUtc = new Date(hoy + "T00:00:00Z");
-  const en14dias = new Date(hoyUtc.getTime() + 14 * DIA_MS);
-  const tareasProximas = await prisma.tareaRoadmap.findMany({
-    where: {
-      lista: { clienteId: { in: ids } },
-      estado: "sin_iniciar",
-      fechaInicio: { gte: hoyUtc, lte: en14dias },
-    },
-    orderBy: { fechaInicio: "asc" },
-    select: {
-      id: true,
-      nombre: true,
-      fechaInicio: true,
-      personas: true,
-      lista: { select: { clienteId: true, cliente: { select: { nombre: true } } } },
-    },
-  });
   const etapasProximas: EtapaProxima[] = tareasProximas.map((t) => ({
     id: t.id,
     clienteId: t.lista.clienteId,
@@ -145,20 +174,6 @@ export default async function DashboardPage({
     personas: t.personas,
   }));
 
-  // Evolución del semáforo: una serie por proyecto sobre el eje semanal del
-  // rango filtrado. Para cada semana vale el último evento ocurrido hasta
-  // ella —incluidos los anteriores al rango, o el gráfico arrancaría vacío
-  // aunque el proyecto ya tuviera un estado.
-  const eventosSemaforo = await prisma.semaforoEvento.findMany({
-    where: { clienteId: { in: ids }, createdAt: { lte: rangoFecha.lte } },
-    orderBy: { createdAt: "asc" },
-    select: {
-      clienteId: true,
-      estado: true,
-      createdAt: true,
-      cliente: { select: { nombre: true } },
-    },
-  });
 
   const semanasSemaforo: string[] = [];
   const finesDeSemana: number[] = [];
@@ -189,18 +204,10 @@ export default async function DashboardPage({
     }),
   }));
 
-  // Cumpleaños de la semana (lunes a domingo): mismo comportamiento de
-  // siempre, acotado a los proyectos visibles. La card está oculta detrás de
-  // MODULOS.cumpleanos; mientras lo esté ni siquiera se consulta la base,
-  // pero el cálculo queda intacto para cuando se reactive.
+  // Cumpleaños de la semana (lunes a domingo), acotado a los proyectos
+  // visibles.
   const semana = semanaActualISO();
   const diasSemanaMD = new Set(semana.map((iso) => iso.slice(5))); // "MM-DD"
-  const miembrosEquipo = MODULOS.cumpleanos
-    ? await prisma.miembroEquipo.findMany({
-        where: { clienteId: { in: ids }, cumpleanos: { not: null } },
-        include: { cliente: { select: { nombre: true } } },
-      })
-    : [];
   const md = (d: Date) =>
     `${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
   const cumpleanosSemana = miembrosEquipo

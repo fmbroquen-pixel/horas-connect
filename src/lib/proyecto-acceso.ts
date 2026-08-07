@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import type { Cliente, Usuario } from "@/generated/prisma/client";
@@ -45,13 +46,15 @@ async function clientesDeUsuario(
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 
-async function rolDe(usuarioId: string): Promise<string> {
+// Memoizada: la piden getProyectosPermitidos y getProyectosConRol, y en una
+// pantalla como Time Tracking las dos corren para el mismo usuario.
+const rolDe = cache(async function rolDe(usuarioId: string): Promise<string> {
   const usuario = await prisma.usuario.findUnique({
     where: { id: usuarioId },
     select: { rol: true },
   });
   return usuario?.rol ?? "";
-}
+});
 
 // Proyectos activos que un usuario puede VER en la sección Proyectos. Misma
 // regla que la carga de horas (getProyectosPermitidos), para que lo que un
@@ -88,9 +91,12 @@ export function getProyectosVisibles(usuario: Usuario): Promise<Cliente[]> {
 // usuario no está autorizado (rol reader, sin sesión o cliente no asignado).
 //
 // Consulta el cliente y su asignación directo, en vez de traer la lista
-// completa y buscar adentro: se llama en el layout del proyecto, otra vez en
-// cada pestaña y en casi todas las server actions del Follow Up.
-export async function getAccesoProyecto(
+// completa y buscar adentro.
+//
+// Y memoizada, porque la llaman el layout del proyecto Y la pestaña que se
+// esté mostrando, siempre con el mismo id: sin cache() cada pantalla del
+// proyecto pagaba dos veces la sesión, el cliente y la asignación.
+export const getAccesoProyecto = cache(async function getAccesoProyecto(
   clienteId: string,
 ): Promise<{ usuario: Usuario; cliente: Cliente } | null> {
   const sesion = await getSesionActual();
@@ -107,4 +113,4 @@ export async function getAccesoProyecto(
     select: { id: true },
   });
   return asignado ? { usuario, cliente } : null;
-}
+});

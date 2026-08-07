@@ -26,18 +26,22 @@ export default async function ProyectoRoadmapPage({
   // proyecto y no se vuelven a tocar.
   await asegurarRoadmap(acceso.cliente);
 
-  const semaforo = await prisma.semaforoEvento.findFirst({
-    where: { clienteId: id },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const listas = await prisma.listaRoadmap.findMany({
-    where: { clienteId: id },
-    orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
-    include: {
-      tareas: { orderBy: [{ orden: "asc" }, { createdAt: "asc" }] },
-    },
-  });
+  // En paralelo: son independientes entre sí, y contra una base remota cada
+  // ida y vuelta cuesta más que la consulta en sí. En serie, el semáforo
+  // retrasaba las listas sin ningún motivo.
+  const [semaforo, listas] = await Promise.all([
+    prisma.semaforoEvento.findFirst({
+      where: { clienteId: id },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.listaRoadmap.findMany({
+      where: { clienteId: id },
+      orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
+      include: {
+        tareas: { orderBy: [{ orden: "asc" }, { createdAt: "asc" }] },
+      },
+    }),
+  ]);
 
   const vistas: ListaRoadmapVista[] = listas.map((l) => {
     const tareas = l.tareas.map((t) => ({
