@@ -28,10 +28,18 @@ export function FilaTareaRoadmap({
   tarea,
   seleccionada,
   onToggle,
+  agarre,
 }: {
   tarea: TareaRoadmapFila;
   seleccionada: boolean;
   onToggle: (id: string) => void;
+  // Props de arrastre para la celda del checkbox. Las pone la lista, que es
+  // la que conoce el orden completo de sus tareas.
+  agarre?: {
+    draggable: true;
+    onDragStart: (e: React.DragEvent) => void;
+    onDragEnd: () => void;
+  };
 }) {
   // El calendario de rango se dibuja en un portal y tapa parte de la tabla:
   // con la fila marcada no se pierde de vista sobre qué tarea se está
@@ -54,13 +62,23 @@ export function FilaTareaRoadmap({
       }`}
     >
       <div className={GRID_ROADMAP}>
-        <input
-          type="checkbox"
-          checked={seleccionada}
-          onChange={() => onToggle(tarea.id)}
-          className="h-4 w-4 accent-dc-purple"
-          aria-label={`Seleccionar ${tarea.nombre}`}
-        />
+        {/* La celda entera es la zona de agarre: acá no hay nada que editar,
+            así que arrastrar desde la izquierda no compite con el nombre, las
+            fechas ni los botones de la derecha. El checkbox sigue andando con
+            un clic, porque el navegador no emite click si hubo arrastre. */}
+        <span
+          {...agarre}
+          title={agarre ? "Arrastrá para reordenar la tarea" : undefined}
+          className={`flex items-center ${agarre ? "cursor-grab active:cursor-grabbing" : ""}`}
+        >
+          <input
+            type="checkbox"
+            checked={seleccionada}
+            onChange={() => onToggle(tarea.id)}
+            className="h-4 w-4 accent-dc-purple"
+            aria-label={`Seleccionar ${tarea.nombre}`}
+          />
+        </span>
 
         {/* Columna de texto largo: alineada a la izquierda, como el header.
             Las personas van pegadas al nombre porque califican a la tarea; no

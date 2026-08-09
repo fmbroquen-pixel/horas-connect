@@ -1,7 +1,7 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
-import { duplicarLista, eliminarLista, renombrarLista } from "./actions";
+import { useId, useRef, useState, useTransition } from "react";
+import { duplicarLista, eliminarLista, renombrarLista, reordenarTareas } from "./actions";
 import {
   COLOR_ESTADO,
   ETIQUETA_ESTADO,
@@ -16,6 +16,7 @@ import {
   BotonEditarIcono,
   BotonEliminarIcono,
 } from "@/components/tabla/acciones-fila";
+import { useReordenable } from "@/components/tabla/reordenable";
 
 // Una lista del plan sobre la superficie clara del Design System (.dc-panel),
 // igual que las tablas de Time Tracking o Equipo: de ahí salen el encabezado
@@ -26,11 +27,23 @@ export function ListaRoadmapCard({
   sel,
   onToggle,
   onToggleLista,
+  agarre,
+  arrastrandoAlgo = false,
 }: {
   lista: ListaRoadmapVista;
   sel: Set<string>;
   onToggle: (id: string) => void;
   onToggleLista: (ids: string[], marcar: boolean) => void;
+  // Props de arrastre para el header: la lista se mueve desde acá. Las pone
+  // el tablero, que es el que conoce el orden completo.
+  agarre?: {
+    draggable: true;
+    onDragStart: (e: React.DragEvent) => void;
+    onDragEnd: () => void;
+  };
+  // Con una lista en el aire, el header no debe plegarse por un clic
+  // accidental al soltar.
+  arrastrandoAlgo?: boolean;
 }) {
   // Plegadas por defecto: un roadmap largo se recorre primero por sus listas.
   const [abierta, setAbierta] = useState(false);
@@ -45,13 +58,27 @@ export function ListaRoadmapCard({
   const seleccionadas = ids.filter((id) => sel.has(id)).length;
   const todasSel = ids.length > 0 && seleccionadas === ids.length;
 
+  // Reordenar tareas dentro de esta lista. El agarre es la celda del
+  // checkbox: la columna de la izquierda no tiene nada que editar, así que
+  // arrastrar desde ahí no compite con el nombre, las fechas ni los botones.
+  const [reordenando, startReorden] = useTransition();
+  const dnd = useReordenable(ids, (orden) =>
+    startReorden(() => reordenarTareas(lista.id, orden)),
+  );
+
   return (
     <section className="dc-panel overflow-hidden">
       {/* Todo el header pliega y despliega. Los controles que hacen otra cosa
           (renombrar, duplicar, eliminar) frenan la propagación para no
           arrastrar el desplegable con ellos. */}
       <header
-        onClick={() => setAbierta((v) => !v)}
+        {...agarre}
+        onClick={() => {
+          // Al terminar un arrastre real el navegador no emite click, pero si
+          // el gesto se cancela sí: no plegar mientras haya algo en el aire.
+          if (!arrastrandoAlgo) setAbierta((v) => !v);
+        }}
+        title={agarre ? "Arrastrá para reordenar la lista" : undefined}
         className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-2 border-b border-dc-line px-4 py-3 transition hover:bg-dc-card/60"
       >
         {renombrando ? (
@@ -192,12 +219,28 @@ export function ListaRoadmapCard({
           </div>
 
           {lista.tareas.map((t) => (
-            <FilaTareaRoadmap
-              key={t.id}
-              tarea={t}
-              seleccionada={sel.has(t.id)}
-              onToggle={onToggle}
-            />
+            <div key={t.id} {...dnd.zona(t.id)} className="relative">
+              {/* Línea de destino: marca dónde va a caer la tarea que se
+                  arrastra. Absoluta, así no empuja la fila ni cambia altos. */}
+              {dnd.marcaAntes(t.id) && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute left-0 right-0 top-0 z-10 h-0.5 rounded-full bg-dc-peri shadow-[0_0_8px_var(--color-dc-peri)]"
+                />
+              )}
+              <div
+                className={`transition-opacity ${
+                  dnd.arrastrada(t.id) || reordenando ? "opacity-40" : ""
+                }`}
+              >
+                <FilaTareaRoadmap
+                  tarea={t}
+                  seleccionada={sel.has(t.id)}
+                  onToggle={onToggle}
+                  agarre={dnd.agarre(t.id)}
+                />
+              </div>
+            </div>
           ))}
 
           {lista.tareas.length === 0 && (

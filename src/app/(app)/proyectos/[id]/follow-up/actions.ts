@@ -464,6 +464,87 @@ export async function actualizarRangoTarea(
   return {};
 }
 
+// ── Reordenar ─────────────────────────────────────────────────────────────
+
+// Después de mover algo, las fechas de lo que sigue cambian: el plan es
+// secuencial y el orden ES la dependencia. Se reencadena desde el primer
+// lugar donde la secuencia difiere de como estaba, así todo lo anterior al
+// movimiento conserva las fechas que alguien puso a mano.
+async function reencadenarTrasMover(
+  clienteId: string,
+  antes: string[],
+  tx: DB,
+): Promise<void> {
+  const despues = (await getTareasEnOrden(clienteId, tx)).map((t) => t.id);
+  let i = 0;
+  while (i < antes.length && i < despues.length && antes[i] === despues[i]) i++;
+  // i === 0 significa que se movió la primera tarea del plan: no hay ancla y
+  // se replanifica desde el arranque del proyecto.
+  await resecuenciar(clienteId, i > 0 ? despues[i - 1] : undefined, undefined, tx);
+}
+
+// Nuevo orden de las listas del proyecto. Recibe la lista completa de ids en
+// el orden final —no un "moví esto acá"— porque así el servidor no tiene que
+// reconstruir la intención y el resultado es el mismo que se vio en pantalla.
+export async function reordenarListas(
+  clienteId: string,
+  idsEnOrden: string[],
+): Promise<void> {
+  await requireAcceso(clienteId);
+  if (idsEnOrden.length === 0) return;
+
+  await enSecuencia(async (tx) => {
+    const actuales = await tx.listaRoadmap.findMany({
+      where: listasVivas({ clienteId }),
+      select: { id: true },
+    });
+    const validos = new Set(actuales.map((l) => l.id));
+    // Se ignoran ids ajenos o ya eliminados: la acción es una entrada pública.
+    const orden = idsEnOrden.filter((id) => validos.has(id));
+    if (orden.length !== actuales.length) return;
+
+    const antes = (await getTareasEnOrden(clienteId, tx)).map((t) => t.id);
+
+    for (const [i, id] of orden.entries()) {
+      await tx.listaRoadmap.update({ where: { id }, data: { orden: i } });
+    }
+
+    await reencadenarTrasMover(clienteId, antes, tx);
+  });
+
+  revalidar();
+}
+
+// Nuevo orden de las tareas DENTRO de una lista. Mover una tarea de lista es
+// otra cosa y no se hace por acá.
+export async function reordenarTareas(
+  listaId: string,
+  idsEnOrden: string[],
+): Promise<void> {
+  const lista = await listaConAcceso(listaId);
+  if (!lista || idsEnOrden.length === 0) return;
+
+  await enSecuencia(async (tx) => {
+    const actuales = await tx.tareaRoadmap.findMany({
+      where: { ...SOLO_TAREAS_VIVAS, listaId },
+      select: { id: true },
+    });
+    const validos = new Set(actuales.map((t) => t.id));
+    const orden = idsEnOrden.filter((id) => validos.has(id));
+    if (orden.length !== actuales.length) return;
+
+    const antes = (await getTareasEnOrden(lista.clienteId, tx)).map((t) => t.id);
+
+    for (const [i, id] of orden.entries()) {
+      await tx.tareaRoadmap.update({ where: { id }, data: { orden: i } });
+    }
+
+    await reencadenarTrasMover(lista.clienteId, antes, tx);
+  });
+
+  revalidar();
+}
+
 // ── Acciones masivas ──────────────────────────────────────────────────────
 
 // Valida el acceso a todos los proyectos tocados y devuelve las tareas.

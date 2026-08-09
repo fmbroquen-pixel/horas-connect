@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { editarTareas, eliminarTareas } from "./actions";
+import { editarTareas, eliminarTareas, reordenarListas } from "./actions";
 import { OPCIONES_ESTADO, type ListaRoadmapVista } from "./constantes";
 import { ListaRoadmapCard } from "./lista-roadmap";
 import { NuevaListaBoton } from "./nueva-lista-boton";
 import { Dropdown } from "@/components/dropdown";
+import { useReordenable } from "@/components/tabla/reordenable";
 import { reformatEntradaHoras } from "@/lib/horas";
 import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 
@@ -29,6 +30,15 @@ export function RoadmapTablero({
   const [campo, setCampo] = useState<CampoMasivo>("estado");
   const [valor, setValor] = useState("sin_iniciar");
   const [pending, start] = useTransition();
+
+  // Reordenar listas: se arrastra desde el header y el orden se guarda solo
+  // al soltar. Mover una lista mueve todo su bloque de tareas dentro de la
+  // secuencia, así que el servidor recalcula las fechas de lo que quede
+  // después del punto donde cambió el plan.
+  const dnd = useReordenable(
+    listas.map((l) => l.id),
+    (orden) => start(() => reordenarListas(clienteId, orden)),
+  );
 
   const toggle = (id: string) =>
     setSel((s) => {
@@ -164,13 +174,32 @@ export function RoadmapTablero({
         <div className="h-full overflow-auto overscroll-contain">
           <div className="min-w-[880px] space-y-4">
             {listas.map((lista) => (
-              <ListaRoadmapCard
-                key={lista.id}
-                lista={lista}
-                sel={sel}
-                onToggle={toggle}
-                onToggleLista={toggleLista}
-              />
+              <div key={lista.id} {...dnd.zona(lista.id)} className="relative">
+                {/* Línea de destino: marca dónde va a caer la lista que se
+                    arrastra. Es absoluta para no empujar nada. */}
+                {dnd.marcaAntes(lista.id) && (
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute -top-2 left-0 right-0 h-0.5 rounded-full bg-dc-peri shadow-[0_0_8px_var(--color-dc-peri)]"
+                  />
+                )}
+                <div
+                  className={
+                    dnd.arrastrada(lista.id)
+                      ? "opacity-40 transition-opacity"
+                      : "transition-opacity"
+                  }
+                >
+                  <ListaRoadmapCard
+                    lista={lista}
+                    sel={sel}
+                    onToggle={toggle}
+                    onToggleLista={toggleLista}
+                    agarre={dnd.agarre(lista.id)}
+                    arrastrandoAlgo={dnd.activo}
+                  />
+                </div>
+              </div>
             ))}
 
             {listas.length === 0 && (
