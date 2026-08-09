@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
+import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { fechaDesdeISO, hoyUTC } from "@/lib/dias-habiles";
 import {
   createAdminClient,
@@ -31,6 +32,13 @@ export type CampoViatico =
 
 type Resultado = { error?: string; campo?: CampoViatico };
 
+function revalidar() {
+  revalidatePath("/viaticos");
+  revalidatePath("/proyectos", "layout");
+}
+
+// Valida los campos contra el usuario DUEÑO del gasto: los clientes
+// permitidos son los suyos, no los de quien está cargando.
 async function validarEntrada(usuarioId: string, formData: FormData) {
   const parsed = ViaticoSchema.safeParse({
     fecha: formData.get("fecha"),
@@ -81,19 +89,33 @@ async function subirComprobante(
   return { path };
 }
 
+// Alta desde la barra de captura. Distingue dos personas, igual que la carga
+// de horas:
+//   · el DUEÑO del gasto (usuarioId), que puede ser otro si lo carga un admin;
+//   · quien lo INGRESÓ (creadoPorId), que es siempre el actor de la sesión.
+// La resolución del dueño corre entera en el servidor: un usuario que no sea
+// admin queda atado a sí mismo aunque manipule el campo oculto del formulario.
 export async function crearViatico(
   _prevState: unknown,
   formData: FormData,
 ): Promise<Resultado> {
-  const usuario = await requireGuest();
+  const actor = await requireGuest();
 
-  const r = await validarEntrada(usuario.id, formData);
+  const destinoRes = await resolverUsuarioDestino(
+    actor,
+    formData.get("usuarioId")?.toString(),
+    "viáticos",
+  );
+  if (!destinoRes.ok) return { error: destinoRes.error };
+  const destino = destinoRes.destino;
+
+  const r = await validarEntrada(destino.id, formData);
   if (r.error || !r.datos) return { error: r.error, campo: r.campo };
 
   let archivoPath: string | undefined;
   const archivo = formData.get("archivo");
   if (archivo instanceof File && archivo.size > 0) {
-    const subida = await subirComprobante(usuario.id, archivo);
+    const subida = await subirComprobante(destino.id, archivo);
     if (subida.error) return { error: subida.error };
     archivoPath = subida.path;
   }
@@ -102,7 +124,8 @@ export async function crearViatico(
     data: {
       fecha: r.datos.fecha,
       clienteId: r.datos.clienteId,
-      usuarioId: usuario.id,
+      usuarioId: destino.id,
+      creadoPorId: actor.id,
       moneda: r.datos.moneda,
       monto: r.datos.monto,
       concepto: r.datos.concepto,
@@ -110,22 +133,23 @@ export async function crearViatico(
     },
   });
 
-  revalidatePath("/viaticos");
-  revalidatePath("/proyectos", "layout");
+  revalidar();
   return {};
 }
 
+// Edición de una fila del historial. El dueño no cambia acá: se edita el
+// gasto de quien ya lo tiene asignado.
 export async function actualizarViatico(
   id: string,
   _prevState: unknown,
   formData: FormData,
 ): Promise<Resultado> {
-  const usuario = await requireGuest();
-  const esAdmin = usuario.rol === "admin";
+  const actor = await requireGuest();
+  const esAdmin = actor.rol === "admin";
 
   const existente = await prisma.viatico.findUnique({ where: { id } });
   if (!existente) return { error: "Viático no encontrado." };
-  if (!esAdmin && existente.usuarioId !== usuario.id) {
+  if (!esAdmin && existente.usuarioId !== actor.id) {
     return { error: "No podés modificar viáticos de otra persona." };
   }
 
@@ -152,18 +176,17 @@ export async function actualizarViatico(
     },
   });
 
-  revalidatePath("/viaticos");
-  revalidatePath("/proyectos", "layout");
+  revalidar();
   return {};
 }
 
 export async function eliminarViatico(id: string): Promise<void> {
-  const usuario = await requireGuest();
-  const esAdmin = usuario.rol === "admin";
+  const actor = await requireGuest();
+  const esAdmin = actor.rol === "admin";
 
   const existente = await prisma.viatico.findUnique({ where: { id } });
   if (!existente) throw new Error("Viático no encontrado.");
-  if (!esAdmin && existente.usuarioId !== usuario.id) {
+  if (!esAdmin && existente.usuarioId !== actor.id) {
     throw new Error("No podés borrar viáticos de otra persona.");
   }
 
@@ -175,6 +198,5 @@ export async function eliminarViatico(id: string): Promise<void> {
     data: { eliminadoEn: new Date() },
   });
 
-  revalidatePath("/viaticos");
-  revalidatePath("/proyectos", "layout");
+  revalidar();
 }

@@ -4,19 +4,25 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { Dropdown } from "@/components/dropdown";
 
-// Selector "Registrar horas para" — solo se renderiza para admins (la
-// página decide). Guarda la elección en la URL (?usuario=) en vez de en
-// estado local: así el servidor puede resolver contra ese usuario los
-// clientes asignados, la tarifa vigente y el historial, y la elección
-// sobrevive a un refresh o a compartir el link.
+// Selector "Registrar … para" — solo se renderiza para admins (la página lo
+// decide). Lo comparten Time Tracking y Expenses: la mecánica es idéntica y
+// lo único que cambia entre los dos es la etiqueta.
+//
+// Guarda la elección en la URL (?usuario=) en vez de en estado local: así el
+// servidor puede resolver contra ese usuario los clientes asignados, la
+// tarifa vigente y el historial, y la elección sobrevive a un refresh o a
+// compartir el link.
 export function SelectorUsuario({
   usuarios,
   actual,
   actorId,
+  etiqueta,
 }: {
   usuarios: { id: string; nombre: string }[];
   actual: string;
   actorId: string;
+  // "Registrar horas para", "Registrar viático para", …
+  etiqueta: string;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -35,7 +41,7 @@ export function SelectorUsuario({
 
   return (
     <div className="flex items-center gap-2">
-      <span className="shrink-0 text-xs text-dc-muted">Registrar horas para</span>
+      <span className="shrink-0 text-xs text-dc-muted">{etiqueta}</span>
       <Dropdown
         value={actual}
         onChange={elegir}
@@ -45,7 +51,7 @@ export function SelectorUsuario({
         }))}
         disabled={pending}
         className="w-56"
-        ariaLabel="Registrar horas para"
+        ariaLabel={etiqueta}
       />
     </div>
   );

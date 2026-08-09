@@ -294,7 +294,8 @@ model Usuario {
   registros          RegistroHoras[]    @relation("Mentor")
   registrosCreados   RegistroHoras[]    @relation("CreadoPor")
   proyectosAsignados ProyectoAsignado[]
-  viaticos           Viatico[]
+  viaticos           Viatico[]          @relation("Gasto")
+  viaticosCreados    Viatico[]          @relation("ViaticoCreadoPor")
   vacaciones         Vacacion[]
   semaforoEventos    SemaforoEvento[]
   etapaEventos       EtapaEvento[]
@@ -431,10 +432,21 @@ model RegistroHoras {
 }
 
 model Viatico {
-  id        String          @id @default(cuid())
-  fecha     DateTime        @db.Date
-  usuarioId String          @map("usuario_id")
-  usuario   Usuario         @relation(fields: [usuarioId], references: [id])
+  id    String   @id @default(cuid())
+  fecha DateTime @db.Date
+
+  // Dueño del gasto: a quién le corresponde el viático. Un admin puede cargar
+  // en nombre de otro, y ahí este campo apunta al otro, no a quien completó
+  // el formulario.
+  usuarioId String  @map("usuario_id")
+  usuario   Usuario @relation("Gasto", fields: [usuarioId], references: [id])
+
+  // Quién hizo la carga. Se separa del dueño por lo mismo que en las horas:
+  // sin este dato, un viático cargado por un admin para otra persona no deja
+  // rastro de quién lo ingresó.
+  creadoPorId String  @map("creado_por_id")
+  creadoPor   Usuario @relation("ViaticoCreadoPor", fields: [creadoPorId], references: [id])
+
   clienteId String          @map("cliente_id")
   cliente   Cliente         @relation(fields: [clienteId], references: [id])
   etapaId   String?         @map("etapa_id")

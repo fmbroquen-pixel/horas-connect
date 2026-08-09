@@ -15,7 +15,7 @@ import { InfoButton } from "@/components/info-button";
 import { TablaRegistros } from "./tabla-registros";
 import { AccionesMenu } from "./acciones-menu";
 import { BarraCaptura } from "./barra-captura";
-import { SelectorUsuario } from "./selector-usuario";
+import { SelectorUsuario } from "@/components/selector-usuario";
 import { DIAS_VENTANA_EDICION, limiteVentana } from "./constantes";
 import type { MapaTarifas, RegistroFila } from "./tipos";
 
@@ -154,6 +154,7 @@ export default async function TimetrackerPage({
       <div className="mt-6 flex shrink-0 flex-wrap items-center justify-between gap-2">
         {esAdmin ? (
           <SelectorUsuario
+            etiqueta="Registrar horas para"
             usuarios={usuariosQueReportan.map((u) => ({ id: u.id, nombre: u.nombre }))}
             actual={destino.id}
             actorId={actor.id}

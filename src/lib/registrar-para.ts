@@ -20,14 +20,17 @@ export type ResultadoDestino =
   | { ok: true; destino: Usuario }
   | { ok: false; error: string };
 
-// Resuelve a quién pertenecen las horas ("worked_by") a partir de lo que
-// pide el formulario o la URL. Es el único punto donde se decide, y siempre
-// corre en el servidor: un usuario que no sea admin queda atado a sí mismo
-// aunque manipule el form o el query param. Quien ejecuta la acción
-// ("reported_by") se guarda por separado en cada action.
+// Resuelve a quién pertenece lo que se está cargando —las horas trabajadas o
+// el gasto— a partir de lo que pide el formulario o la URL. Es el único punto
+// donde se decide, y siempre corre en el servidor: un usuario que no sea
+// admin queda atado a sí mismo aunque manipule el form o el query param.
+// Quien ejecuta la acción se guarda por separado en cada action.
 export async function resolverUsuarioDestino(
   actor: Usuario,
   usuarioIdSolicitado?: string | null,
+  // Solo cambia el texto del error: "horas" en Time Tracking, "viáticos" en
+  // Expenses. La regla de permisos es la misma para los dos.
+  queSeCarga = "horas",
 ): Promise<ResultadoDestino> {
   // Sin pedido explícito, o pidiéndose a sí mismo: siempre permitido.
   if (!usuarioIdSolicitado || usuarioIdSolicitado === actor.id) {
@@ -35,7 +38,10 @@ export async function resolverUsuarioDestino(
   }
 
   if (actor.rol !== "admin") {
-    return { ok: false, error: "No podés registrar horas en nombre de otra persona." };
+    return {
+      ok: false,
+      error: `No podés registrar ${queSeCarga} en nombre de otra persona.`,
+    };
   }
 
   const destino = await prisma.usuario.findFirst({
@@ -46,7 +52,10 @@ export async function resolverUsuarioDestino(
     },
   });
   if (!destino) {
-    return { ok: false, error: "El usuario elegido no existe o no puede reportar horas." };
+    return {
+      ok: false,
+      error: `El usuario elegido no existe o no puede reportar ${queSeCarga}.`,
+    };
   }
   return { ok: true, destino };
 }

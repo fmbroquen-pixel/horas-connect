@@ -2,25 +2,32 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
+import { getUsuariosQueReportan, resolverUsuarioDestino } from "@/lib/registrar-para";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { fechaDesdeISO } from "@/lib/dias-habiles";
 import { MODULOS } from "@/lib/modulos";
 import { hoyISO, rangoDefault30 } from "@/lib/formato";
-import {
-  createAdminClient,
-  BUCKET_COMPROBANTES,
-} from "@/lib/supabase/admin";
+import { createAdminClient, BUCKET_COMPROBANTES } from "@/lib/supabase/admin";
 import { FiltroPopover } from "@/components/filtro-popover";
 import { InfoButton } from "@/components/info-button";
+import { SelectorUsuario } from "@/components/selector-usuario";
 import { GRID_VIATICOS, type ViaticoFila } from "./tipos";
-import { RegistrarViaticoBoton } from "./registrar-boton";
+import { BarraCapturaViatico } from "./barra-captura";
 import { FilaViatico } from "./fila-viatico";
 import { PapeleraMenu } from "../papelera/papelera-menu";
 
+// Expenses comparte el patrón de Time Tracking: selector de usuario (solo
+// admin), barra de captura permanente arriba y el historial abajo con sus
+// filtros y su scroll propio. Lo único distinto son los campos del módulo.
 export default async function ViaticosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ desde?: string; hasta?: string; proyecto?: string }>;
+  searchParams: Promise<{
+    desde?: string;
+    hasta?: string;
+    proyecto?: string;
+    usuario?: string;
+  }>;
 }) {
   // Módulo detrás de flag: con expenses en false la ruta no responde aunque
   // se escriba la URL a mano, igual que Time Off.
@@ -28,30 +35,39 @@ export default async function ViaticosPage({
 
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
-  const { usuario } = sesion;
-  if (usuario.rol === "reader") redirect("/rentabilidad");
+  const actor = sesion.usuario;
+  if (actor.rol === "reader") redirect("/rentabilidad");
+  const esAdmin = actor.rol === "admin";
 
   const params = await searchParams;
   const { desde, hasta } = rangoDefault30(params.desde, params.hasta);
 
-  const proyectos = await getProyectosPermitidos(usuario.id);
+  // Dueño de los gastos. Solo un admin puede elegir otro; para el resto
+  // resolverUsuarioDestino devuelve siempre el propio actor (y si el param es
+  // inválido, se cae al actor sin romper la pantalla).
+  const destinoRes = await resolverUsuarioDestino(actor, params.usuario, "viáticos");
+  const destino = destinoRes.ok ? destinoRes.destino : actor;
+
+  // Todo el contexto de la pantalla es el del usuario destino: si el admin
+  // carga para otro, ve exactamente lo que esa persona vería.
+  const proyectos = await getProyectosPermitidos(destino.id);
   const proyectoId = proyectos.some((p) => p.id === params.proyecto)
     ? params.proyecto
     : undefined;
 
-  const viaticos = await prisma.viatico.findMany({
+  const [viaticos, usuariosQueReportan] = await Promise.all([
+    prisma.viatico.findMany({
       where: {
-        usuarioId: usuario.id,
+        usuarioId: destino.id,
         ...SOLO_ACTIVOS,
-        fecha: {
-          gte: fechaDesdeISO(desde),
-          lte: fechaDesdeISO(hasta),
-        },
+        fecha: { gte: fechaDesdeISO(desde), lte: fechaDesdeISO(hasta) },
         ...(proyectoId ? { clienteId: proyectoId } : {}),
       },
-    orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
-    take: 300,
-  });
+      orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
+      take: 300,
+    }),
+    esAdmin ? getUsuariosQueReportan() : Promise.resolve([]),
+  ]);
 
   // URLs firmadas (1 hora) para ver los comprobantes del bucket privado.
   const supabase = createAdminClient();
@@ -77,18 +93,44 @@ export default async function ViaticosPage({
   );
 
   const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
+  const esOtroUsuario = destino.id !== actor.id;
+  // Sin proyectos asignados no hay nada contra qué cargar: se avisa y se
+  // esconde la barra, en vez de dejar un desplegable de clientes vacío que
+  // solo falla al guardar.
+  const sinProyectos = proyectos.length === 0;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-2">
         <h1 className="font-display text-lg uppercase text-white">Expenses</h1>
         <InfoButton>
-          Cargá los gastos asociados a un cliente. El comprobante es opcional.
+          Cargá los gastos asociados a un cliente. El comprobante es opcional y
+          se guarda en un bucket privado: se ve con un enlace temporal desde la
+          columna del clip.
         </InfoButton>
       </div>
 
+      {sinProyectos && (
+        <p className="mt-4 shrink-0 rounded-xl border border-dc-pink/40 bg-dc-pink/10 px-4 py-3 text-sm text-dc-pink">
+          {esOtroUsuario
+            ? `${destino.nombre} no tiene proyectos asignados, así que no se le pueden cargar viáticos.`
+            : "Todavía no tenés proyectos asignados, así que no podés cargar viáticos. Pedile a un administrador que te asigne los tuyos."}
+        </p>
+      )}
+
+      {/* Acciones del historial: selector de usuario (admin), consultar
+          (filtro) y papelera. */}
       <div className="mt-6 flex shrink-0 flex-wrap items-center justify-between gap-2">
-        <RegistrarViaticoBoton proyectos={opcionesProyecto} />
+        {esAdmin ? (
+          <SelectorUsuario
+            etiqueta="Registrar viático para"
+            usuarios={usuariosQueReportan.map((u) => ({ id: u.id, nombre: u.nombre }))}
+            actual={destino.id}
+            actorId={actor.id}
+          />
+        ) : (
+          <span />
+        )}
         <div className="flex items-center gap-2">
           <FiltroPopover
             basePath="/viaticos"
@@ -102,7 +144,20 @@ export default async function ViaticosPage({
         </div>
       </div>
 
-      <div className="mt-4 flex min-h-0 flex-1 overflow-x-auto dc-panel">
+      {/* Barra de captura permanente, inmediatamente encima del historial. */}
+      {!sinProyectos && (
+        <div className="mt-4">
+          {/* key por usuario: al cambiar de persona se remonta la barra y no
+              queda cargado el cliente del anterior. */}
+          <BarraCapturaViatico
+            key={destino.id}
+            proyectos={opcionesProyecto}
+            usuarioId={esOtroUsuario ? destino.id : ""}
+          />
+        </div>
+      )}
+
+      <div className="mt-3 flex min-h-0 flex-1 overflow-x-auto dc-panel">
         <div className="flex min-h-0 min-w-[860px] flex-1 flex-col">
           <div className={`dc-thead ${GRID_VIATICOS} shrink-0 border-b border-dc-line px-3`}>
             <span>Fecha</span>
@@ -129,7 +184,9 @@ export default async function ViaticosPage({
 
             {filas.length === 0 && (
               <p className="px-4 py-6 text-center text-sm text-dc-muted">
-                Todavía no cargaste viáticos.
+                {esOtroUsuario
+                  ? `${destino.nombre} no tiene viáticos en este período.`
+                  : "Todavía no cargaste viáticos."}
               </p>
             )}
           </div>
