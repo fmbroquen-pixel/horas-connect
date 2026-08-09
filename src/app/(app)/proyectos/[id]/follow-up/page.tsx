@@ -2,10 +2,12 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
 import { asegurarRoadmap } from "@/lib/roadmap";
+import { SOLO_TAREAS_VIVAS, listasVivas } from "@/lib/roadmap-papelera";
 import { formatHorasHsMin } from "@/lib/horas";
 import { InfoButton } from "@/components/info-button";
 import { RoadmapTablero } from "./tablero";
 import { CabeceraSeguimiento } from "./cabecera-seguimiento";
+import { PapeleraMenu } from "../../../papelera/papelera-menu";
 import { formatFecha } from "@/lib/formato";
 import type { ListaRoadmapVista } from "./constantes";
 
@@ -35,10 +37,13 @@ export default async function ProyectoRoadmapPage({
       orderBy: { createdAt: "desc" },
     }),
     prisma.listaRoadmap.findMany({
-      where: { clienteId: id },
+      where: listasVivas({ clienteId: id }),
       orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
       include: {
-        tareas: { orderBy: [{ orden: "asc" }, { createdAt: "asc" }] },
+        tareas: {
+          where: SOLO_TAREAS_VIVAS,
+          orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
+        },
       },
     }),
   ]);
@@ -66,9 +71,11 @@ export default async function ProyectoRoadmapPage({
           </h2>
           <InfoButton>
             Las tareas son estimativas y secuenciales. Una edición de fecha
-            modifica las tareas siguientes.
+            modifica las tareas siguientes. Lo que se elimina va a la papelera:
+            deja de contar en el plan y en los KPIs, y se puede restaurar.
           </InfoButton>
         </div>
+        <PapeleraMenu tipo="roadmap" />
       </div>
 
       <CabeceraSeguimiento

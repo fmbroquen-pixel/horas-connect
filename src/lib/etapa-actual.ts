@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { tareasVivas } from "@/lib/roadmap-papelera";
 
 // La "etapa actual" de un proyecto deja de ser un dato aparte: es la última
 // tarea EN CURSO de su Roadmap, según el orden del plan. Así el estado que se
@@ -33,8 +34,10 @@ export async function getEtapasPorProyecto(
 ): Promise<Record<string, EtapaProyecto>> {
   if (clienteIds.length === 0) return {};
 
+  // Lo que está en la papelera no forma parte del plan, así que tampoco puede
+  // ser la etapa actual ni aparecer entre las opciones.
   const tareas = await prisma.tareaRoadmap.findMany({
-    where: { lista: { clienteId: { in: clienteIds } } },
+    where: tareasVivas({ clienteId: { in: clienteIds } }),
     orderBy: [...ORDEN_PLAN],
     select: {
       id: true,

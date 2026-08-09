@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosConRol } from "@/lib/proyecto-acceso";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
+import { tareasVivas } from "@/lib/roadmap-papelera";
 import { formatHorasHsMin } from "@/lib/horas";
 import { construirCurvaHoras } from "@/lib/curva-horas";
 import { hoyISO, semanaActualISO } from "@/lib/formato";
@@ -85,7 +86,7 @@ export default async function DashboardPage({
     // entregado el presupuesto. Alimenta lo ENTREGADO y la curva, que son
     // magnitudes de flujo y por eso sí siguen al filtro.
     prisma.tareaRoadmap.findMany({
-      where: { lista: { clienteId: { in: ids } }, fechaFin: rangoFecha },
+      where: { ...tareasVivas({ clienteId: { in: ids } }), fechaFin: rangoFecha },
       select: { horasEstimadas: true, estado: true, fechaFin: true },
     }),
     // Lo ESTIMADO es el plan completo y no se filtra por fecha: es el tamaño
@@ -94,7 +95,7 @@ export default async function DashboardPage({
     // atrás y el Roadmap planifica hacia adelante— y encima significaba otra
     // cosa que el KPI del mismo nombre en el Home de Proyecto.
     prisma.tareaRoadmap.aggregate({
-      where: { lista: { clienteId: { in: ids } } },
+      where: tareasVivas({ clienteId: { in: ids } }),
       _sum: { horasEstimadas: true },
     }),
     // Etapas próximas: lo que arranca en los próximos 14 días y todavía no
@@ -102,7 +103,7 @@ export default async function DashboardPage({
     // ventana fija hacia adelante: la pregunta es "qué se viene".
     prisma.tareaRoadmap.findMany({
       where: {
-        lista: { clienteId: { in: ids } },
+        ...tareasVivas({ clienteId: { in: ids } }),
         estado: "sin_iniciar",
         fechaInicio: { gte: hoyUtc, lte: en14dias },
       },

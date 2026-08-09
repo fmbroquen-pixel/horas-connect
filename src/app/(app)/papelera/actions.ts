@@ -3,12 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { revalidarHoras } from "@/lib/registros-horas";
 import { prisma } from "@/lib/prisma";
-import { requireGuest } from "@/lib/require-guest";
+import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { formatHorasHsMin } from "@/lib/horas";
 import { formatMonto } from "@/lib/formato";
 import { RETENCION_DIAS } from "./constantes";
 
-export type TipoEliminado = "hora" | "viatico" | "vacacion";
+export type TipoEliminado = "hora" | "viatico" | "vacacion" | "roadmap";
+
+// Alcance de la papelera del Follow Up. Los otros tipos son personales —cada
+// uno ve lo suyo, el admin ve todo— pero una lista o una tarea no pertenecen
+// a nadie: pertenecen a un proyecto. Así que el alcance es por proyecto
+// accesible, la misma regla con la que se entra a Follow Up.
+async function clientesDelUsuario(usuarioId: string): Promise<string[]> {
+  const proyectos = await getProyectosPermitidos(usuarioId);
+  return proyectos.map((p) => p.id);
+}
 
 export type ItemEliminado = {
   tipo: TipoEliminado;
@@ -73,6 +82,54 @@ export async function listarEliminados(
     }));
   }
 
+  if (tipo === "roadmap") {
+    const clienteIds = await clientesDelUsuario(usuario.id);
+    if (clienteIds.length === 0) return [];
+
+    // Listas y tareas se listan juntas: para quien borró algo, "la papelera
+    // de Follow Up" es una sola, y la sección de cada ítem ya dice cuál es
+    // cuál.
+    const [listas, tareas] = await Promise.all([
+      prisma.listaRoadmap.findMany({
+        where: { eliminadoEn: { not: null }, clienteId: { in: clienteIds } },
+        include: { cliente: { select: { nombre: true } }, _count: { select: { tareas: true } } },
+        orderBy: { eliminadoEn: "desc" },
+        take: 100,
+      }),
+      prisma.tareaRoadmap.findMany({
+        where: {
+          eliminadoEn: { not: null },
+          lista: { clienteId: { in: clienteIds } },
+        },
+        include: {
+          lista: { select: { nombre: true, cliente: { select: { nombre: true } } } },
+        },
+        orderBy: { eliminadoEn: "desc" },
+        take: 100,
+      }),
+    ]);
+
+    const items: ItemEliminado[] = [
+      ...listas.map((l) => ({
+        tipo: "roadmap" as const,
+        seccion: "Follow Up · Lista",
+        id: `lista:${l.id}`,
+        resumen: `${l.cliente.nombre} · ${l.nombre} (${l._count.tareas} tareas)`,
+        eliminadoEn: l.eliminadoEn!.toISOString(),
+        diasRestantes: diasRestantes(l.eliminadoEn!),
+      })),
+      ...tareas.map((t) => ({
+        tipo: "roadmap" as const,
+        seccion: "Follow Up · Tarea",
+        id: `tarea:${t.id}`,
+        resumen: `${t.lista.cliente.nombre} · ${t.lista.nombre} · ${t.nombre}`,
+        eliminadoEn: t.eliminadoEn!.toISOString(),
+        diasRestantes: diasRestantes(t.eliminadoEn!),
+      })),
+    ];
+    return items.sort((a, b) => b.eliminadoEn.localeCompare(a.eliminadoEn));
+  }
+
   const vacaciones = await prisma.vacacion.findMany({
     where: { eliminadoEn: { not: null }, ...scope },
     orderBy: { eliminadoEn: "desc" },
@@ -88,6 +145,26 @@ export async function listarEliminados(
   }));
 }
 
+// El id de un ítem del Roadmap viaja prefijado ("lista:…" / "tarea:…")
+// porque la papelera del Follow Up mezcla los dos tipos en una sola lista.
+function parseRoadmapId(id: string): { clase: "lista" | "tarea"; id: string } | null {
+  const [clase, real] = id.split(":", 2);
+  if ((clase !== "lista" && clase !== "tarea") || !real) return null;
+  return { clase, id: real };
+}
+
+// Alcance de escritura del Roadmap: solo sobre proyectos a los que el usuario
+// tiene acceso. Se valida acá y no solo en la UI.
+async function scopeRoadmap(usuarioId: string) {
+  const clienteIds = await clientesDelUsuario(usuarioId);
+  return { clienteIds };
+}
+
+function revalidarRoadmap() {
+  revalidatePath("/proyectos", "layout");
+  revalidatePath("/dashboard");
+}
+
 export async function restaurarItem(
   tipo: TipoEliminado,
   id: string,
@@ -96,6 +173,29 @@ export async function restaurarItem(
   const esAdmin = usuario.rol === "admin";
   const scope = esAdmin ? {} : { usuarioId: usuario.id };
   const data = { eliminadoEn: null };
+
+  if (tipo === "roadmap") {
+    const ref = parseRoadmapId(id);
+    if (!ref) return;
+    const { clienteIds } = await scopeRoadmap(usuario.id);
+    // Restaurar limpia la marca y nada más: los datos y el orden nunca se
+    // tocaron, así que el ítem vuelve exactamente donde estaba. Las fechas de
+    // lo que sigue se recalculan solas en la próxima secuencia.
+    const limpiar = { eliminadoEn: null, eliminadoPorId: null };
+    if (ref.clase === "lista") {
+      await prisma.listaRoadmap.updateMany({
+        where: { id: ref.id, clienteId: { in: clienteIds } },
+        data: limpiar,
+      });
+    } else {
+      await prisma.tareaRoadmap.updateMany({
+        where: { id: ref.id, lista: { clienteId: { in: clienteIds } } },
+        data: limpiar,
+      });
+    }
+    revalidarRoadmap();
+    return;
+  }
 
   if (tipo === "hora") {
     await prisma.registroHoras.updateMany({ where: { id, ...scope }, data });
@@ -109,4 +209,38 @@ export async function restaurarItem(
     revalidatePath("/vacaciones");
     revalidatePath("/dashboard");
   }
+}
+
+// Borrado definitivo desde la papelera: esto no se puede deshacer.
+//
+// Existe porque una lista o una tarea mandadas a la papelera siguen ocupando
+// lugar en la papelera durante RETENCION_DIAS, y a veces se borra algo que ya
+// se sabe que no vuelve. Para el resto de los módulos el borrado definitivo
+// lo hace el cron al vencer el plazo.
+export async function eliminarDefinitivo(
+  tipo: TipoEliminado,
+  id: string,
+): Promise<void> {
+  const usuario = await requireGuest();
+  if (tipo !== "roadmap") return;
+
+  const ref = parseRoadmapId(id);
+  if (!ref) return;
+  const { clienteIds } = await scopeRoadmap(usuario.id);
+
+  if (ref.clase === "lista") {
+    // La cascada del schema se lleva sus tareas.
+    await prisma.listaRoadmap.deleteMany({
+      where: { id: ref.id, clienteId: { in: clienteIds }, eliminadoEn: { not: null } },
+    });
+  } else {
+    await prisma.tareaRoadmap.deleteMany({
+      where: {
+        id: ref.id,
+        lista: { clienteId: { in: clienteIds } },
+        eliminadoEn: { not: null },
+      },
+    });
+  }
+  revalidarRoadmap();
 }

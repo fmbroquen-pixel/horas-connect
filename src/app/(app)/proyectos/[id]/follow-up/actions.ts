@@ -14,6 +14,7 @@ import {
   isoDesdeFecha,
 } from "@/lib/dias-habiles";
 import { PLANTILLAS, getTareasEnOrden, resecuenciar, type DB } from "@/lib/roadmap";
+import { SOLO_TAREAS_VIVAS, listasVivas, tareasVivas } from "@/lib/roadmap-papelera";
 import { ETIQUETA_ESTADO } from "./constantes";
 import type { EstadoTareaRoadmap } from "@/generated/prisma/client";
 
@@ -54,21 +55,25 @@ async function requireAcceso(clienteId: string) {
 }
 
 // Resuelve el proyecto dueño de una lista y valida el acceso de una sola vez.
+// Solo lo vivo: sobre algo que está en la papelera no se opera desde el plan,
+// se opera desde la papelera.
 async function listaConAcceso(listaId: string) {
-  const lista = await prisma.listaRoadmap.findUnique({ where: { id: listaId } });
+  const lista = await prisma.listaRoadmap.findFirst({
+    where: listasVivas({ id: listaId }),
+  });
   if (!lista) return null;
-  await requireAcceso(lista.clienteId);
-  return lista;
+  const { usuario } = await requireAcceso(lista.clienteId);
+  return { ...lista, actor: usuario };
 }
 
 async function tareaConAcceso(tareaId: string) {
-  const tarea = await prisma.tareaRoadmap.findUnique({
-    where: { id: tareaId },
+  const tarea = await prisma.tareaRoadmap.findFirst({
+    where: { ...tareasVivas(), id: tareaId },
     include: { lista: true },
   });
   if (!tarea) return null;
-  await requireAcceso(tarea.lista.clienteId);
-  return tarea;
+  const { usuario } = await requireAcceso(tarea.lista.clienteId);
+  return { ...tarea, actor: usuario };
 }
 
 // La tarea inmediatamente anterior en la secuencia del proyecto. Es el ancla
@@ -94,7 +99,7 @@ async function anclaAntesDeLista(
   db: DB = prisma,
 ): Promise<string | undefined> {
   const primera = await db.tareaRoadmap.findFirst({
-    where: { listaId },
+    where: { ...SOLO_TAREAS_VIVAS, listaId },
     orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
     select: { id: true },
   });
@@ -122,7 +127,7 @@ export async function crearLista(
 
   await enSecuencia(async (tx) => {
     const ultima = await tx.listaRoadmap.findFirst({
-      where: { clienteId },
+      where: listasVivas({ clienteId }),
       orderBy: { orden: "desc" },
       select: { orden: true },
     });
@@ -188,10 +193,16 @@ export async function eliminarLista(listaId: string): Promise<void> {
     // en la secuencia.
     const ancla = await anclaAntesDeLista(lista.clienteId, listaId, tx);
 
-    // Las horas cargadas no se tocan: su dato vivo es cliente + concepto, que
-    // sobreviven a la lista. El historial sigue clasificado aunque el plan
-    // cambie.
-    await tx.listaRoadmap.delete({ where: { id: listaId } });
+    // A la papelera, no al vacío. Las tareas de la lista NO se marcan: la
+    // lista las tapa mientras esté eliminada, y restaurarla las devuelve con
+    // su orden y sus datos intactos.
+    //
+    // Las horas cargadas tampoco se tocan: su dato vivo es cliente +
+    // concepto, que sobreviven a la lista.
+    await tx.listaRoadmap.update({
+      where: { id: listaId },
+      data: { eliminadoEn: new Date(), eliminadoPorId: lista.actor.id },
+    });
 
     await resecuenciar(lista.clienteId, ancla, undefined, tx);
   });
@@ -202,16 +213,21 @@ export async function eliminarLista(listaId: string): Promise<void> {
 // Copia una lista con todas sus tareas al final del plan. Sirve para armar el
 // tablero del trimestre siguiente a partir del anterior ya ajustado.
 export async function duplicarLista(listaId: string): Promise<void> {
-  const lista = await prisma.listaRoadmap.findUnique({
-    where: { id: listaId },
-    include: { tareas: { orderBy: [{ orden: "asc" }, { createdAt: "asc" }] } },
+  const lista = await prisma.listaRoadmap.findFirst({
+    where: listasVivas({ id: listaId }),
+    include: {
+      tareas: {
+        where: SOLO_TAREAS_VIVAS,
+        orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
+      },
+    },
   });
   if (!lista) return;
   await requireAcceso(lista.clienteId);
 
   await enSecuencia(async (tx) => {
     const ultima = await tx.listaRoadmap.findFirst({
-      where: { clienteId: lista.clienteId },
+      where: listasVivas({ clienteId: lista.clienteId }),
       orderBy: { orden: "desc" },
       select: { orden: true },
     });
@@ -317,7 +333,7 @@ export async function crearTarea(
 
   await enSecuencia(async (tx) => {
     const ultima = await tx.tareaRoadmap.findFirst({
-      where: { listaId },
+      where: { ...SOLO_TAREAS_VIVAS, listaId },
       orderBy: { orden: "desc" },
       select: { orden: true },
     });
@@ -453,12 +469,13 @@ export async function actualizarRangoTarea(
 // Valida el acceso a todos los proyectos tocados y devuelve las tareas.
 async function tareasConAcceso(ids: string[]) {
   const tareas = await prisma.tareaRoadmap.findMany({
-    where: { id: { in: ids } },
+    where: { ...tareasVivas(), id: { in: ids } },
     include: { lista: { select: { clienteId: true } } },
   });
   const clientes = [...new Set(tareas.map((t) => t.lista.clienteId))];
-  for (const clienteId of clientes) await requireAcceso(clienteId);
-  return { tareas, clientes };
+  let actor = null as Awaited<ReturnType<typeof requireAcceso>>["usuario"] | null;
+  for (const clienteId of clientes) actor = (await requireAcceso(clienteId)).usuario;
+  return { tareas, clientes, actor };
 }
 
 // Solo se aplican en masa los campos que tienen sentido uniformes. Las fechas
@@ -497,8 +514,8 @@ export async function editarTareas(
 
 export async function eliminarTareas(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
-  const { tareas, clientes } = await tareasConAcceso(ids);
-  if (tareas.length === 0) return;
+  const { tareas, clientes, actor } = await tareasConAcceso(ids);
+  if (tareas.length === 0 || !actor) return;
 
   const idsValidos = tareas.map((t) => t.id);
   const aBorrar = new Set(idsValidos);
@@ -513,7 +530,11 @@ export async function eliminarTareas(ids: string[]): Promise<void> {
       anclas.set(clienteId, i > 0 ? orden[i - 1].id : undefined);
     }
 
-    await tx.tareaRoadmap.deleteMany({ where: { id: { in: idsValidos } } });
+    // A la papelera: se pueden restaurar una por una desde ahí.
+    await tx.tareaRoadmap.updateMany({
+      where: { id: { in: idsValidos } },
+      data: { eliminadoEn: new Date(), eliminadoPorId: actor.id },
+    });
 
     for (const clienteId of clientes) {
       await resecuenciar(clienteId, anclas.get(clienteId), undefined, tx);
@@ -533,8 +554,12 @@ export async function eliminarTarea(tareaId: string): Promise<void> {
     // secuencia y no se podría ubicar su anterior.
     const ancla = await anclaPrevia(clienteId, tareaId, tx);
 
-    // Las horas cargadas no se tocan: su dato vivo es cliente + concepto.
-    await tx.tareaRoadmap.delete({ where: { id: tareaId } });
+    // A la papelera, no al vacío. Las horas cargadas no se tocan: su dato
+    // vivo es cliente + concepto.
+    await tx.tareaRoadmap.update({
+      where: { id: tareaId },
+      data: { eliminadoEn: new Date(), eliminadoPorId: tarea.actor.id },
+    });
 
     await resecuenciar(clienteId, ancla, undefined, tx);
   });

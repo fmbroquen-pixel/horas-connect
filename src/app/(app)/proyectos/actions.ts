@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
+import { tareasVivas } from "@/lib/roadmap-papelera";
 import { ETIQUETA_SEMAFORO } from "./constantes";
 import type { SemaforoEstado } from "@/generated/prisma/client";
 
@@ -100,8 +101,10 @@ export async function marcarEtapaActual(
     return { error: "La etapa anterior no puede seguir En curso." };
   }
 
+  // tareasVivas: una tarea en la papelera no puede pasar a ser la etapa
+  // actual del proyecto.
   const tarea = await prisma.tareaRoadmap.findFirst({
-    where: { id: tareaId, lista: { clienteId } },
+    where: { ...tareasVivas({ clienteId }), id: tareaId },
     select: { id: true },
   });
   if (!tarea) return { error: "Esa tarea no pertenece al plan del proyecto." };
@@ -111,7 +114,11 @@ export async function marcarEtapaActual(
     // plan sea secuencial, un arrastre de datos podría dejar varias en curso
     // en listas distintas y todas describen lo mismo.
     prisma.tareaRoadmap.updateMany({
-      where: { lista: { clienteId }, estado: "en_curso", id: { not: tareaId } },
+      where: {
+        ...tareasVivas({ clienteId }),
+        estado: "en_curso",
+        id: { not: tareaId },
+      },
       data: { estado: cierreAnterior },
     }),
     prisma.tareaRoadmap.update({

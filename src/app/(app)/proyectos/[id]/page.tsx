@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
+import { tareasVivas } from "@/lib/roadmap-papelera";
 import { formatHorasHsMin } from "@/lib/horas";
 import { construirCurvaHoras } from "@/lib/curva-horas";
 import { InfoButton } from "@/components/info-button";
@@ -33,7 +34,7 @@ export default async function ProyectoHomePage({
       select: { fecha: true, horas: true },
     }),
     prisma.tareaRoadmap.findMany({
-      where: { lista: { clienteId: id } },
+      where: tareasVivas({ clienteId: id }),
       select: { horasEstimadas: true, estado: true, fechaFin: true },
     }),
   ]);

@@ -7,6 +7,7 @@ import {
   hoyUTC,
   siguienteDiaHabil,
 } from "@/lib/dias-habiles";
+import { SOLO_TAREAS_VIVAS, listasVivas } from "@/lib/roadmap-papelera";
 import type { Cliente, Prisma } from "@/generated/prisma/client";
 
 // Cliente de Prisma o cliente de transacción. Las funciones que leen y
@@ -139,11 +140,16 @@ export function planificar(
 // dentro de cada lista, por orden. Esa secuencia única es la cadena de
 // dependencias del roadmap.
 export async function getTareasEnOrden(clienteId: string, db: DB = prisma) {
+  // Sin lo que está en la papelera: una tarea eliminada no ocupa lugar en la
+  // secuencia, así que las que siguen se corren para ocupar su hueco.
   const listas = await db.listaRoadmap.findMany({
-    where: { clienteId },
+    where: listasVivas({ clienteId }),
     orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
     include: {
-      tareas: { orderBy: [{ orden: "asc" }, { createdAt: "asc" }] },
+      tareas: {
+        where: SOLO_TAREAS_VIVAS,
+        orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
+      },
     },
   });
   return listas.flatMap((l) => l.tareas);

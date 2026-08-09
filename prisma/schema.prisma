@@ -156,7 +156,17 @@ model ListaRoadmap {
 
   tareas TareaRoadmap[]
 
+  // Papelera del Follow Up. Mientras eliminadoEn tenga fecha, la lista y todo
+  // lo que cuelga de ella dejan de existir para el resto del sistema: no
+  // aparecen en el plan, no entran a la secuencia y no suman a ningún KPI.
+  // Restaurarla es limpiar esta marca —por eso al borrar una lista NO se
+  // tocan sus tareas: vuelven con ella, con sus datos y su orden intactos.
+  eliminadoEn    DateTime? @map("eliminado_en")
+  eliminadoPorId String?   @map("eliminado_por_id")
+  eliminadoPor   Usuario?  @relation("ListaEliminadaPor", fields: [eliminadoPorId], references: [id])
+
   @@index([clienteId, orden])
+  @@index([eliminadoEn])
   @@map("listas_roadmap")
 }
 
@@ -190,7 +200,15 @@ model TareaRoadmap {
 
   registros RegistroHoras[]
 
+  // Papelera del Follow Up: misma regla que en la lista. Una tarea en la
+  // papelera no se muestra, no entra a la secuencia de fechas y no cuenta
+  // para las horas estimadas ni para el avance.
+  eliminadoEn    DateTime? @map("eliminado_en")
+  eliminadoPorId String?   @map("eliminado_por_id")
+  eliminadoPor   Usuario?  @relation("TareaEliminadaPor", fields: [eliminadoPorId], references: [id])
+
   @@index([listaId, orden])
+  @@index([eliminadoEn])
   @@map("tareas_roadmap")
 }
 
@@ -296,6 +314,8 @@ model Usuario {
   proyectosAsignados ProyectoAsignado[]
   viaticos           Viatico[]          @relation("Gasto")
   viaticosCreados    Viatico[]          @relation("ViaticoCreadoPor")
+  listasEliminadas   ListaRoadmap[]     @relation("ListaEliminadaPor")
+  tareasEliminadas   TareaRoadmap[]     @relation("TareaEliminadaPor")
   vacaciones         Vacacion[]
   semaforoEventos    SemaforoEvento[]
   etapaEventos       EtapaEvento[]
