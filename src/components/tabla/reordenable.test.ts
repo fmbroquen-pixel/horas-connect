@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { moverAIndice } from "./reordenable";
+import { indiceSegunDireccion, moverAIndice } from "./reordenable";
 
 // El índice de destino se expresa sobre la lista ANTES de sacar el elemento:
 // 0 = antes de todo, n = después del último.
@@ -88,6 +88,50 @@ describe("moverAIndice", () => {
         alcanzadas.add(r.indexOf(id));
       }
       expect([...alcanzadas].sort()).toEqual([0, 1, 2, 3]);
+    }
+  });
+});
+
+describe("indiceSegunDireccion", () => {
+  // Apuntar a un ítem que está ARRIBA del que arrastro significa "quiero
+  // quedar antes que él"; a uno de ABAJO, "después". Sin mitades: cualquier
+  // punto del ítem apuntado da un movimiento real.
+  it("subiendo, cae antes del apuntado", () => {
+    expect(indiceSegunDireccion(0, 3)).toBe(0);
+    expect(indiceSegunDireccion(1, 3)).toBe(1);
+  });
+
+  it("bajando, cae después del apuntado", () => {
+    expect(indiceSegunDireccion(3, 0)).toBe(4);
+    expect(indiceSegunDireccion(1, 0)).toBe(2);
+  });
+
+  it("apuntarse a sí mismo no mueve nada", () => {
+    // Devuelve la posición siguiente, que moverAIndice reconoce como la que
+    // el ítem ya ocupa.
+    expect(moverAIndice(["A", "B", "C"], "B", indiceSegunDireccion(1, 1))).toBeNull();
+  });
+
+  it("el caso que faltaba: la última a la primera, apuntando a cualquier parte", () => {
+    const dos = ["A", "B"];
+    // Antes esto dependía de acertarle a la mitad de arriba de "A".
+    expect(moverAIndice(dos, "B", indiceSegunDireccion(0, 1))).toEqual(["B", "A"]);
+
+    const tres = ["A", "B", "C"];
+    expect(moverAIndice(tres, "C", indiceSegunDireccion(0, 2))).toEqual(["C", "A", "B"]);
+    expect(moverAIndice(tres, "C", indiceSegunDireccion(1, 2))).toEqual(["A", "C", "B"]);
+  });
+
+  it("apuntar a cualquier vecino siempre mueve", () => {
+    // La garantía que rompía la zona muerta: ningún ítem apuntado, salvo uno
+    // mismo, puede terminar en "no pasa nada".
+    const ids = ["A", "B", "C", "D"];
+    for (const [origenIdx, id] of ids.entries()) {
+      for (let i = 0; i < ids.length; i++) {
+        const r = moverAIndice(ids, id, indiceSegunDireccion(i, origenIdx));
+        if (i === origenIdx) expect(r).toBeNull();
+        else expect(r).not.toBeNull();
+      }
     }
   });
 });

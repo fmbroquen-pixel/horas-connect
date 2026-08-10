@@ -21,9 +21,15 @@ import { useState } from "react";
 // mover otra cosa en sentido contrario para llegar. Con posiciones, cualquier
 // ítem llega a cualquier lugar en un solo gesto.
 //
-// Cuál posición depende de en qué mitad del ítem está el cursor: mitad de
-// arriba = antes, mitad de abajo = después. Eso es lo que hace que la línea
-// indicadora coincida con lo que va a pasar al soltar.
+// Cuál posición depende de la DIRECCIÓN del arrastre: si venís subiendo, el
+// ítem apuntado se corre hacia abajo y el tuyo queda antes; si venís bajando,
+// queda después. No por mitades: con mitades, apuntar a la mitad "equivocada"
+// del vecino inmediato calcula la posición que el ítem ya ocupa y no pasa
+// nada. Esa zona muerta es la mitad de la superficie del vecino, y con dos
+// ítems es justo donde cae el cursor al arrastrar uno sobre el otro.
+//
+// Con dirección, cualquier lugar del ítem apuntado produce un movimiento
+// real, y la línea indicadora aparece del lado por el que venís.
 export type Reordenable = {
   // Va en el elemento desde el que se puede empezar a arrastrar.
   agarre: (id: string) => {
@@ -40,15 +46,24 @@ export type Reordenable = {
   arrastrada: (id: string) => boolean;
   // La línea va justo ARRIBA de este ítem.
   marcaAntes: (id: string) => boolean;
-  // La línea va DEBAJO de este ítem. Solo da true en el último: cualquier
-  // otro borde ya lo dibuja el marcaAntes del ítem siguiente, y pintarlo dos
-  // veces mostraría dos líneas para la misma posición.
+  // La línea va DEBAJO de este ítem. Nunca dan las dos a la vez ni en dos
+  // ítems distintos: se dibujan solo sobre el que está apuntado.
   marcaDespues: (id: string) => boolean;
   activo: boolean;
   // Orden a dibujar: el optimista mientras el servidor confirma, o el del
   // servidor. El llamador ordena sus ítems por esto.
   orden: string[];
 };
+
+// Posición de destino según a qué ítem apuntás y desde dónde venís. Apuntar
+// al propio ítem arrastrado devuelve su lugar actual, que no mueve nada.
+// Aparte del hook para poder probarla.
+export function indiceSegunDireccion(
+  indiceApuntado: number,
+  indiceOrigen: number,
+): number {
+  return indiceApuntado < indiceOrigen ? indiceApuntado : indiceApuntado + 1;
+}
 
 // Mueve `desde` a la posición `indiceDestino`, expresada sobre la lista tal
 // como está ANTES de sacar el elemento. Devuelve null si no hay cambio real.
@@ -80,6 +95,9 @@ export function useReordenable(
 ): Reordenable {
   const [origen, setOrigen] = useState<string | null>(null);
   const [destino, setDestino] = useState<number | null>(null);
+  // Sobre qué ítem está el cursor: las líneas se dibujan solo ahí, así nunca
+  // aparecen dos para el mismo borde.
+  const [apuntado, setApuntado] = useState<string | null>(null);
   // Orden mostrado mientras el servidor confirma. El plan es secuencial:
   // guardar el orden nuevo implica además recalcular las fechas de todo lo
   // que sigue, y eso tarda. Sin esto la fila se quedaba quieta hasta que
@@ -100,6 +118,7 @@ export function useReordenable(
   const limpiar = () => {
     setOrigen(null);
     setDestino(null);
+    setApuntado(null);
   };
 
   const soltar = () => {
@@ -116,12 +135,11 @@ export function useReordenable(
     onReordenar(orden, desde);
   };
 
-  // Mitad de arriba del ítem → antes; mitad de abajo → después.
-  const posicionSegunCursor = (e: React.DragEvent, id: string) => {
+  const posicionDe = (id: string) => {
     const i = visibles.indexOf(id);
-    if (i < 0) return null;
-    const r = e.currentTarget.getBoundingClientRect();
-    return e.clientY < r.top + r.height / 2 ? i : i + 1;
+    const desde = origen ? visibles.indexOf(origen) : -1;
+    if (i < 0 || desde < 0) return null;
+    return indiceSegunDireccion(i, desde);
   };
 
   return {
@@ -143,8 +161,10 @@ export function useReordenable(
         // válido y no dispara el drop.
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
-        const i = posicionSegunCursor(e, id);
-        if (i !== null && i !== destino) setDestino(i);
+        const i = posicionDe(id);
+        if (i === null) return;
+        if (i !== destino) setDestino(i);
+        if (apuntado !== id) setApuntado(id);
       },
       onDrop: (e) => {
         e.preventDefault();
@@ -152,11 +172,8 @@ export function useReordenable(
       },
     }),
     arrastrada: (id) => origen === id,
-    marcaAntes: (id) => origen !== null && destino === visibles.indexOf(id),
-    marcaDespues: (id) =>
-      origen !== null &&
-      visibles.indexOf(id) === visibles.length - 1 &&
-      destino === visibles.length,
+    marcaAntes: (id) => apuntado === id && destino === visibles.indexOf(id),
+    marcaDespues: (id) => apuntado === id && destino === visibles.indexOf(id) + 1,
     activo: origen !== null,
   };
 }
