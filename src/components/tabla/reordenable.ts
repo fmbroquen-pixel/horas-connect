@@ -13,6 +13,17 @@ import { useState } from "react";
 // El agarre y la zona de destino son elementos distintos a propósito: se
 // arrastra desde un lugar acotado (el header de la lista, la celda del
 // checkbox de la tarea) pero se puede soltar sobre la fila entera.
+//
+// El destino se expresa como POSICIÓN (0..n), no como "el ítem sobre el que
+// solté". Insertar siempre antes del ítem apuntado deja posiciones
+// inalcanzables: arrastrando hacia abajo nunca se puede pasar al ítem de
+// destino, así que la última posición directamente no existía y había que
+// mover otra cosa en sentido contrario para llegar. Con posiciones, cualquier
+// ítem llega a cualquier lugar en un solo gesto.
+//
+// Cuál posición depende de en qué mitad del ítem está el cursor: mitad de
+// arriba = antes, mitad de abajo = después. Eso es lo que hace que la línea
+// indicadora coincida con lo que va a pasar al soltar.
 export type Reordenable = {
   // Va en el elemento desde el que se puede empezar a arrastrar.
   agarre: (id: string) => {
@@ -27,29 +38,37 @@ export type Reordenable = {
   };
   // Para el feedback visual.
   arrastrada: (id: string) => boolean;
-  // true cuando el ítem que se arrastra caería justo ANTES de este.
+  // La línea va justo ARRIBA de este ítem.
   marcaAntes: (id: string) => boolean;
+  // La línea va DEBAJO de este ítem. Solo da true en el último: cualquier
+  // otro borde ya lo dibuja el marcaAntes del ítem siguiente, y pintarlo dos
+  // veces mostraría dos líneas para la misma posición.
+  marcaDespues: (id: string) => boolean;
   activo: boolean;
   // Orden a dibujar: el optimista mientras el servidor confirma, o el del
   // servidor. El llamador ordena sus ítems por esto.
   orden: string[];
 };
 
-// El cálculo del orden final, aparte del hook para poder probarlo: saca el
-// que se arrastra y lo vuelve a insertar en la posición del que recibe el
-// drop. Devuelve null si no hay nada que cambiar —soltar sobre sí mismo, o
-// sobre algo que no está en la lista.
-export function moverEnOrden(
+// Mueve `desde` a la posición `indiceDestino`, expresada sobre la lista tal
+// como está ANTES de sacar el elemento. Devuelve null si no hay cambio real.
+// Aparte del hook para poder probarla.
+export function moverAIndice(
   ids: string[],
   desde: string,
-  sobre: string,
+  indiceDestino: number,
 ): string[] | null {
-  if (desde === sobre) return null;
-  const orden = ids.filter((x) => x !== desde);
-  if (orden.length === ids.length) return null; // `desde` no estaba
-  const i = orden.indexOf(sobre);
+  const i = ids.indexOf(desde);
   if (i < 0) return null;
-  orden.splice(i, 0, desde);
+
+  // Al sacar el elemento, todas las posiciones que estaban después suyo se
+  // corren una hacia atrás. Sin este ajuste, arrastrar hacia abajo caería
+  // siempre un lugar antes de donde muestra la línea.
+  const destino = indiceDestino > i ? indiceDestino - 1 : indiceDestino;
+  if (destino === i) return null;
+
+  const orden = ids.filter((x) => x !== desde);
+  orden.splice(Math.max(0, Math.min(destino, orden.length)), 0, desde);
   return orden.join() === ids.join() ? null : orden;
 }
 
@@ -60,7 +79,7 @@ export function useReordenable(
   onReordenar: (idsEnOrden: string[], movidoId: string) => void,
 ): Reordenable {
   const [origen, setOrigen] = useState<string | null>(null);
-  const [destino, setDestino] = useState<string | null>(null);
+  const [destino, setDestino] = useState<number | null>(null);
   // Orden mostrado mientras el servidor confirma. El plan es secuencial:
   // guardar el orden nuevo implica además recalcular las fechas de todo lo
   // que sigue, y eso tarda. Sin esto la fila se quedaba quieta hasta que
@@ -78,21 +97,35 @@ export function useReordenable(
 
   const visibles = optimista ?? ids;
 
-  const soltar = (sobre: string) => {
-    const desde = origen;
+  const limpiar = () => {
     setOrigen(null);
     setDestino(null);
-    if (!desde) return;
+  };
+
+  const soltar = () => {
+    const desde = origen;
+    const indice = destino;
+    limpiar();
+    if (!desde || indice === null) return;
 
     // Solo se avisa si el orden cambió de verdad: soltar en el mismo lugar no
     // tiene por qué disparar una escritura ni un recálculo de fechas.
-    const orden = moverEnOrden(visibles, desde, sobre);
+    const orden = moverAIndice(visibles, desde, indice);
     if (!orden) return;
     setOptimista(orden);
     onReordenar(orden, desde);
   };
 
+  // Mitad de arriba del ítem → antes; mitad de abajo → después.
+  const posicionSegunCursor = (e: React.DragEvent, id: string) => {
+    const i = visibles.indexOf(id);
+    if (i < 0) return null;
+    const r = e.currentTarget.getBoundingClientRect();
+    return e.clientY < r.top + r.height / 2 ? i : i + 1;
+  };
+
   return {
+    orden: visibles,
     agarre: (id) => ({
       draggable: true,
       onDragStart: (e) => {
@@ -101,28 +134,29 @@ export function useReordenable(
         // Firefox no arranca el arrastre sin datos asociados.
         e.dataTransfer.setData("text/plain", id);
       },
-      onDragEnd: () => {
-        setOrigen(null);
-        setDestino(null);
-      },
+      onDragEnd: limpiar,
     }),
     zona: (id) => ({
       onDragOver: (e) => {
-        if (!origen || origen === id) return;
+        if (!origen) return;
         // Sin preventDefault el navegador no considera esto un destino
         // válido y no dispara el drop.
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
-        if (destino !== id) setDestino(id);
+        const i = posicionSegunCursor(e, id);
+        if (i !== null && i !== destino) setDestino(i);
       },
       onDrop: (e) => {
         e.preventDefault();
-        soltar(id);
+        soltar();
       },
     }),
-    orden: visibles,
     arrastrada: (id) => origen === id,
-    marcaAntes: (id) => destino === id && origen !== null && origen !== id,
+    marcaAntes: (id) => origen !== null && destino === visibles.indexOf(id),
+    marcaDespues: (id) =>
+      origen !== null &&
+      visibles.indexOf(id) === visibles.length - 1 &&
+      destino === visibles.length,
     activo: origen !== null,
   };
 }

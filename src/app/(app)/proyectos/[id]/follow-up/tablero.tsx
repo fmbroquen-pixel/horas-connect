@@ -209,12 +209,22 @@ function Tablero({
           <div className="min-w-[880px] space-y-4">
             {enPantalla.map((lista) => (
               <div key={lista.id} {...dnd.zona(lista.id)} className="relative">
-                {/* Línea de destino: marca dónde va a caer la lista que se
-                    arrastra. Es absoluta para no empujar nada. */}
+                {/* Líneas de destino: marcan dónde va a caer la lista que se
+                    arrastra. Absolutas, para no empujar nada.
+
+                    La de abajo solo la dibuja la última: cualquier otro borde
+                    ya lo pinta la línea de arriba de la lista siguiente. Es
+                    lo que hace alcanzable la última posición. */}
                 {dnd.marcaAntes(lista.id) && (
                   <span
                     aria-hidden
                     className="pointer-events-none absolute -top-2 left-0 right-0 h-0.5 rounded-full bg-dc-peri shadow-[0_0_8px_var(--color-dc-peri)]"
+                  />
+                )}
+                {dnd.marcaDespues(lista.id) && (
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute -bottom-2 left-0 right-0 h-0.5 rounded-full bg-dc-peri shadow-[0_0_8px_var(--color-dc-peri)]"
                   />
                 )}
                 <div

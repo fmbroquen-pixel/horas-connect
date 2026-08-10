@@ -244,6 +244,14 @@ export function ListaRoadmapCard({
                   className="pointer-events-none absolute left-0 right-0 top-0 z-10 h-0.5 rounded-full bg-dc-peri shadow-[0_0_8px_var(--color-dc-peri)]"
                 />
               )}
+              {/* Solo en la última tarea: es lo que permite soltar al final
+                  de la lista. */}
+              {dnd.marcaDespues(t.id) && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-0.5 rounded-full bg-dc-peri shadow-[0_0_8px_var(--color-dc-peri)]"
+                />
+              )}
               <div
                 className={`transition-opacity ${
                   dnd.arrastrada(t.id) ? "opacity-40" : ""
