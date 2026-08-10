@@ -6,6 +6,7 @@ import { FilaRegistro } from "./fila-registro";
 import { GRID_TIMETRACKER } from "./grid";
 import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 import { Dropdown } from "@/components/dropdown";
+import { ToastOk } from "@/components/ui/toast-ok";
 import type { OpcionConcepto, OpcionSelect, RegistroFila } from "./tipos";
 
 export function TablaRegistros({
@@ -20,6 +21,13 @@ export function TablaRegistros({
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirmar, setConfirmar] = useState(false);
   const [pending, start] = useTransition();
+  // Aviso de borrado. Vive acá y no en la fila porque la fila que se elimina
+  // desaparece del listado, y con ella se iría el toast antes de leerse. El
+  // contador hace que dos borrados seguidos vuelvan a mostrarlo: sin él, el
+  // estado no cambiaría y el toast no reaparecería.
+  const [borrado, setBorrado] = useState<{ n: number; seq: number } | null>(null);
+  const avisarBorrado = (n: number) =>
+    setBorrado((b) => ({ n, seq: (b?.seq ?? 0) + 1 }));
 
   // Edición masiva: campo a cambiar y valor a aplicar.
   const [editando, setEditando] = useState(false);
@@ -46,11 +54,14 @@ export function TablaRegistros({
     setEditando(false);
   };
 
-  const borrarSeleccion = () =>
+  const borrarSeleccion = () => {
+    const cuantos = sel.size;
     start(async () => {
       await eliminarRegistros([...sel]);
       limpiar();
+      avisarBorrado(cuantos);
     });
+  };
 
   const cambiarCampo = (c: CampoMasivo) => {
     setCampo(c);
@@ -195,6 +206,7 @@ export function TablaRegistros({
                 conceptos={conceptos}
                 seleccionado={sel.has(f.id)}
                 onToggle={toggle}
+                onEliminado={() => avisarBorrado(1)}
               />
             ))}
 
@@ -206,6 +218,16 @@ export function TablaRegistros({
           </div>
         </div>
       </div>
+
+      <ToastOk
+        key={borrado?.seq}
+        show={borrado !== null}
+        onHide={() => setBorrado(null)}
+      >
+        {borrado?.n === 1
+          ? "Registro eliminado"
+          : `${borrado?.n} registros eliminados`}
+      </ToastOk>
     </div>
   );
 }

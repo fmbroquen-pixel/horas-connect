@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { actualizarCampoRegistro, eliminarRegistro } from "./actions";
 import { formatMonto, hoyISO, restarDiasISO } from "@/lib/formato";
 import { DIAS_VENTANA_EDICION } from "./constantes";
@@ -11,7 +12,7 @@ import {
   CeldaSoloLectura,
 } from "@/components/tabla/celda-editable";
 import type { OpcionConcepto, OpcionSelect, RegistroFila } from "./tipos";
-import { BotonEliminarIcono } from "@/components/tabla/acciones-fila";
+import { BotonEditarIcono, BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 
 const OPCIONES_OWNERSHIP = [
   { value: "owner", label: "Owner" },
@@ -30,27 +31,40 @@ function mostrarFecha(iso: string): string {
 
 // Fila del historial con edición inline: cada celda se edita en el lugar y se
 // guarda sola al salir del campo o con Enter. No hay modo edición de fila ni
-// botón de guardar; la única acción explícita es eliminar.
+// botón de guardar.
 export function FilaRegistro({
   registro,
   proyectos,
   conceptos,
   seleccionado,
   onToggle,
+  onEliminado,
 }: {
   registro: RegistroFila;
   proyectos: OpcionSelect[];
   conceptos: OpcionConcepto[];
   seleccionado: boolean;
   onToggle: (id: string) => void;
+  // Avisa que el borrado terminó. El toast lo muestra la tabla: al eliminar,
+  // esta fila desaparece, y con ella se iría cualquier aviso que dibujara.
+  onEliminado?: () => void;
 }) {
   const editable = registro.editable;
+  const filaRef = useRef<HTMLDivElement>(null);
 
   const guardar = (campo: Parameters<typeof actualizarCampoRegistro>[1]) =>
     async (valor: string) => actualizarCampoRegistro(registro.id, campo, valor);
 
+  // El lápiz no abre un modo de edición —acá no existe— sino que entra a la
+  // primera celda editable de la fila. Es la misma acción que hacer clic en
+  // ella, con la ventaja de que se ve: la edición inline no se anuncia sola.
+  const editarPrimeraCelda = () => {
+    const celda = filaRef.current?.querySelector<HTMLElement>("[data-celda-editable]");
+    celda?.click();
+  };
+
   return (
-    <div className="border-b border-dc-line px-4 py-2 last:border-0">
+    <div ref={filaRef} className="border-b border-dc-line px-4 py-2 last:border-0">
       <div className={GRID_TIMETRACKER}>
         {editable ? (
           <input
@@ -126,12 +140,18 @@ export function FilaRegistro({
           <span className="tabular-nums">{formatMonto(registro.montoUsd)}</span>
         </CeldaSoloLectura>
 
-        <span className="flex justify-center">
+        {/* Editar → Eliminar, el mismo par y el mismo orden que Expenses. */}
+        <span className="flex justify-center gap-1">
           {editable ? (
-            <BotonEliminarIcono
-              onConfirm={() => eliminarRegistro(registro.id)}
-              label="Eliminar registro"
-            />
+            <>
+              <BotonEditarIcono onClick={editarPrimeraCelda} />
+              <BotonEliminarIcono
+                onConfirm={async () => {
+                  await eliminarRegistro(registro.id);
+                  onEliminado?.();
+                }}
+              />
+            </>
           ) : (
             <span
               className="text-xs text-dc-muted"

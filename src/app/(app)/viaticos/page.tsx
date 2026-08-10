@@ -13,7 +13,7 @@ import { InfoButton } from "@/components/info-button";
 import { SelectorUsuario } from "@/components/selector-usuario";
 import { GRID_VIATICOS, type ViaticoFila } from "./tipos";
 import { BarraCapturaViatico } from "./barra-captura";
-import { FilaViatico } from "./fila-viatico";
+import { ListaViaticos } from "./lista-viaticos";
 import { PapeleraMenu } from "../papelera/papelera-menu";
 
 // Expenses comparte el patrón de Time Tracking: selector de usuario (solo
@@ -178,9 +178,7 @@ export default async function ViaticosPage({
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {filas.map((f) => (
-              <FilaViatico key={f.id} viatico={f} proyectos={opcionesProyecto} />
-            ))}
+            <ListaViaticos filas={filas} proyectos={opcionesProyecto} />
 
             {filas.length === 0 && (
               <p className="px-4 py-6 text-center text-sm text-dc-muted">

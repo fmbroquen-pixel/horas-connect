@@ -115,6 +115,11 @@ function Lectura({
       type="button"
       onClick={onEditar}
       title={titulo}
+      // Marca para que la fila pueda encontrar su primera celda editable. El
+      // botón de editar de la fila la usa para entrar en edición desde ahí:
+      // en una tabla que se edita celda por celda, ese botón no abre ningún
+      // modo aparte, lleva al primer campo.
+      data-celda-editable
       className={`${BASE_LECTURA} ${alinear === "centro" ? "justify-center text-center" : "justify-start text-left"}`}
     >
       <span className="truncate">{children}</span>

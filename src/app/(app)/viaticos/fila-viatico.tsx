@@ -10,7 +10,8 @@ import {
   type OpcionSelect,
   type ViaticoFila,
 } from "./tipos";
-import { BTN_PRIMARY_SM, BTN_SECONDARY_SM, BTN_DANGER_SM, BTN_DANGER_CONFIRM_SM } from "@/lib/ui";
+import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
+import { BotonEditarIcono, BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 
@@ -20,9 +21,13 @@ const INPUT =
 export function FilaViatico({
   viatico,
   proyectos,
+  onEliminado,
 }: {
   viatico: ViaticoFila;
   proyectos: OpcionSelect[];
+  // Avisa que el borrado terminó. El toast lo muestra la lista: al eliminar,
+  // esta fila desaparece, y con ella se iría cualquier aviso que dibujara.
+  onEliminado?: () => void;
 }) {
   const [editando, setEditando] = useState(false);
 
@@ -59,11 +64,18 @@ export function FilaViatico({
               <span className="text-dc-muted">—</span>
             )}
           </span>
+          {/* Editar → Eliminar, el mismo par y el mismo orden que Time
+              Tracking. Solo íconos: el texto de estas dos acciones se repetía
+              en cada fila y competía con los datos, que es lo que hay que
+              leer. */}
           <span className="flex justify-center gap-1">
-            <button type="button" onClick={() => setEditando(true)} className={BTN_SECONDARY_SM}>
-              Editar
-            </button>
-            <BotonEliminar id={viatico.id} />
+            <BotonEditarIcono onClick={() => setEditando(true)} />
+            <BotonEliminarIcono
+              onConfirm={async () => {
+                await eliminarViatico(viatico.id);
+                onEliminado?.();
+              }}
+            />
           </span>
         </div>
       </div>
@@ -172,23 +184,6 @@ function FormEdicion({
       </div>
       {state?.error && <p className="mt-2 text-xs text-dc-pink">{state.error}</p>}
     </form>
-  );
-}
-
-function BotonEliminar({ id }: { id: string }) {
-  const [confirmando, setConfirmando] = useState(false);
-
-  if (!confirmando) {
-    return (
-      <button type="button" onClick={() => setConfirmando(true)} className={BTN_DANGER_SM}>
-        Borrar
-      </button>
-    );
-  }
-  return (
-    <button type="button" onClick={() => eliminarViatico(id)} className={BTN_DANGER_CONFIRM_SM}>
-      ¿Seguro?
-    </button>
   );
 }
 
