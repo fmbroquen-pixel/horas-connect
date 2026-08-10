@@ -52,6 +52,10 @@ export function BarraCaptura({
   const [estado, setEstado] = useState<{ error?: string; campo?: CampoRegistro }>();
   const [aviso, setAviso] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // Cuántos registros se guardaron bien en esta sesión de carga. Lo lee el
+  // botón para pulsar el check: acá se carga de a muchos seguidos y sin una
+  // señal por registro no se sabe si el último entró.
+  const [guardados, setGuardados] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
 
   const set = (campo: keyof typeof valores, valor: string) => {
@@ -83,6 +87,7 @@ export function BarraCaptura({
         // (y la fecha del día); limpia los campos que cambian.
         setValores((v) => ({ ...v, conceptoId: "", horas: "" }));
         setEstado(undefined);
+        setGuardados((n) => n + 1);
         setTimeout(() => enfocar("conceptoId"), 20);
       } else {
         setEstado(r);
@@ -213,7 +218,12 @@ export function BarraCaptura({
           </span>
         </div>
 
-        <BotonGuardarIcono pending={pending} />
+        {/* Al extremo derecho y separado del último campo: es la acción que
+            cierra la carga, no una columna más del formulario. Mismo bloque
+            en Expenses. */}
+        <span className="ml-auto pl-3">
+          <BotonGuardarIcono pending={pending} exito={guardados} />
+        </span>
       </div>
 
       <ToastAviso mensaje={aviso} onClose={() => setAviso(null)} />

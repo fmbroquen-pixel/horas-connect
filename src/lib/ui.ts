@@ -16,13 +16,16 @@ export const BTN_SECONDARY_SM = `${BASE} rounded-lg border border-dc-line px-2 p
 export const BTN_ICON_SM = `${BASE} rounded-lg border border-dc-line p-1.5 text-dc-muted hover:border-dc-peri hover:bg-dc-peri/10 hover:text-dc-text`;
 
 // La acción PRINCIPAL de un formulario, en versión ícono: mismo cuadrado que
-// BTN_ICON_SM pero con el relleno de BTN_PRIMARY_SM. Sin esto, guardar y
-// cancelar quedaban con el mismo peso visual y el formulario dejaba de decir
-// cuál es su acción esperada.
+// BTN_ICON_SM pero relleno. Sin esto, guardar y cancelar quedaban con el mismo
+// peso visual y el formulario dejaba de decir cuál es su acción esperada.
+//
+// Va en verde y no en el violeta de marca: es la única acción de la app que
+// CONFIRMA, y el violeta ya significa "acción" en general (agregar, aplicar,
+// navegar). El verde la separa de todas esas y la vuelve reconocible sin leer.
 //
 // El borde transparente no se ve, pero hace falta: sin él este botón mide 2px
 // menos que los de al lado —que sí llevan borde— y el par queda desparejo.
-export const BTN_ICON_PRIMARY_SM = `${BASE} rounded-lg border border-transparent bg-dc-purple p-1.5 text-white hover:brightness-110`;
+export const BTN_ICON_PRIMARY_SM = `${BASE} rounded-lg border border-transparent bg-dc-green p-1.5 text-white hover:brightness-110`;
 
 // Acción destructiva (Borrar) y su confirmación.
 export const BTN_DANGER_SM = `${BASE} rounded-lg border border-dc-line px-2 py-1 text-xs text-dc-muted hover:border-dc-pink hover:bg-dc-pink/10 hover:text-dc-pink`;

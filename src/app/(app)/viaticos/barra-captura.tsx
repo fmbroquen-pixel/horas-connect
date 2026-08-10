@@ -55,6 +55,10 @@ export function BarraCapturaViatico({
   const [estado, setEstado] = useState<{ error?: string; campo?: CampoViatico }>();
   const [aviso, setAviso] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // Cuántos viáticos se guardaron bien en esta sesión de carga. Lo lee el
+  // botón para pulsar el check: acá se carga de a muchos seguidos y sin una
+  // señal por viático no se sabe si el último entró.
+  const [guardados, setGuardados] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
   const archivoRef = useRef<HTMLInputElement>(null);
 
@@ -88,6 +92,7 @@ export function BarraCapturaViatico({
         setValores((v) => ({ ...v, concepto: "", monto: "" }));
         setEstado(undefined);
         if (archivoRef.current) archivoRef.current.value = "";
+        setGuardados((n) => n + 1);
         setTimeout(() => enfocar("concepto"), 20);
       } else {
         setEstado(r);
@@ -196,7 +201,11 @@ export function BarraCapturaViatico({
           />
         </div>
 
-        <BotonGuardarIcono pending={pending} />
+        {/* Mismo bloque que en Time Tracking: al extremo derecho y separado
+            del último campo. */}
+        <span className="ml-auto pl-3">
+          <BotonGuardarIcono pending={pending} exito={guardados} />
+        </span>
       </div>
 
       <ToastAviso mensaje={aviso} onClose={() => setAviso(null)} />

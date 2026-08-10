@@ -6,6 +6,10 @@
   --dc-pink: #ff91ff;
   --dc-peri: #8b8cff;
   --dc-purple: #8b2fe0;
+  /* Confirmación. Es el único verde de la paleta y existe para una sola cosa:
+     el botón que guarda. Tira a menta para convivir con el violeta sin
+     ensuciar. */
+  --dc-green: #34d399;
   --dc-blue: #1300b9;
   --dc-text: #eceafd;
   --dc-muted: #a5a3d6;
@@ -26,6 +30,7 @@
   --color-dc-pink: var(--dc-pink);
   --color-dc-peri: var(--dc-peri);
   --color-dc-purple: var(--dc-purple);
+  --color-dc-green: var(--dc-green);
   --color-dc-blue: var(--dc-blue);
   --color-dc-text: var(--dc-text);
   --color-dc-muted: var(--dc-muted);
@@ -94,6 +99,9 @@ input[type="number"]::-webkit-inner-spin-button {
      bordes de foco, textos de error). */
   --dc-peri: #5a5be0;
   --dc-pink: #c21f9a;
+  /* El verde de confirmación también baja: el menta del tema oscuro con texto
+     blanco encima no se lee sobre un panel claro. */
+  --dc-green: #0d9668;
   /* Fondo del panel apenas gris; las filas van en blanco (reglas de abajo)
      para que el contenido gane protagonismo sin contraste extremo. */
   background: #f4f3fa;
@@ -279,6 +287,36 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 @media (prefers-reduced-motion: reduce) {
   .dc-fila-destino {
+    animation: none;
+  }
+}
+
+/* Confirmación del botón de guardar: un pulso corto sobre el check cuando el
+   guardado salió bien. Solo se dispara con el éxito, así que verlo ES la
+   señal; si falla, no pasa nada y el error se cuenta aparte.
+
+   Animación y no transición, por lo mismo de siempre: una transición necesita
+   un estado inicial pintado y en una pestaña sin cuadros se queda esperando.
+   Esta corre igual. */
+@keyframes dc-guardado {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55);
+  }
+  35% {
+    transform: scale(1.18);
+    box-shadow: 0 0 0 5px rgba(52, 211, 153, 0.28);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 9px rgba(52, 211, 153, 0);
+  }
+}
+.dc-guardado {
+  animation: dc-guardado 0.6s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dc-guardado {
     animation: none;
   }
 }

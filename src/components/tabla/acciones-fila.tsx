@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   BTN_ICON_SM,
   BTN_ICON_PRIMARY_SM,
@@ -47,13 +47,15 @@ function IconoX() {
   );
 }
 
-function IconoGuardar() {
+// Mientras el guardado viaja: el check se va y queda girando en su lugar, sin
+// cambiar el tamaño del botón. Es animación CSS, así que no depende de que la
+// pestaña esté produciendo cuadros.
+function Spinner() {
   return (
-    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-      <path d="M17 21v-8H7v8" />
-      <path d="M7 3v5h8" />
-    </svg>
+    <span
+      aria-hidden
+      className="block h-[15px] w-[15px] animate-spin rounded-full border-2 border-white/40 border-t-white"
+    />
   );
 }
 
@@ -134,6 +136,7 @@ export function BotonGuardarIcono({
   disabled,
   form,
   label = "Guardar",
+  exito,
 }: {
   pending?: boolean;
   // Aparte de `pending`: hay formularios que además se bloquean hasta que lo
@@ -141,17 +144,36 @@ export function BotonGuardarIcono({
   disabled?: boolean;
   form?: string;
   label?: string;
+  // Contador que el formulario incrementa cuando el guardado salió bien. Es
+  // un número y no un booleano porque dos guardados seguidos tienen que
+  // pulsar dos veces: con un booleano el estado no cambiaría la segunda vez.
+  // Los formularios que se cierran al guardar no necesitan pasarlo.
+  exito?: number;
 }) {
+  // Se ajusta el estado durante el render, que es el patrón recomendado para
+  // reaccionar a un cambio de prop sin el parpadeo de un efecto.
+  const [ultimoExito, setUltimoExito] = useState(exito);
+  const [celebrando, setCelebrando] = useState(false);
+  if (exito !== ultimoExito) {
+    setUltimoExito(exito);
+    setCelebrando(true);
+  }
+  useEffect(() => {
+    if (!celebrando) return;
+    const t = setTimeout(() => setCelebrando(false), 600);
+    return () => clearTimeout(t);
+  }, [celebrando]);
+
   return (
     <button
       type="submit"
       form={form}
       disabled={pending || disabled}
-      className={BTN_ICON_PRIMARY_SM}
+      className={`${BTN_ICON_PRIMARY_SM} ${celebrando ? "dc-guardado" : ""}`}
       title={label}
       aria-label={label}
     >
-      <IconoGuardar />
+      {pending ? <Spinner /> : <IconoCheck />}
     </button>
   );
 }
