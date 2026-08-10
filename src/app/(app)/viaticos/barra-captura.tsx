@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { crearViatico, type CampoViatico } from "./actions";
-import { BTN_PRIMARY } from "@/lib/ui";
+import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
 import { hoyISO, restarDiasISO } from "@/lib/formato";
 import { DIAS_VENTANA_CARGA } from "@/lib/ventana-carga";
 import { Dropdown } from "@/components/dropdown";
@@ -196,9 +196,7 @@ export function BarraCapturaViatico({
           />
         </div>
 
-        <button type="submit" disabled={pending} className={BTN_PRIMARY}>
-          {pending ? "Guardando…" : "Guardar"}
-        </button>
+        <BotonGuardarIcono pending={pending} />
       </div>
 
       <ToastAviso mensaje={aviso} onClose={() => setAviso(null)} />

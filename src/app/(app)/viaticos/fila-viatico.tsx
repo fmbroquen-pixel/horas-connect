@@ -10,8 +10,12 @@ import {
   type OpcionSelect,
   type ViaticoFila,
 } from "./tipos";
-import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
-import { BotonEditarIcono, BotonEliminarIcono } from "@/components/tabla/acciones-fila";
+import {
+  BotonCancelarIcono,
+  BotonEditarIcono,
+  BotonEliminarIcono,
+  BotonGuardarIcono,
+} from "@/components/tabla/acciones-fila";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 
@@ -173,13 +177,11 @@ function FormEdicion({
           aria-label="Comprobante"
           className="text-xs text-dc-muted file:mr-1 file:rounded-lg file:border file:border-dc-line file:bg-dc-deeper file:px-2 file:py-1 file:text-xs file:text-dc-muted"
         />
+        {/* Mismo par que en modo lectura: la acción principal primero, la
+            secundaria después, con el mismo tamaño y separación. */}
         <span className="flex justify-center gap-1">
-          <button type="submit" disabled={pending} className={BTN_PRIMARY_SM}>
-            {pending ? "…" : "Guardar"}
-          </button>
-          <button type="button" onClick={onCerrar} className={BTN_SECONDARY_SM}>
-            ✕
-          </button>
+          <BotonGuardarIcono pending={pending} />
+          <BotonCancelarIcono onClick={onCerrar} />
         </span>
       </div>
       {state?.error && <p className="mt-2 text-xs text-dc-pink">{state.error}</p>}

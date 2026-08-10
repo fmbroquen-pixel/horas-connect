@@ -4,7 +4,11 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { crearUsuario } from "./actions";
 import { RolDropdown } from "./rol-dropdown";
 import { Modal } from "@/components/ui/modal";
-import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
+import { BTN_PRIMARY } from "@/lib/ui";
+import {
+  BotonCancelarIcono,
+  BotonGuardarIcono,
+} from "@/components/tabla/acciones-fila";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -114,17 +118,13 @@ export function NuevoUsuarioBoton() {
                 </p>
               )}
 
-              <div className="flex justify-end gap-2 pt-1">
-                <button type="button" onClick={cerrar} className={BTN_SECONDARY}>
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={!valido || pending}
-                  className={`${BTN_PRIMARY} disabled:cursor-not-allowed disabled:opacity-50`}
-                >
-                  {pending ? "Creando…" : "Crear usuario"}
-                </button>
+              <div className="flex justify-end gap-1 pt-1">
+                <BotonCancelarIcono onClick={cerrar} />
+                <BotonGuardarIcono
+                  pending={pending}
+                  disabled={!valido}
+                  label="Crear usuario"
+                />
               </div>
             </form>
         </div>

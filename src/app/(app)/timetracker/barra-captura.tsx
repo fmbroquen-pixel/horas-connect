@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { crearRegistro, type CampoRegistro } from "./actions";
-import { BTN_PRIMARY } from "@/lib/ui";
+import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
 import { parseHorasHsMin, reformatEntradaHoras } from "@/lib/horas";
 import { formatMonto, hoyISO, restarDiasISO } from "@/lib/formato";
 import { DIAS_VENTANA_EDICION } from "./constantes";
@@ -213,9 +213,7 @@ export function BarraCaptura({
           </span>
         </div>
 
-        <button type="submit" disabled={pending} className={BTN_PRIMARY}>
-          {pending ? "Guardando…" : "Guardar"}
-        </button>
+        <BotonGuardarIcono pending={pending} />
       </div>
 
       <ToastAviso mensaje={aviso} onClose={() => setAviso(null)} />

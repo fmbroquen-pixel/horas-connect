@@ -2,7 +2,11 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Modal } from "@/components/ui/modal";
-import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
+import { BTN_PRIMARY } from "@/lib/ui";
+import {
+  BotonCancelarIcono,
+  BotonGuardarIcono,
+} from "@/components/tabla/acciones-fila";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -115,17 +119,17 @@ export function AgregarModal({
                 </p>
               )}
 
-              <div className="flex justify-end gap-2 pt-1">
-                <button type="button" onClick={cerrar} className={BTN_SECONDARY}>
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={!valido || pending}
-                  className={`${BTN_PRIMARY} disabled:cursor-not-allowed disabled:opacity-50`}
-                >
-                  {pending ? "Creando…" : submitLabel}
-                </button>
+              {/* En el modal la principal va a la derecha, que es donde se la
+                  busca al terminar de completar. El orden es lo único que
+                  cambia respecto de las filas; tamaño, separación y estados
+                  son los mismos. */}
+              <div className="flex justify-end gap-1 pt-1">
+                <BotonCancelarIcono onClick={cerrar} />
+                <BotonGuardarIcono
+                  pending={pending}
+                  disabled={!valido}
+                  label={submitLabel}
+                />
               </div>
             </form>
         </div>

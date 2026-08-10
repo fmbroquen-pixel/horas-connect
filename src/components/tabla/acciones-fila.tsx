@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import {
   BTN_ICON_SM,
+  BTN_ICON_PRIMARY_SM,
   BTN_ICON_DANGER_SM,
   BTN_ICON_CONFIRM_SM,
 } from "@/lib/ui";
@@ -121,24 +122,34 @@ export function BotonEliminarIcono({
   );
 }
 
-// Guardar (submit) del formulario de edición inline: mismo lenguaje de ícono.
+// Acción principal de un formulario (submit): guardar lo editado o crear algo
+// nuevo. Es la misma operación —confirmar el formulario— así que lleva el
+// mismo ícono y solo cambia la etiqueta; lo que la distingue de Cancelar es el
+// relleno, no el dibujo.
+//
 // `form` permite apuntar a un formulario por id, para los casos en que el
 // botón no puede estar dentro de él (una fila de <table>, por ejemplo).
 export function BotonGuardarIcono({
   pending,
+  disabled,
   form,
+  label = "Guardar",
 }: {
   pending?: boolean;
+  // Aparte de `pending`: hay formularios que además se bloquean hasta que lo
+  // cargado es válido.
+  disabled?: boolean;
   form?: string;
+  label?: string;
 }) {
   return (
     <button
       type="submit"
       form={form}
-      disabled={pending}
-      className={BTN_ICON_SM}
-      title="Guardar"
-      aria-label="Guardar"
+      disabled={pending || disabled}
+      className={BTN_ICON_PRIMARY_SM}
+      title={label}
+      aria-label={label}
     >
       <IconoGuardar />
     </button>
