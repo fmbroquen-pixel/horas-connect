@@ -251,23 +251,31 @@ input[type="number"]::-webkit-inner-spin-button {
 
 /* Fila a la que se llega desde "Próximas dos semanas": se enciende al
    aparecer y se apaga sola. Fondo y sombra, nada que ocupe espacio, así la
-   tabla no se mueve al llegar. */
+   tabla no se mueve al llegar.
+
+   Primero se sostiene encendida y recién después se desvanece: si empezara a
+   bajar desde el arranque, la mitad del tiempo se iría en un violeta ya casi
+   invisible y el realce se leería más corto de lo que dura.
+
+   La barra lateral se apaga bajándole el alpha al color y no con
+   `box-shadow: none`: contra `none` el navegador interpola también el
+   desplazamiento, así que la barra se va adelgazando de 3px a 0 mientras se
+   desvanece. Con el alpha conserva su ancho y solo pierde color, que es lo
+   que se lee como un apagado y no como algo que se encoge. */
 @keyframes dc-fila-destino {
-  0% {
+  0%,
+  45% {
     background-color: rgba(139, 140, 255, 0.28);
     box-shadow: inset 3px 0 0 0 var(--dc-peri);
-  }
-  70% {
-    background-color: rgba(139, 140, 255, 0.18);
-    box-shadow: inset 3px 0 0 0 var(--dc-peri);
+    animation-timing-function: ease-out;
   }
   100% {
-    background-color: transparent;
-    box-shadow: none;
+    background-color: rgba(139, 140, 255, 0);
+    box-shadow: inset 3px 0 0 0 rgba(139, 140, 255, 0);
   }
 }
 .dc-fila-destino {
-  animation: dc-fila-destino 1.4s ease-out both;
+  animation: dc-fila-destino 2.8s linear both;
 }
 @media (prefers-reduced-motion: reduce) {
   .dc-fila-destino {

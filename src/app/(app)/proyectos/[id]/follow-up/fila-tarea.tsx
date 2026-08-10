@@ -108,7 +108,9 @@ export function FilaTareaRoadmap({
     const ir = setTimeout(() => {
       if (filaRef.current) centrarEnSuContenedor(filaRef.current);
     }, 60);
-    const apagar = setTimeout(() => setDestacada(false), 1600);
+    // Un poco más que los 2,8s de la animación: si la clase se sacara antes,
+    // el realce se cortaría a mitad del desvanecido.
+    const apagar = setTimeout(() => setDestacada(false), 3000);
     return () => {
       clearTimeout(ir);
       clearTimeout(apagar);
