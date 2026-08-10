@@ -48,7 +48,10 @@ export async function EstadoProyectos({ clienteIds }: { clienteIds: string[] }) 
             <span className="min-w-0 flex-1 text-center">Semáforo</span>
             <span className="min-w-0 flex-1 text-center">Etapa actual</span>
           </div>
-          <div className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
+          {/* El eje horizontal va declarado: pedir solo overflow-y deja el
+              otro en `auto`, no en `visible`, y la lista se vuelve
+              arrastrable de costado sin que nadie lo pida. */}
+          <div className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto overflow-x-hidden">
             {clientes.map((c) => (
               <FilaProyectoEstado
                 key={c.id}

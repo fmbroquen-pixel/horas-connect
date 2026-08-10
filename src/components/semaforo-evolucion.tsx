@@ -113,7 +113,10 @@ export function SemaforoEvolucion({
   };
 
   return (
-    <div className="h-full min-h-[180px]">
+    // Mismo clampeo del canvas que en curva-horas: Chart.js escribe el ancho
+    // inline y lo corrige un tick tarde, así que sin max-w-full el canvas se
+    // sale de la card mientras tanto.
+    <div className="h-full min-h-[180px] w-full min-w-0 [&_canvas]:max-w-full">
       <Line options={options} data={data} />
     </div>
   );

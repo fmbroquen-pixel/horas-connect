@@ -118,7 +118,14 @@ export function CurvaHoras({
   return (
     // Sin alto propio: lo pone el contenedor, así el mismo gráfico entra
     // tanto en el Home del proyecto como en el de CORE.
-    <div className="h-full min-h-[180px]">
+    //
+    // El canvas se clampea con max-w-full porque Chart.js le escribe el ancho
+    // en el style y lo recalcula DESPUÉS de que el layout cambió: entre que la
+    // ventana se achica y el gráfico se entera, el canvas conserva el ancho
+    // viejo y se sale de su caja. max-width le gana a ese width inline, así
+    // que en el peor caso el dibujo queda un instante apretado en vez de
+    // empujar la pantalla.
+    <div className="h-full min-h-[180px] w-full min-w-0 [&_canvas]:max-w-full">
       <Line options={options} data={data} />
     </div>
   );

@@ -255,7 +255,18 @@ export default async function DashboardPage({
             : "No estás asignado como Mentor Owner ni Backup en ningún proyecto. Un admin puede asignarlos desde Settings → Usuarios."}
         </p>
       ) : (
-        <ZonaRecalculable className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pb-2">
+        // El eje horizontal va declarado. Un contenedor que pide `overflow-y`
+        // y deja el otro eje sin declarar NO se queda en `visible`: la regla
+        // de CSS computa el par y lo pasa a `auto`. Es decir que este bloque
+        // era un contenedor de scroll horizontal sin que nadie lo pidiera, y
+        // cualquier cosa que se pasara de ancho por dentro lo volvía
+        // arrastrable de costado. Que el layout de arriba tenga
+        // overflow-x-hidden no alcanzaba: el scroll pasaba acá adentro.
+        //
+        // (`clip` sería mejor —no se puede desplazar ni por programa— pero
+        // junto a un `overflow-y: auto` el navegador lo degrada a `hidden`,
+        // así que se escribe hidden y no se promete otra cosa.)
+        <ZonaRecalculable className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden pb-2">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Kpi
               etiqueta="Horas estimadas de proyectos"
@@ -303,7 +314,7 @@ export default async function DashboardPage({
                 {cumpleanosSemana.length === 0 ? (
                   <p className="text-sm text-dc-muted">No hay cumpleaños esta semana.</p>
                 ) : (
-                  <ul className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
+                  <ul className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto overflow-x-hidden">
                     {cumpleanosSemana.map((c) => (
                       <li
                         key={c.id}

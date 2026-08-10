@@ -109,7 +109,7 @@ export function EtapasProximas({
             : "Ninguna coincide con este filtro."}
         </p>
       ) : (
-        <ul className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto">
+        <ul className="min-h-0 flex-1 divide-y divide-dc-line overflow-y-auto overflow-x-hidden">
           {visibles.map((e) => (
                   <li key={e.id}>
                     <Link
