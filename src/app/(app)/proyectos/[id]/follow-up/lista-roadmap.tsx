@@ -31,6 +31,8 @@ export function ListaRoadmapCard({
   agarre,
   arrastrandoAlgo = false,
   onReprogramadas,
+  abrirPorDefecto = false,
+  tareaDestino,
 }: {
   lista: ListaRoadmapVista;
   sel: Set<string>;
@@ -49,9 +51,14 @@ export function ListaRoadmapCard({
   // Avisa cuántas tareas se reprogramaron, para que el tablero muestre el
   // toast: es uno solo para toda la pantalla.
   onReprogramadas?: (cantidad: number) => void;
+  // Se llegó a esta lista desde el Home: arranca desplegada, o la tarea
+  // buscada quedaría escondida detrás del plegado.
+  abrirPorDefecto?: boolean;
+  tareaDestino?: string;
 }) {
   // Plegadas por defecto: un roadmap largo se recorre primero por sus listas.
-  const [abierta, setAbierta] = useState(false);
+  // Salvo que se haya llegado acá buscando una tarea puntual.
+  const [abierta, setAbierta] = useState(abrirPorDefecto);
   const [renombrando, setRenombrando] = useState(false);
   const idContenido = useId();
 
@@ -262,6 +269,7 @@ export function ListaRoadmapCard({
                   seleccionada={sel.has(t.id)}
                   onToggle={onToggle}
                   agarre={dnd.agarre(t.id)}
+                  esDestino={t.id === tareaDestino}
                 />
               </div>
             </div>

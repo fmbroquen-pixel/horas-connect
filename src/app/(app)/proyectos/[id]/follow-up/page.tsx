@@ -16,10 +16,16 @@ import type { ListaRoadmapVista } from "./constantes";
 // propia); debajo, el plan de trabajo con sus listas.
 export default async function ProyectoRoadmapPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  // ?lista= y ?tarea= llegan desde "Próximas dos semanas" del Home. Son ids,
+  // no nombres: los nombres de tarea se repiten entre proyectos y entre
+  // trimestres ("Office Hours" aparece cuatro veces en un mismo plan).
+  searchParams: Promise<{ lista?: string; tarea?: string }>;
 }) {
   const { id } = await params;
+  const { lista: listaDestino, tarea: tareaDestino } = await searchParams;
   const acceso = await getAccesoProyecto(id);
   if (!acceso) notFound();
 
@@ -85,7 +91,12 @@ export default async function ProyectoRoadmapPage({
         tableroUrl={acceso.cliente.tableroUrl ?? ""}
       />
 
-      <RoadmapTablero clienteId={id} listas={vistas} />
+      <RoadmapTablero
+        clienteId={id}
+        listas={vistas}
+        listaDestino={listaDestino}
+        tareaDestino={tareaDestino}
+      />
     </div>
   );
 }

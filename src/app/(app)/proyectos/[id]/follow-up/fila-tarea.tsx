@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { actualizarCampoTarea, actualizarRangoTarea, eliminarTarea } from "./actions";
 import {
   GRID_ROADMAP,
@@ -20,6 +20,46 @@ import { claseResaltado, useResaltado } from "./resaltado";
 import { BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 import { SelectorPersonas } from "./selector-personas";
 
+// El contenedor con scroll más cercano hacia arriba. El plan vive dentro del
+// scroll del tablero, no del de la ventana.
+function contenedorScrolleable(el: HTMLElement | null): HTMLElement | null {
+  let p = el?.parentElement ?? null;
+  while (p) {
+    const overflow = getComputedStyle(p).overflowY;
+    if ((overflow === "auto" || overflow === "scroll") && p.scrollHeight > p.clientHeight) {
+      return p;
+    }
+    p = p.parentElement;
+  }
+  return null;
+}
+
+// Centra la fila en su contenedor.
+//
+// Dos decisiones que parecen detalles y no lo son:
+//
+// A mano y no con scrollIntoView, porque la pantalla entra con una animación
+// que aplica un `transform` a un ancestro y scrollIntoView, calculado en ese
+// momento, no movía nada: quedaba en scrollTop 0 con la fila mil píxeles más
+// abajo.
+//
+// Y salto instantáneo, no `behavior: "smooth"`: el scroll suave se anima
+// cuadro a cuadro, y una pestaña en segundo plano no emite cuadros. Abrir el
+// enlace en una pestaña nueva —que es exactamente lo que uno hace con una
+// lista de pendientes— dejaba el scroll encolado sin avanzar nunca, y al
+// volver a la pestaña el realce ya se había apagado. Además, al llegar desde
+// otra pantalla no hay nada que seguir con la vista: se aterriza.
+function centrarEnSuContenedor(fila: HTMLElement) {
+  const cont = contenedorScrolleable(fila);
+  if (!cont) {
+    fila.scrollIntoView({ block: "center" });
+    return;
+  }
+  const f = fila.getBoundingClientRect();
+  const c = cont.getBoundingClientRect();
+  cont.scrollTop += f.top - c.top - (c.height - f.height) / 2;
+}
+
 // Fila del plan con edición inline: cada celda se guarda sola al salir o con
 // Enter. Inicio y Fin son la excepción: siguen siendo dos columnas, pero se
 // editan desde un único calendario de rango y se guardan de una. Cualquier
@@ -30,6 +70,7 @@ export function FilaTareaRoadmap({
   seleccionada,
   onToggle,
   agarre,
+  esDestino = false,
 }: {
   tarea: TareaRoadmapFila;
   seleccionada: boolean;
@@ -41,6 +82,8 @@ export function FilaTareaRoadmap({
     onDragStart: (e: React.DragEvent) => void;
     onDragEnd: () => void;
   };
+  // Es la tarea a la que se llegó desde "Próximas dos semanas" del Home.
+  esDestino?: boolean;
 }) {
   // El calendario de rango se dibuja en un portal y tapa parte de la tabla:
   // con la fila marcada no se pierde de vista sobre qué tarea se está
@@ -53,6 +96,25 @@ export function FilaTareaRoadmap({
   const { resaltadoDe } = useResaltado();
   const resaltado = claseResaltado(resaltadoDe(tarea.id));
 
+  // Llegada desde el Home: centrar la fila y encenderla un momento. El plan
+  // puede tener 70 tareas dentro de un contenedor con scroll propio, así que
+  // sin esto "llegar a la tarea" seguía siendo buscarla a mano.
+  const filaRef = useRef<HTMLDivElement>(null);
+  const [destacada, setDestacada] = useState(esDestino);
+  useEffect(() => {
+    if (!esDestino) return;
+    // Un tick de espera: al montar, la animación de entrada de la pantalla
+    // todavía está corriendo y el layout no está firme.
+    const ir = setTimeout(() => {
+      if (filaRef.current) centrarEnSuContenedor(filaRef.current);
+    }, 60);
+    const apagar = setTimeout(() => setDestacada(false), 1600);
+    return () => {
+      clearTimeout(ir);
+      clearTimeout(apagar);
+    };
+  }, [esDestino]);
+
   const guardar = (campo: Parameters<typeof actualizarCampoTarea>[1]) =>
     async (valor: string) => actualizarCampoTarea(tarea.id, campo, valor);
 
@@ -61,7 +123,10 @@ export function FilaTareaRoadmap({
     // dos ocupa espacio: la fila no cambia de alto ni empuja a las de abajo
     // al abrir el calendario.
     <div
+      ref={filaRef}
       className={`border-b border-dc-line px-4 py-2 transition-colors duration-150 last:border-0 ${
+        destacada ? "dc-fila-destino" : ""
+      } ${
         editandoFechas
           ? "bg-dc-peri/[0.07] shadow-[inset_3px_0_0_0_var(--color-dc-peri)]"
           : ""

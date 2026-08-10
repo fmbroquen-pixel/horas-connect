@@ -22,6 +22,8 @@ const INPUT =
 export function RoadmapTablero(props: {
   clienteId: string;
   listas: ListaRoadmapVista[];
+  listaDestino?: string;
+  tareaDestino?: string;
 }) {
   // El provider envuelve TODO el tablero: las celdas que se resaltan están
   // tres niveles más abajo, y mover una lista reprograma tareas de otras.
@@ -35,9 +37,15 @@ export function RoadmapTablero(props: {
 function Tablero({
   clienteId,
   listas,
+  listaDestino,
+  tareaDestino,
 }: {
   clienteId: string;
   listas: ListaRoadmapVista[];
+  // Tarea a la que se llegó desde el Home: su lista se abre sola, la fila se
+  // centra y se enciende un momento.
+  listaDestino?: string;
+  tareaDestino?: string;
 }) {
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirmar, setConfirmar] = useState(false);
@@ -242,6 +250,10 @@ function Tablero({
                     agarre={dnd.agarre(lista.id)}
                     arrastrandoAlgo={dnd.activo}
                     onReprogramadas={avisar}
+                    abrirPorDefecto={lista.id === listaDestino}
+                    tareaDestino={
+                      lista.id === listaDestino ? tareaDestino : undefined
+                    }
                   />
                 </div>
               </div>

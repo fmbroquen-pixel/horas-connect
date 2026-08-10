@@ -7,6 +7,7 @@ import { InfoButton } from "@/components/info-button";
 export type EtapaProxima = {
   id: string;
   clienteId: string;
+  listaId: string;
   proyecto: string;
   tarea: string;
   fecha: string; // dd/mm
@@ -37,9 +38,15 @@ function IconoPersonas({ dos }: { dos: boolean }) {
 // y por eso el encabezado muestra la fecha de corte: que se lea distinta a la
 // del filtro de fechas es lo que evita la duda de si la card lo respeta.
 //
-// Cada ítem enlaza al Follow Up de su proyecto: la card no es un aviso, es
-// un punto de entrada al trabajo que se viene. La lista va ordenada por
-// fecha y sin cortes por semana; la urgencia la marca el color de la fecha.
+// Cada ítem enlaza a SU TAREA dentro del Follow Up del proyecto, no solo al
+// proyecto: la card no es un aviso, es un punto de entrada al trabajo que se
+// viene, y dejar a la persona en un plan de 70 tareas buscando cuál era no
+// es llegar. El enlace viaja con los ids de lista y tarea —nunca con los
+// nombres, que se repiten entre proyectos— y del otro lado la lista se abre,
+// la fila se centra y se enciende un momento.
+//
+// La lista va ordenada por fecha y sin cortes por semana; la urgencia la
+// marca el color de la fecha.
 export function EtapasProximas({
   etapas,
   hasta,
@@ -106,7 +113,7 @@ export function EtapasProximas({
           {visibles.map((e) => (
                   <li key={e.id}>
                     <Link
-                      href={`/proyectos/${e.clienteId}/follow-up`}
+                      href={`/proyectos/${e.clienteId}/follow-up?lista=${e.listaId}&tarea=${e.id}`}
                       className="flex items-center justify-between gap-3 rounded-lg px-1 py-2 text-sm transition hover:bg-dc-peri/10"
                     >
                       <span className="min-w-0">

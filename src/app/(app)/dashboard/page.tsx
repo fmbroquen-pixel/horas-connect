@@ -113,7 +113,9 @@ export default async function DashboardPage({
         nombre: true,
         fechaInicio: true,
         personas: true,
-        lista: { select: { clienteId: true, cliente: { select: { nombre: true } } } },
+        lista: {
+          select: { id: true, clienteId: true, cliente: { select: { nombre: true } } },
+        },
       },
     }),
     // Evolución del semáforo: para cada semana vale el último evento ocurrido
@@ -164,6 +166,7 @@ export default async function DashboardPage({
   const etapasProximas: EtapaProxima[] = tareasProximas.map((t) => ({
     id: t.id,
     clienteId: t.lista.clienteId,
+    listaId: t.lista.id,
     proyecto: t.lista.cliente.nombre,
     tarea: t.nombre,
     fecha: `${String(t.fechaInicio.getUTCDate()).padStart(2, "0")}/${String(
