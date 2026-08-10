@@ -62,7 +62,11 @@ export function EtapasProximas({
       : etapas.filter((e) => String(e.personas) === filtro);
 
   return (
-    <div className="flex min-h-0 flex-col rounded-2xl border border-dc-line bg-dc-card p-5">
+    // min-w-0 en la raíz: esta card es un grid item, y los grid items arrancan
+    // con min-width:auto, o sea que NO bajan del ancho mínimo de su contenido
+    // aunque el track mida menos. Sin esto la card se plantaba en su ancho
+    // natural y se salía de la columna.
+    <div className="flex min-h-0 min-w-0 flex-col rounded-2xl border border-dc-line bg-dc-card p-5">
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex items-baseline gap-1.5">
           <h2 className="text-base font-semibold text-white">Próximas dos semanas</h2>

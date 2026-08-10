@@ -307,7 +307,9 @@ export default async function DashboardPage({
               }`}
             >
               {MODULOS.cumpleanos && (
-              <div className="flex max-h-64 min-h-0 flex-col rounded-2xl border border-dc-line bg-dc-card p-5 lg:max-h-none">
+              // min-w-0 por lo mismo que Próximas dos semanas: es un grid item
+              // y sin esto no baja de su ancho mínimo de contenido.
+              <div className="flex max-h-64 min-h-0 min-w-0 flex-col rounded-2xl border border-dc-line bg-dc-card p-5 lg:max-h-none">
                 <h2 className="mb-3 shrink-0 text-base font-semibold text-white">
                   Cumpleaños de la semana
                 </h2>
