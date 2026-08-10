@@ -12,8 +12,16 @@ import {
   finTrasDiasHabiles,
   hoyUTC,
   isoDesdeFecha,
+  siguienteDiaHabil,
 } from "@/lib/dias-habiles";
-import { PLANTILLAS, getTareasEnOrden, resecuenciar, type DB } from "@/lib/roadmap";
+import {
+  PLANTILLAS,
+  escriturasDeSecuencia,
+  getTareasEnOrden,
+  planificar,
+  resecuenciar,
+  type DB,
+} from "@/lib/roadmap";
 import { SOLO_TAREAS_VIVAS, listasVivas, tareasVivas } from "@/lib/roadmap-papelera";
 import { ETIQUETA_ESTADO } from "./constantes";
 import type { EstadoTareaRoadmap } from "@/generated/prisma/client";
@@ -466,21 +474,59 @@ export async function actualizarRangoTarea(
 
 // ── Reordenar ─────────────────────────────────────────────────────────────
 
+// Reencadena sobre un orden que TODAVÍA no está en la base. calcularSecuencia
+// lee el plan tal como está guardado, así que acá se le arma el plan nuevo a
+// mano: mismas tareas, en el orden que eligió la persona.
+async function calcularSecuenciaConOrden(
+  clienteId: string,
+  idsEnOrden: string[],
+  anclaId: string | undefined,
+): Promise<{ id: string; fechaInicio: Date; fechaFin: Date }[]> {
+  const tareas = await getTareasEnOrden(clienteId);
+  const porId = new Map(tareas.map((t) => [t.id, t]));
+  const plan = idsEnOrden.map((id) => porId.get(id)!).filter(Boolean);
+  if (plan.length === 0) return [];
+
+  const indice = anclaId ? plan.findIndex((t) => t.id === anclaId) : -1;
+  const desde = indice >= 0 ? indice : 0;
+  const inicio =
+    indice >= 0 ? plan[desde].fechaInicio : await inicioDelPlan(clienteId);
+
+  const fechas = planificar(plan, desde, inicio);
+  return fechas.flatMap(({ fechaInicio, fechaFin }, i) => {
+    const t = plan[desde + i];
+    const igual =
+      t.fechaInicio.getTime() === fechaInicio.getTime() &&
+      t.fechaFin.getTime() === fechaFin.getTime();
+    return igual ? [] : [{ id: t.id, fechaInicio, fechaFin }];
+  });
+}
+
+// Arranque del plan cuando no hay ancla: la fecha de inicio del contrato o el
+// próximo día hábil.
+async function inicioDelPlan(clienteId: string): Promise<Date> {
+  const cliente = await prisma.cliente.findUnique({
+    where: { id: clienteId },
+    select: { fechaInicio: true },
+  });
+  return siguienteDiaHabil(cliente?.fechaInicio ?? hoyUTC());
+}
+
 // Después de mover algo, las fechas de lo que sigue cambian: el plan es
 // secuencial y el orden ES la dependencia. Se reencadena desde el primer
 // lugar donde la secuencia difiere de como estaba, así todo lo anterior al
 // movimiento conserva las fechas que alguien puso a mano.
-async function reencadenarTrasMover(
-  clienteId: string,
-  antes: string[],
-  tx: DB,
-): Promise<void> {
-  const despues = (await getTareasEnOrden(clienteId, tx)).map((t) => t.id);
+//
+// El ancla se calcula sobre el orden NUEVO, que todavía no está escrito: se
+// simula en memoria a partir de los ids que mandó el cliente. Así todo el
+// trabajo de decisión ocurre antes de tocar la base, y las escrituras salen
+// juntas en un solo viaje.
+function anclaDelCambio(antes: string[], despues: string[]): string | undefined {
   let i = 0;
   while (i < antes.length && i < despues.length && antes[i] === despues[i]) i++;
   // i === 0 significa que se movió la primera tarea del plan: no hay ancla y
   // se replanifica desde el arranque del proyecto.
-  await resecuenciar(clienteId, i > 0 ? despues[i - 1] : undefined, undefined, tx);
+  return i > 0 ? despues[i - 1] : undefined;
 }
 
 // Nuevo orden de las listas del proyecto. Recibe la lista completa de ids en
@@ -493,24 +539,42 @@ export async function reordenarListas(
   await requireAcceso(clienteId);
   if (idsEnOrden.length === 0) return;
 
-  await enSecuencia(async (tx) => {
-    const actuales = await tx.listaRoadmap.findMany({
-      where: listasVivas({ clienteId }),
-      select: { id: true },
-    });
-    const validos = new Set(actuales.map((l) => l.id));
-    // Se ignoran ids ajenos o ya eliminados: la acción es una entrada pública.
-    const orden = idsEnOrden.filter((id) => validos.has(id));
-    if (orden.length !== actuales.length) return;
-
-    const antes = (await getTareasEnOrden(clienteId, tx)).map((t) => t.id);
-
-    for (const [i, id] of orden.entries()) {
-      await tx.listaRoadmap.update({ where: { id }, data: { orden: i } });
-    }
-
-    await reencadenarTrasMover(clienteId, antes, tx);
+  const listas = await prisma.listaRoadmap.findMany({
+    where: listasVivas({ clienteId }),
+    orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
+    include: {
+      tareas: {
+        where: SOLO_TAREAS_VIVAS,
+        orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
+        select: { id: true },
+      },
+    },
   });
+  const validos = new Set(listas.map((l) => l.id));
+  // Se ignoran ids ajenos o ya eliminados: la acción es una entrada pública.
+  const orden = idsEnOrden.filter((id) => validos.has(id));
+  if (orden.length !== listas.length) return;
+
+  const antes = listas.flatMap((l) => l.tareas.map((t) => t.id));
+  const despues = orden.flatMap(
+    (id) => listas.find((l) => l.id === id)!.tareas.map((t) => t.id),
+  );
+  const ancla = anclaDelCambio(antes, despues);
+  if (antes.join() === despues.join() && orden.join() === listas.map((l) => l.id).join()) {
+    return;
+  }
+
+  // Las fechas se calculan sobre el orden nuevo simulado en memoria, no
+  // releyendo la base entre escritura y escritura.
+  const cambios = await calcularSecuenciaConOrden(clienteId, despues, ancla);
+
+  // Un solo viaje: los órdenes de las listas y todas las fechas juntas.
+  await prisma.$transaction([
+    ...orden.map((id, i) =>
+      prisma.listaRoadmap.update({ where: { id }, data: { orden: i } }),
+    ),
+    ...escriturasDeSecuencia(cambios),
+  ]);
 
   revalidar();
 }
@@ -524,23 +588,32 @@ export async function reordenarTareas(
   const lista = await listaConAcceso(listaId);
   if (!lista || idsEnOrden.length === 0) return;
 
-  await enSecuencia(async (tx) => {
-    const actuales = await tx.tareaRoadmap.findMany({
-      where: { ...SOLO_TAREAS_VIVAS, listaId },
-      select: { id: true },
-    });
-    const validos = new Set(actuales.map((t) => t.id));
-    const orden = idsEnOrden.filter((id) => validos.has(id));
-    if (orden.length !== actuales.length) return;
-
-    const antes = (await getTareasEnOrden(lista.clienteId, tx)).map((t) => t.id);
-
-    for (const [i, id] of orden.entries()) {
-      await tx.tareaRoadmap.update({ where: { id }, data: { orden: i } });
-    }
-
-    await reencadenarTrasMover(lista.clienteId, antes, tx);
+  const antesTodo = (await getTareasEnOrden(lista.clienteId)).map((t) => t.id);
+  const deLaLista = await prisma.tareaRoadmap.findMany({
+    where: { ...SOLO_TAREAS_VIVAS, listaId },
+    orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
+    select: { id: true },
   });
+  const validos = new Set(deLaLista.map((t) => t.id));
+  const orden = idsEnOrden.filter((id) => validos.has(id));
+  if (orden.length !== deLaLista.length) return;
+  if (orden.join() === deLaLista.map((t) => t.id).join()) return;
+
+  // La secuencia nueva del proyecto: el mismo plan de antes, con el tramo de
+  // esta lista reemplazado por el orden elegido.
+  const enLista = new Set(orden);
+  let k = 0;
+  const despues = antesTodo.map((id) => (enLista.has(id) ? orden[k++] : id));
+
+  const ancla = anclaDelCambio(antesTodo, despues);
+  const cambios = await calcularSecuenciaConOrden(lista.clienteId, despues, ancla);
+
+  await prisma.$transaction([
+    ...orden.map((id, i) =>
+      prisma.tareaRoadmap.update({ where: { id }, data: { orden: i } }),
+    ),
+    ...escriturasDeSecuencia(cambios),
+  ]);
 
   revalidar();
 }

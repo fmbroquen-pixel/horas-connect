@@ -61,10 +61,16 @@ export function ListaRoadmapCard({
   // Reordenar tareas dentro de esta lista. El agarre es la celda del
   // checkbox: la columna de la izquierda no tiene nada que editar, así que
   // arrastrar desde ahí no compite con el nombre, las fechas ni los botones.
-  const [reordenando, startReorden] = useTransition();
+  const [, startReorden] = useTransition();
   const dnd = useReordenable(ids, (orden) =>
     startReorden(() => reordenarTareas(lista.id, orden)),
   );
+  // Igual que las listas: se dibuja según el orden del hook para que la fila
+  // se mueva en el acto y no cuando vuelva el servidor.
+  const tareaPorId = new Map(lista.tareas.map((t) => [t.id, t]));
+  const tareasEnPantalla = dnd.orden
+    .map((id) => tareaPorId.get(id))
+    .filter(Boolean) as typeof lista.tareas;
 
   return (
     <section className="dc-panel overflow-hidden">
@@ -218,7 +224,7 @@ export function ListaRoadmapCard({
             <span />
           </div>
 
-          {lista.tareas.map((t) => (
+          {tareasEnPantalla.map((t) => (
             <div key={t.id} {...dnd.zona(t.id)} className="relative">
               {/* Línea de destino: marca dónde va a caer la tarea que se
                   arrastra. Absoluta, así no empuja la fila ni cambia altos. */}
@@ -230,7 +236,7 @@ export function ListaRoadmapCard({
               )}
               <div
                 className={`transition-opacity ${
-                  dnd.arrastrada(t.id) || reordenando ? "opacity-40" : ""
+                  dnd.arrastrada(t.id) ? "opacity-40" : ""
                 }`}
               >
                 <FilaTareaRoadmap

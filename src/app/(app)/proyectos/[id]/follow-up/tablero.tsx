@@ -39,6 +39,10 @@ export function RoadmapTablero({
     listas.map((l) => l.id),
     (orden) => start(() => reordenarListas(clienteId, orden)),
   );
+  // Se dibuja según el orden del hook, no según el de las props: mientras el
+  // servidor guarda y recalcula fechas, la lista ya se ve donde la soltaron.
+  const porId = new Map(listas.map((l) => [l.id, l]));
+  const enPantalla = dnd.orden.map((id) => porId.get(id)).filter(Boolean) as typeof listas;
 
   const toggle = (id: string) =>
     setSel((s) => {
@@ -173,7 +177,7 @@ export function RoadmapTablero({
       <div className="min-h-0 flex-1 overflow-hidden rounded-2xl">
         <div className="h-full overflow-auto overscroll-contain">
           <div className="min-w-[880px] space-y-4">
-            {listas.map((lista) => (
+            {enPantalla.map((lista) => (
               <div key={lista.id} {...dnd.zona(lista.id)} className="relative">
                 {/* Línea de destino: marca dónde va a caer la lista que se
                     arrastra. Es absoluta para no empujar nada. */}

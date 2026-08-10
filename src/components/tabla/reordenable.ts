@@ -30,6 +30,9 @@ export type Reordenable = {
   // true cuando el ítem que se arrastra caería justo ANTES de este.
   marcaAntes: (id: string) => boolean;
   activo: boolean;
+  // Orden a dibujar: el optimista mientras el servidor confirma, o el del
+  // servidor. El llamador ordena sus ítems por esto.
+  orden: string[];
 };
 
 // El cálculo del orden final, aparte del hook para poder probarlo: saca el
@@ -56,6 +59,22 @@ export function useReordenable(
 ): Reordenable {
   const [origen, setOrigen] = useState<string | null>(null);
   const [destino, setDestino] = useState<string | null>(null);
+  // Orden mostrado mientras el servidor confirma. El plan es secuencial:
+  // guardar el orden nuevo implica además recalcular las fechas de todo lo
+  // que sigue, y eso tarda. Sin esto la fila se quedaba quieta hasta que
+  // volvía la respuesta y parecía que el arrastre no había hecho nada.
+  const [optimista, setOptimista] = useState<string[] | null>(null);
+
+  // Cuando llega el orden del servidor, manda él: si coincide con lo que ya
+  // se mostraba el usuario no ve ningún salto, y si el servidor rechazó el
+  // movimiento la lista vuelve sola a la verdad.
+  const [ultimoServidor, setUltimoServidor] = useState(ids);
+  if (ids.join() !== ultimoServidor.join()) {
+    setUltimoServidor(ids);
+    setOptimista(null);
+  }
+
+  const visibles = optimista ?? ids;
 
   const soltar = (sobre: string) => {
     const desde = origen;
@@ -65,8 +84,10 @@ export function useReordenable(
 
     // Solo se avisa si el orden cambió de verdad: soltar en el mismo lugar no
     // tiene por qué disparar una escritura ni un recálculo de fechas.
-    const orden = moverEnOrden(ids, desde, sobre);
-    if (orden) onReordenar(orden);
+    const orden = moverEnOrden(visibles, desde, sobre);
+    if (!orden) return;
+    setOptimista(orden);
+    onReordenar(orden);
   };
 
   return {
@@ -97,6 +118,7 @@ export function useReordenable(
         soltar(id);
       },
     }),
+    orden: visibles,
     arrastrada: (id) => origen === id,
     marcaAntes: (id) => destino === id && origen !== null && origen !== id,
     activo: origen !== null,
