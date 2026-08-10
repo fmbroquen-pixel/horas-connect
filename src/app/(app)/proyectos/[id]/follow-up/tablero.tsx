@@ -214,18 +214,33 @@ function Tablero({
           se le come el redondeo arriba y abajo. */}
       <div className="min-h-0 flex-1 overflow-hidden rounded-2xl">
         <div className="h-full overflow-auto overscroll-contain">
-          {/* El padding de arriba existe SOLO mientras se arrastra. Arriba de
-              la primera lista no hay hueco —el contenido del scroll empieza
+          {/* El hueco de arriba existe SOLO mientras se arrastra. Arriba de la
+              primera lista no hay separación —el contenido del scroll empieza
               ahí mismo—, así que la línea de esa posición no tenía dónde
               dibujarse: pegada al borde quedaba aplastada contra la barra de
               herramientas, y 8px más arriba caía fuera de la caja de contenido
               y la recortaba el scroll.
 
-              Con pt-4 durante el arrastre, esa posición pasa a tener el mismo
-              hueco de 16px que hay entre dos listas, y la línea se dibuja
-              igual que todas las demás. Al soltar, el espacio se va: el plan
-              en reposo no cambia. */}
-          <div className={`min-w-[880px] space-y-4 ${dnd.activo ? "pt-4" : ""}`}>
+              El hueco es padding y la franja que lo cubre es un elemento
+              aparte, con sus propios handlers. Las dos cosas hacen falta: el
+              padding es espacio del contenedor y no pertenece a ningún ítem,
+              y soltar sobre espacio suelto no dispara ningún drop. Con solo
+              el padding, la línea se dibujaba —la pintaba un dragover
+              anterior— pero el gesto terminaba en nada.
+
+              La franja va absoluta para no ocupar lugar: si fuera un hijo más,
+              space-y-4 le sumaría su propio margen y el hueco quedaría del
+              doble. Al soltar, padding y franja desaparecen: el plan en
+              reposo no cambia. */}
+          <div className={`relative min-w-[880px] ${dnd.activo ? "pt-4" : ""}`}>
+            {dnd.activo && (
+              <div
+                {...dnd.zonaAntesDeTodo()}
+                aria-hidden
+                className="absolute inset-x-0 top-0 z-10 h-4"
+              />
+            )}
+            <div className="space-y-4">
             {enPantalla.map((lista) => (
               <div key={lista.id} {...dnd.zona(lista.id)} className="relative">
                 {/* Líneas de destino: marcan dónde va a caer la lista que se
@@ -282,6 +297,7 @@ function Tablero({
             {/* Agregar va siempre al final del plan, después de la última
                 lista. */}
             <NuevaListaBoton clienteId={clienteId} />
+            </div>
           </div>
         </div>
       </div>

@@ -42,6 +42,17 @@ export type Reordenable = {
     onDragOver: (e: React.DragEvent) => void;
     onDrop: (e: React.DragEvent) => void;
   };
+  // Zona para el borde de ARRIBA de todo. Apunta a una posición fija en vez de
+  // a un ítem, porque ahí no hay ítem anterior al que apuntar.
+  //
+  // Hace falta una zona propia y no alcanza con dejar un hueco: un hueco es
+  // espacio del contenedor, no de ningún ítem, y soltar sobre espacio suelto
+  // no dispara ningún drop. La línea se dibujaba igual —la había pintado un
+  // dragover anterior— y el gesto terminaba en nada.
+  zonaAntesDeTodo: () => {
+    onDragOver: (e: React.DragEvent) => void;
+    onDrop: (e: React.DragEvent) => void;
+  };
   // Para el feedback visual.
   arrastrada: (id: string) => boolean;
   // La línea va justo ARRIBA de este ítem.
@@ -177,6 +188,22 @@ export function useReordenable(
         if (i === null) return;
         if (i !== destino) setDestino(i);
         if (apuntado !== id) setApuntado(id);
+      },
+      onDrop: (e) => {
+        e.preventDefault();
+        soltar();
+      },
+    }),
+    zonaAntesDeTodo: () => ({
+      onDragOver: (e) => {
+        if (!origen) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        // Posición 0 fija. La marca se le pide al primer ítem para que la
+        // línea salga en el mismo lugar y con el mismo dibujo que siempre.
+        if (destino !== 0) setDestino(0);
+        const primero = visibles[0];
+        if (primero && apuntado !== primero) setApuntado(primero);
       },
       onDrop: (e) => {
         e.preventDefault();
