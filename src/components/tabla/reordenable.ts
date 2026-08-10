@@ -65,6 +65,18 @@ export function indiceSegunDireccion(
   return indiceApuntado < indiceOrigen ? indiceApuntado : indiceApuntado + 1;
 }
 
+// De qué lado del ítem apuntado va la línea indicadora. Aparte del hook para
+// poder probar lo que importa de verdad: que la línea marque el mismo borde
+// donde el ítem va a terminar cayendo.
+export function ladoDeMarca(
+  indiceDestino: number,
+  indiceApuntado: number,
+): "antes" | "despues" | null {
+  if (indiceDestino === indiceApuntado) return "antes";
+  if (indiceDestino === indiceApuntado + 1) return "despues";
+  return null;
+}
+
 // Mueve `desde` a la posición `indiceDestino`, expresada sobre la lista tal
 // como está ANTES de sacar el elemento. Devuelve null si no hay cambio real.
 // Aparte del hook para poder probarla.
@@ -172,8 +184,14 @@ export function useReordenable(
       },
     }),
     arrastrada: (id) => origen === id,
-    marcaAntes: (id) => apuntado === id && destino === visibles.indexOf(id),
-    marcaDespues: (id) => apuntado === id && destino === visibles.indexOf(id) + 1,
+    marcaAntes: (id) =>
+      apuntado === id &&
+      destino !== null &&
+      ladoDeMarca(destino, visibles.indexOf(id)) === "antes",
+    marcaDespues: (id) =>
+      apuntado === id &&
+      destino !== null &&
+      ladoDeMarca(destino, visibles.indexOf(id)) === "despues",
     activo: origen !== null,
   };
 }

@@ -215,18 +215,25 @@ function Tablero({
       <div className="min-h-0 flex-1 overflow-hidden rounded-2xl">
         <div className="h-full overflow-auto overscroll-contain">
           <div className="min-w-[880px] space-y-4">
-            {enPantalla.map((lista) => (
+            {enPantalla.map((lista, i) => (
               <div key={lista.id} {...dnd.zona(lista.id)} className="relative">
                 {/* Líneas de destino: marcan dónde va a caer la lista que se
                     arrastra. Absolutas, para no empujar nada.
 
-                    La de abajo solo la dibuja la última: cualquier otro borde
-                    ya lo pinta la línea de arriba de la lista siguiente. Es
-                    lo que hace alcanzable la última posición. */}
+                    Van centradas en el hueco de 16px que separa las tarjetas,
+                    8px afuera del borde. Arriba de la PRIMERA ese hueco no
+                    existe: esos 8px caen fuera de la caja de contenido del
+                    scroll, que los recorta, y la primera posición se quedaba
+                    sin indicador. Ahí la línea se dibuja pegada por dentro.
+
+                    Abajo de la última no hace falta: siempre queda el hueco
+                    contra el botón de agregar, que se dibuja después. */}
                 {dnd.marcaAntes(lista.id) && (
                   <span
                     aria-hidden
-                    className="pointer-events-none absolute -top-2 left-0 right-0 h-0.5 rounded-full bg-dc-peri shadow-[0_0_8px_var(--color-dc-peri)]"
+                    className={`pointer-events-none absolute left-0 right-0 h-0.5 rounded-full bg-dc-peri shadow-[0_0_8px_var(--color-dc-peri)] ${
+                      i === 0 ? "top-0" : "-top-2"
+                    }`}
                   />
                 )}
                 {dnd.marcaDespues(lista.id) && (

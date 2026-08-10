@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { indiceSegunDireccion, moverAIndice } from "./reordenable";
+import { indiceSegunDireccion, ladoDeMarca, moverAIndice } from "./reordenable";
 
 // El índice de destino se expresa sobre la lista ANTES de sacar el elemento:
 // 0 = antes de todo, n = después del último.
@@ -122,6 +122,19 @@ describe("indiceSegunDireccion", () => {
     expect(moverAIndice(tres, "C", indiceSegunDireccion(1, 2))).toEqual(["A", "C", "B"]);
   });
 
+  it("siempre hay un lado marcado", () => {
+    // Si `ladoDeMarca` devolviera null no se dibujaría ninguna línea y el
+    // arrastre quedaría sin feedback, que es el bug de la primera posición
+    // visto desde la lógica.
+    const ids = ["A", "B", "C", "D"];
+    for (let origen = 0; origen < ids.length; origen++) {
+      for (let apuntado = 0; apuntado < ids.length; apuntado++) {
+        const destino = indiceSegunDireccion(apuntado, origen);
+        expect(ladoDeMarca(destino, apuntado)).not.toBeNull();
+      }
+    }
+  });
+
   it("apuntar a cualquier vecino siempre mueve", () => {
     // La garantía que rompía la zona muerta: ningún ítem apuntado, salvo uno
     // mismo, puede terminar en "no pasa nada".
@@ -133,5 +146,42 @@ describe("indiceSegunDireccion", () => {
         else expect(r).not.toBeNull();
       }
     }
+  });
+});
+
+describe("la línea marca el borde donde el ítem termina cayendo", () => {
+  // La promesa del feedback: donde se dibuja la línea es exactamente donde
+  // queda el ítem al soltar. Si alguna vez dejaran de coincidir, el arrastre
+  // seguiría funcionando pero mentiría.
+  const coincide = (ids: string[]) => {
+    for (const origen of ids) {
+      for (const apuntado of ids) {
+        if (apuntado === origen) continue;
+        const iApuntado = ids.indexOf(apuntado);
+        const destino = indiceSegunDireccion(iApuntado, ids.indexOf(origen));
+        const lado = ladoDeMarca(destino, iApuntado);
+        const orden = moverAIndice(ids, origen, destino);
+        expect(orden).not.toBeNull();
+        const final = orden!.indexOf(origen);
+        const vecino = orden!.indexOf(apuntado);
+        expect({ lado, distancia: final - vecino }).toEqual({
+          lado,
+          distancia: lado === "antes" ? -1 : 1,
+        });
+      }
+    }
+  };
+
+  it("con dos listas", () => coincide(["A", "B"]));
+  it("con tres listas", () => coincide(["A", "B", "C"]));
+  it("con cinco listas", () => coincide(["A", "B", "C", "D", "E"]));
+
+  it("la última apuntando a la primera marca ARRIBA de la primera", () => {
+    // El caso del bug: la línea que no se veía. Se dibuja antes de la
+    // primera lista y ahí es donde cae.
+    const ids = ["A", "B", "C"];
+    const destino = indiceSegunDireccion(0, 2);
+    expect(ladoDeMarca(destino, 0)).toBe("antes");
+    expect(moverAIndice(ids, "C", destino)).toEqual(["C", "A", "B"]);
   });
 });
