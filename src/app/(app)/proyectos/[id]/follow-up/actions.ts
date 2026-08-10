@@ -428,48 +428,57 @@ export async function actualizarRangoTarea(
   tareaId: string,
   inicioISO: string,
   finISO: string,
-): Promise<Resultado> {
+): Promise<Resultado & Reprogramacion> {
   const tarea = await tareaConAcceso(tareaId);
-  if (!tarea) return { error: "Tarea inexistente." };
+  if (!tarea) return { error: "Tarea inexistente.", recalculadas: [] };
 
   const patron = /^\d{4}-\d{2}-\d{2}$/;
   if (!patron.test(inicioISO) || !patron.test(finISO)) {
-    return { error: "Fecha inválida." };
+    return { error: "Fecha inválida.", recalculadas: [] };
   }
 
   const fechaInicio = fechaDesdeISO(inicioISO);
   const fechaFin = fechaDesdeISO(finISO);
   if (fechaFin < fechaInicio) {
-    return { error: "El fin no puede ser anterior al inicio." };
+    return { error: "El fin no puede ser anterior al inicio.", recalculadas: [] };
   }
   // El calendario ya deshabilita sábados y domingos, pero la action es una
   // entrada pública: se valida igual.
   if (!esDiaHabil(fechaInicio) || !esDiaHabil(fechaFin)) {
-    return { error: "Las tareas solo pueden empezar y terminar en días hábiles." };
+    return {
+      error: "Las tareas solo pueden empezar y terminar en días hábiles.",
+      recalculadas: [],
+    };
   }
 
   // Mínimo un día hábil: una tarea que empieza y termina el mismo día dura 1.
   const duracionDias = Math.max(1, diasHabilesEntre(fechaInicio, fechaFin));
+  // El fin se recalcula en vez de guardarse tal cual: la aritmética de días
+  // hábiles es la que manda sobre la cadena.
+  const finReal = finTrasDiasHabiles(fechaInicio, duracionDias);
 
-  await enSecuencia(async (tx) => {
+  // Si las fechas quedan iguales a las que ya tenía, esta tarea no entra en la
+  // cuenta: el toast diría "1 tarea" sin que nada se haya movido.
+  const cambioLaEditada =
+    tarea.fechaInicio.getTime() !== fechaInicio.getTime() ||
+    tarea.fechaFin.getTime() !== finReal.getTime();
+
+  const dependientes = await enSecuencia(async (tx) => {
     await tx.tareaRoadmap.update({
       where: { id: tareaId },
-      data: {
-        fechaInicio,
-        duracionDias,
-        // Se recalcula en vez de guardar el fin tal cual: la aritmética de
-        // días hábiles es la que manda sobre la cadena.
-        fechaFin: finTrasDiasHabiles(fechaInicio, duracionDias),
-      },
+      data: { fechaInicio, duracionDias, fechaFin: finReal },
     });
 
     // Ancla en esta tarea: lo anterior queda quieto, lo posterior se
-    // reencadena.
-    await resecuenciar(tarea.lista.clienteId, tareaId, undefined, tx);
+    // reencadena. El ancla nunca vuelve entre las cambiadas —ya quedó con sus
+    // fechas nuevas y compara igual—, así que se suma aparte.
+    return resecuenciar(tarea.lista.clienteId, tareaId, undefined, tx);
   });
 
   revalidar();
-  return {};
+  return {
+    recalculadas: [...(cambioLaEditada ? [tareaId] : []), ...dependientes],
+  };
 }
 
 // ── Reordenar ─────────────────────────────────────────────────────────────

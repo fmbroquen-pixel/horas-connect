@@ -71,10 +71,14 @@ export function FilaTareaRoadmap({
   onToggle,
   agarre,
   esDestino = false,
+  onReprogramadas,
 }: {
   tarea: TareaRoadmapFila;
   seleccionada: boolean;
   onToggle: (id: string) => void;
+  // Cuántas tareas quedaron reprogramadas al editar estas fechas. Sube hasta
+  // el tablero, que es el que muestra el toast: hay uno solo para la pantalla.
+  onReprogramadas?: (cantidad: number) => void;
   // Props de arrastre para la celda del checkbox. Las pone la lista, que es
   // la que conoce el orden completo de sus tareas.
   agarre?: {
@@ -93,7 +97,7 @@ export function FilaTareaRoadmap({
 
   // Realce temporal cuando esta tarea acaba de ser reprogramada: fuerte si es
   // la que se movió, tenue si cambió por dependencia.
-  const { resaltadoDe } = useResaltado();
+  const { resaltadoDe, marcarReprogramacion } = useResaltado();
   const resaltado = claseResaltado(resaltadoDe(tarea.id));
 
   // Llegada desde el Home: centrar la fila y encenderla un momento. El plan
@@ -119,6 +123,18 @@ export function FilaTareaRoadmap({
 
   const guardar = (campo: Parameters<typeof actualizarCampoTarea>[1]) =>
     async (valor: string) => actualizarCampoTarea(tarea.id, campo, valor);
+
+  // Editar las fechas a mano es una reprogramación igual que arrastrar la
+  // tarea: corre la cadena de todo lo que viene después. Así que se avisa
+  // igual —esta tarea con el realce fuerte por ser la causa, las arrastradas
+  // por dependencia con el tenue— y con el mismo toast.
+  const guardarRango = async (r: { inicio: string; fin: string }) => {
+    const res = await actualizarRangoTarea(tarea.id, r.inicio, r.fin);
+    if (res.error) return res;
+    marcarReprogramacion([tarea.id], res.recalculadas);
+    onReprogramadas?.(res.recalculadas.length);
+    return res;
+  };
 
   return (
     // El realce es fondo + una barra lateral por inset shadow. Ninguno de los
@@ -170,7 +186,7 @@ export function FilaTareaRoadmap({
 
         <RangoFechas
           rango={{ inicio: tarea.fechaInicio, fin: tarea.fechaFin }}
-          onGuardar={(r) => actualizarRangoTarea(tarea.id, r.inicio, r.fin)}
+          onGuardar={guardarRango}
           mostrar={mostrarFechaISO}
           onAbiertoChange={setEditandoFechas}
           resaltado={resaltado}

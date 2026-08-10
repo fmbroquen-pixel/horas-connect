@@ -204,14 +204,17 @@ export function escriturasDeSecuencia(
   );
 }
 
+// Devuelve los ids de las tareas cuyas fechas cambiaron. Quien reprograma
+// necesita saberlo para resaltarlas y avisar cuántas fueron: sin ese dato,
+// correr veinte fechas de golpe se ve igual que no hacer nada.
 export async function resecuenciar(
   clienteId: string,
   anclaId?: string,
   inicioForzado?: Date,
   db: DB = prisma,
-): Promise<void> {
+): Promise<string[]> {
   const tareas = await getTareasEnOrden(clienteId, db);
-  if (tareas.length === 0) return;
+  if (tareas.length === 0) return [];
 
   const indice = anclaId ? tareas.findIndex((t) => t.id === anclaId) : -1;
   const desde = indice >= 0 ? indice : 0;
@@ -224,17 +227,20 @@ export async function resecuenciar(
   // En serie sobre `db` y no en un $transaction propio: cuando esto corre
   // dentro de una transacción abrir otra no está permitido, y cuando corre
   // suelto el llamador ya decidió que no la necesita.
+  const cambiadas: string[] = [];
   for (const [i, { fechaInicio, fechaFin }] of plan.entries()) {
     const tarea = tareas[desde + i];
     const igual =
       tarea.fechaInicio.getTime() === fechaInicio.getTime() &&
       tarea.fechaFin.getTime() === fechaFin.getTime();
     if (igual) continue;
+    cambiadas.push(tarea.id);
     await db.tareaRoadmap.update({
       where: { id: tarea.id },
       data: { fechaInicio, fechaFin },
     });
   }
+  return cambiadas;
 }
 
 // Arranque del plan: la fecha de inicio del contrato si está cargada; si no,

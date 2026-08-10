@@ -270,6 +270,7 @@ export function ListaRoadmapCard({
                   onToggle={onToggle}
                   agarre={dnd.agarre(t.id)}
                   esDestino={t.id === tareaDestino}
+                  onReprogramadas={onReprogramadas}
                 />
               </div>
             </div>
