@@ -212,6 +212,43 @@ input[type="number"]::-webkit-inner-spin-button {
   }
 }
 
+/* Feedback de reprogramación: cuando mover una tarea recalcula las fechas de
+   las que siguen, sus celdas se encienden un momento en violeta y se apagan
+   solas. Dos intensidades: la tarea que se movió es la causa del cambio y va
+   más fuerte; las que se recalcularon por dependencia, más tenue.
+
+   Es solo text-shadow, como el resto de los realces de la tabla: no ocupa
+   espacio, así que la grilla no se mueve. `both` deja el estado final
+   (sin sombra) al terminar. */
+@keyframes dc-recalculo {
+  0% {
+    text-shadow:
+      0 0 10px rgba(139, 140, 255, 0.95),
+      0 0 24px rgba(139, 140, 255, 0.7);
+  }
+  60% {
+    text-shadow:
+      0 0 10px rgba(139, 140, 255, 0.75),
+      0 0 24px rgba(139, 140, 255, 0.5);
+  }
+  100% {
+    text-shadow: none;
+  }
+}
+.dc-recalculo {
+  animation: dc-recalculo 1.3s ease-out both;
+}
+.dc-recalculo-suave {
+  animation: dc-recalculo 1.3s ease-out both;
+  opacity: 0.85;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dc-recalculo,
+  .dc-recalculo-suave {
+    animation: none;
+  }
+}
+
 /* Transición de entrada al cambiar de solapa. */
 @keyframes dc-page-in {
   from {

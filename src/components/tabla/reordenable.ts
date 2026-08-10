@@ -55,7 +55,9 @@ export function moverEnOrden(
 
 export function useReordenable(
   ids: string[],
-  onReordenar: (idsEnOrden: string[]) => void,
+  // Recibe el orden final y CUÁL se movió: quien reordena suele necesitar
+  // distinguir la causa del cambio de sus consecuencias.
+  onReordenar: (idsEnOrden: string[], movidoId: string) => void,
 ): Reordenable {
   const [origen, setOrigen] = useState<string | null>(null);
   const [destino, setDestino] = useState<string | null>(null);
@@ -87,7 +89,7 @@ export function useReordenable(
     const orden = moverEnOrden(visibles, desde, sobre);
     if (!orden) return;
     setOptimista(orden);
-    onReordenar(orden);
+    onReordenar(orden, desde);
   };
 
   return {

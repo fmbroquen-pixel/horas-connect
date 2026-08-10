@@ -532,12 +532,17 @@ function anclaDelCambio(antes: string[], despues: string[]): string | undefined 
 // Nuevo orden de las listas del proyecto. Recibe la lista completa de ids en
 // el orden final —no un "moví esto acá"— porque así el servidor no tiene que
 // reconstruir la intención y el resultado es el mismo que se vio en pantalla.
+// Devuelve los ids de las tareas cuyas fechas cambiaron: la pantalla las
+// resalta un momento y avisa cuántas fueron. Sin ese dato, reprogramar veinte
+// tareas de golpe se ve igual que no hacer nada.
+export type Reprogramacion = { recalculadas: string[] };
+
 export async function reordenarListas(
   clienteId: string,
   idsEnOrden: string[],
-): Promise<void> {
+): Promise<Reprogramacion> {
   await requireAcceso(clienteId);
-  if (idsEnOrden.length === 0) return;
+  if (idsEnOrden.length === 0) return { recalculadas: [] };
 
   const listas = await prisma.listaRoadmap.findMany({
     where: listasVivas({ clienteId }),
@@ -553,7 +558,7 @@ export async function reordenarListas(
   const validos = new Set(listas.map((l) => l.id));
   // Se ignoran ids ajenos o ya eliminados: la acción es una entrada pública.
   const orden = idsEnOrden.filter((id) => validos.has(id));
-  if (orden.length !== listas.length) return;
+  if (orden.length !== listas.length) return { recalculadas: [] };
 
   const antes = listas.flatMap((l) => l.tareas.map((t) => t.id));
   const despues = orden.flatMap(
@@ -561,7 +566,7 @@ export async function reordenarListas(
   );
   const ancla = anclaDelCambio(antes, despues);
   if (antes.join() === despues.join() && orden.join() === listas.map((l) => l.id).join()) {
-    return;
+    return { recalculadas: [] };
   }
 
   // Las fechas se calculan sobre el orden nuevo simulado en memoria, no
@@ -577,6 +582,7 @@ export async function reordenarListas(
   ]);
 
   revalidar();
+  return { recalculadas: cambios.map((c) => c.id) };
 }
 
 // Nuevo orden de las tareas DENTRO de una lista. Mover una tarea de lista es
@@ -584,9 +590,9 @@ export async function reordenarListas(
 export async function reordenarTareas(
   listaId: string,
   idsEnOrden: string[],
-): Promise<void> {
+): Promise<Reprogramacion> {
   const lista = await listaConAcceso(listaId);
-  if (!lista || idsEnOrden.length === 0) return;
+  if (!lista || idsEnOrden.length === 0) return { recalculadas: [] };
 
   const antesTodo = (await getTareasEnOrden(lista.clienteId)).map((t) => t.id);
   const deLaLista = await prisma.tareaRoadmap.findMany({
@@ -596,8 +602,10 @@ export async function reordenarTareas(
   });
   const validos = new Set(deLaLista.map((t) => t.id));
   const orden = idsEnOrden.filter((id) => validos.has(id));
-  if (orden.length !== deLaLista.length) return;
-  if (orden.join() === deLaLista.map((t) => t.id).join()) return;
+  if (orden.length !== deLaLista.length) return { recalculadas: [] };
+  if (orden.join() === deLaLista.map((t) => t.id).join()) {
+    return { recalculadas: [] };
+  }
 
   // La secuencia nueva del proyecto: el mismo plan de antes, con el tramo de
   // esta lista reemplazado por el orden elegido.
@@ -616,6 +624,7 @@ export async function reordenarTareas(
   ]);
 
   revalidar();
+  return { recalculadas: cambios.map((c) => c.id) };
 }
 
 // ── Acciones masivas ──────────────────────────────────────────────────────

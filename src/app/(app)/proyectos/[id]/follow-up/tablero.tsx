@@ -7,6 +7,8 @@ import { ListaRoadmapCard } from "./lista-roadmap";
 import { NuevaListaBoton } from "./nueva-lista-boton";
 import { Dropdown } from "@/components/dropdown";
 import { useReordenable } from "@/components/tabla/reordenable";
+import { ToastOk } from "@/components/ui/toast-ok";
+import { ResaltadoProvider, useResaltado } from "./resaltado";
 import { reformatEntradaHoras } from "@/lib/horas";
 import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 
@@ -17,7 +19,20 @@ const INPUT =
 
 // Dueño de la selección: vive por encima de las listas para que la barra de
 // acciones sea una sola aunque las tareas elegidas estén en listas distintas.
-export function RoadmapTablero({
+export function RoadmapTablero(props: {
+  clienteId: string;
+  listas: ListaRoadmapVista[];
+}) {
+  // El provider envuelve TODO el tablero: las celdas que se resaltan están
+  // tres niveles más abajo, y mover una lista reprograma tareas de otras.
+  return (
+    <ResaltadoProvider>
+      <Tablero {...props} />
+    </ResaltadoProvider>
+  );
+}
+
+function Tablero({
   clienteId,
   listas,
 }: {
@@ -30,14 +45,29 @@ export function RoadmapTablero({
   const [campo, setCampo] = useState<CampoMasivo>("estado");
   const [valor, setValor] = useState("sin_iniciar");
   const [pending, start] = useTransition();
+  const { marcarReprogramacion } = useResaltado();
+  // Último aviso de reprogramación. Lleva un contador además de la cantidad
+  // porque dos movimientos seguidos pueden reprogramar la MISMA cantidad de
+  // tareas: sin el contador el estado no cambiaría y el toast no volvería a
+  // salir.
+  const [aviso, setAviso] = useState<{ n: number; seq: number } | null>(null);
+  const avisar = (n: number) =>
+    setAviso((a) => (n > 0 ? { n, seq: (a?.seq ?? 0) + 1 } : a));
 
   // Reordenar listas: se arrastra desde el header y el orden se guarda solo
   // al soltar. Mover una lista mueve todo su bloque de tareas dentro de la
   // secuencia, así que el servidor recalcula las fechas de lo que quede
   // después del punto donde cambió el plan.
-  const dnd = useReordenable(
-    listas.map((l) => l.id),
-    (orden) => start(() => reordenarListas(clienteId, orden)),
+  const dnd = useReordenable(listas.map((l) => l.id), (orden, movidaId) =>
+    start(async () => {
+      const r = await reordenarListas(clienteId, orden);
+      // Mover una lista mueve su bloque entero: sus tareas son la causa, y lo
+      // demás que haya cambiado es dependencia.
+      const propias =
+        listas.find((l) => l.id === movidaId)?.tareas.map((t) => t.id) ?? [];
+      marcarReprogramacion(propias, r.recalculadas);
+      avisar(r.recalculadas.length);
+    }),
   );
   // Se dibuja según el orden del hook, no según el de las props: mientras el
   // servidor guarda y recalcula fechas, la lista ya se ve donde la soltaron.
@@ -201,6 +231,7 @@ export function RoadmapTablero({
                     onToggleLista={toggleLista}
                     agarre={dnd.agarre(lista.id)}
                     arrastrandoAlgo={dnd.activo}
+                    onReprogramadas={avisar}
                   />
                 </div>
               </div>
@@ -219,6 +250,10 @@ export function RoadmapTablero({
           </div>
         </div>
       </div>
+
+      <ToastOk key={aviso?.seq} show={aviso !== null} onHide={() => setAviso(null)}>
+        Fechas actualizadas en {aviso?.n} tarea{aviso?.n === 1 ? "" : "s"}
+      </ToastOk>
     </div>
   );
 }

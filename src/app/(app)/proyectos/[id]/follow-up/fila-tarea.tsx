@@ -16,6 +16,7 @@ import {
   CeldaTexto,
 } from "@/components/tabla/celda-editable";
 import { RangoFechas } from "@/components/tabla/rango-fechas";
+import { claseResaltado, useResaltado } from "./resaltado";
 import { BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 import { SelectorPersonas } from "./selector-personas";
 
@@ -46,6 +47,11 @@ export function FilaTareaRoadmap({
   // operando. Solo puede haber una marcada a la vez porque solo puede haber
   // un calendario abierto: abrir otro cierra el anterior.
   const [editandoFechas, setEditandoFechas] = useState(false);
+
+  // Realce temporal cuando esta tarea acaba de ser reprogramada: fuerte si es
+  // la que se movió, tenue si cambió por dependencia.
+  const { resaltadoDe } = useResaltado();
+  const resaltado = claseResaltado(resaltadoDe(tarea.id));
 
   const guardar = (campo: Parameters<typeof actualizarCampoTarea>[1]) =>
     async (valor: string) => actualizarCampoTarea(tarea.id, campo, valor);
@@ -100,6 +106,7 @@ export function FilaTareaRoadmap({
           onGuardar={(r) => actualizarRangoTarea(tarea.id, r.inicio, r.fin)}
           mostrar={mostrarFechaISO}
           onAbiertoChange={setEditandoFechas}
+          resaltado={resaltado}
         />
 
         <CeldaHoras

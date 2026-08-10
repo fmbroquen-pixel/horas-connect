@@ -17,6 +17,7 @@ import {
   BotonEliminarIcono,
 } from "@/components/tabla/acciones-fila";
 import { useReordenable } from "@/components/tabla/reordenable";
+import { useResaltado } from "./resaltado";
 
 // Una lista del plan sobre la superficie clara del Design System (.dc-panel),
 // igual que las tablas de Time Tracking o Equipo: de ahí salen el encabezado
@@ -29,6 +30,7 @@ export function ListaRoadmapCard({
   onToggleLista,
   agarre,
   arrastrandoAlgo = false,
+  onReprogramadas,
 }: {
   lista: ListaRoadmapVista;
   sel: Set<string>;
@@ -44,6 +46,9 @@ export function ListaRoadmapCard({
   // Con una lista en el aire, el header no debe plegarse por un clic
   // accidental al soltar.
   arrastrandoAlgo?: boolean;
+  // Avisa cuántas tareas se reprogramaron, para que el tablero muestre el
+  // toast: es uno solo para toda la pantalla.
+  onReprogramadas?: (cantidad: number) => void;
 }) {
   // Plegadas por defecto: un roadmap largo se recorre primero por sus listas.
   const [abierta, setAbierta] = useState(false);
@@ -62,8 +67,13 @@ export function ListaRoadmapCard({
   // checkbox: la columna de la izquierda no tiene nada que editar, así que
   // arrastrar desde ahí no compite con el nombre, las fechas ni los botones.
   const [, startReorden] = useTransition();
-  const dnd = useReordenable(ids, (orden) =>
-    startReorden(() => reordenarTareas(lista.id, orden)),
+  const { marcarReprogramacion } = useResaltado();
+  const dnd = useReordenable(ids, (orden, movidaId) =>
+    startReorden(async () => {
+      const r = await reordenarTareas(lista.id, orden);
+      marcarReprogramacion([movidaId], r.recalculadas);
+      onReprogramadas?.(r.recalculadas.length);
+    }),
   );
   // Igual que las listas: se dibuja según el orden del hook para que la fila
   // se mueva en el acto y no cuando vuelva el servidor.

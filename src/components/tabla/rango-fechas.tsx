@@ -33,6 +33,7 @@ export function RangoFechas({
   mostrar,
   editable = true,
   onAbiertoChange,
+  resaltado = "",
 }: {
   rango: Rango;
   onGuardar: (r: Rango) => Promise<{ error?: string }>;
@@ -43,6 +44,9 @@ export function RangoFechas({
   // de la tabla: sin la fila marcada se pierde de vista sobre qué tarea se
   // está operando.
   onAbiertoChange?: (abierto: boolean) => void;
+  // Clase de realce temporal cuando estas fechas se acaban de reprogramar. La
+  // pone el llamador; acá solo se aplica.
+  resaltado?: string;
 }) {
   const [servidor, setServidor] = useState(rango);
   const [local, setLocal] = useState(rango);
@@ -202,10 +206,21 @@ export function RangoFechas({
                   : "hover:bg-dc-peri/10"
               }`}
             >
-              <span className="truncate tabular-nums">{mostrar(valor)}</span>
+              {/* key por valor: al cambiar la fecha el span se remonta y la
+                  animación de entrada la hace aparecer en lugar de saltar de
+                  un número a otro. */}
+              <span
+                key={valor}
+                className={`dc-fade-in truncate tabular-nums ${resaltado}`}
+              >
+                {mostrar(valor)}
+              </span>
             </button>
           ) : (
-            <span className="block truncate px-1.5 py-1 text-center text-sm text-dc-text tabular-nums">
+            <span
+              key={valor}
+              className={`dc-fade-in block truncate px-1.5 py-1 text-center text-sm text-dc-text tabular-nums ${resaltado}`}
+            >
               {mostrar(valor)}
             </span>
           )}
