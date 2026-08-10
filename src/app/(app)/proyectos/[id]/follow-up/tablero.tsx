@@ -214,26 +214,32 @@ function Tablero({
           se le come el redondeo arriba y abajo. */}
       <div className="min-h-0 flex-1 overflow-hidden rounded-2xl">
         <div className="h-full overflow-auto overscroll-contain">
-          <div className="min-w-[880px] space-y-4">
-            {enPantalla.map((lista, i) => (
+          {/* El padding de arriba existe SOLO mientras se arrastra. Arriba de
+              la primera lista no hay hueco —el contenido del scroll empieza
+              ahí mismo—, así que la línea de esa posición no tenía dónde
+              dibujarse: pegada al borde quedaba aplastada contra la barra de
+              herramientas, y 8px más arriba caía fuera de la caja de contenido
+              y la recortaba el scroll.
+
+              Con pt-4 durante el arrastre, esa posición pasa a tener el mismo
+              hueco de 16px que hay entre dos listas, y la línea se dibuja
+              igual que todas las demás. Al soltar, el espacio se va: el plan
+              en reposo no cambia. */}
+          <div className={`min-w-[880px] space-y-4 ${dnd.activo ? "pt-4" : ""}`}>
+            {enPantalla.map((lista) => (
               <div key={lista.id} {...dnd.zona(lista.id)} className="relative">
                 {/* Líneas de destino: marcan dónde va a caer la lista que se
-                    arrastra. Absolutas, para no empujar nada.
+                    arrastra. Absolutas, para no empujar nada. Todas centradas
+                    en el hueco que separa las tarjetas, 8px afuera del borde y
+                    de borde a borde: mismo grosor, ancho y glow en cualquier
+                    posición.
 
-                    Van centradas en el hueco de 16px que separa las tarjetas,
-                    8px afuera del borde. Arriba de la PRIMERA ese hueco no
-                    existe: esos 8px caen fuera de la caja de contenido del
-                    scroll, que los recorta, y la primera posición se quedaba
-                    sin indicador. Ahí la línea se dibuja pegada por dentro.
-
-                    Abajo de la última no hace falta: siempre queda el hueco
-                    contra el botón de agregar, que se dibuja después. */}
+                    Abajo de la última no hace falta hueco extra: siempre queda
+                    el que la separa del botón de agregar. */}
                 {dnd.marcaAntes(lista.id) && (
                   <span
                     aria-hidden
-                    className={`pointer-events-none absolute left-0 right-0 h-0.5 rounded-full bg-dc-peri shadow-[0_0_8px_var(--color-dc-peri)] ${
-                      i === 0 ? "top-0" : "-top-2"
-                    }`}
+                    className="pointer-events-none absolute -top-2 left-0 right-0 h-0.5 rounded-full bg-dc-peri shadow-[0_0_8px_var(--color-dc-peri)]"
                   />
                 )}
                 {dnd.marcaDespues(lista.id) && (
