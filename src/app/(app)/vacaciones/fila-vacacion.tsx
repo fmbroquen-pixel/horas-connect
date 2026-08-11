@@ -31,6 +31,7 @@ export function FilaVacacion({ vacacion }: { vacacion: VacacionFila }) {
             <BotonEditarIcono onClick={() => setEditando(true)} label="Editar solicitud" />
             <BotonEliminarIcono
               onConfirm={() => eliminarVacacion(vacacion.id)}
+              mensaje="Licencia enviada a papelera"
               label="Eliminar solicitud"
             />
           </span>

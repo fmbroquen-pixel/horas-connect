@@ -218,6 +218,7 @@ export function FilaTareaRoadmap({
         <span className="flex justify-center">
           <BotonEliminarIcono
             onConfirm={() => eliminarTarea(tarea.id)}
+            mensaje="Tarea enviada a papelera"
             label="Eliminar tarea"
           />
         </span>

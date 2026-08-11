@@ -8,6 +8,7 @@ import { NuevaListaBoton } from "./nueva-lista-boton";
 import { Dropdown } from "@/components/dropdown";
 import { useReordenable } from "@/components/tabla/reordenable";
 import { ToastOk } from "@/components/ui/toast-ok";
+import { avisarEliminado } from "@/components/ui/avisos";
 import { ResaltadoProvider, useResaltado } from "./resaltado";
 import { reformatEntradaHoras } from "@/lib/horas";
 import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
@@ -113,11 +114,18 @@ function Tablero({
     setValor(c === "estado" ? "sin_iniciar" : "1:00");
   };
 
-  const borrar = () =>
+  const borrar = () => {
+    const cuantas = sel.size;
     start(async () => {
       await eliminarTareas([...sel]);
       limpiar();
+      avisarEliminado(
+        cuantas === 1
+          ? "Tarea enviada a papelera"
+          : `${cuantas} tareas enviadas a papelera`,
+      );
     });
+  };
 
   const aplicar = () =>
     start(async () => {

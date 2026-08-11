@@ -42,6 +42,7 @@ export function FilaMiembro({ miembro }: { miembro: MiembroFila }) {
             <BotonEditarIcono onClick={() => setEditando(true)} label="Editar integrante" />
             <BotonEliminarIcono
               onConfirm={() => eliminarMiembro(miembro.id)}
+              mensaje="Integrante eliminado"
               label="Eliminar integrante"
             />
           </span>

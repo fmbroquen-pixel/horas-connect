@@ -5,6 +5,7 @@ import { logout } from "@/app/actions";
 import { SidebarDesktop, SidebarMobile, type ItemSidebar } from "./sidebar";
 import { PageTransition } from "./page-transition";
 import { Marca } from "@/components/marca";
+import { AvisosDeEliminacion } from "@/components/ui/avisos";
 import { PerfilBoton } from "./perfil/perfil-boton";
 import { urlAvatar } from "@/lib/supabase/admin";
 import { MODULOS } from "@/lib/modulos";
@@ -182,6 +183,11 @@ export default async function AppLayout({
           </div>
         </main>
       </div>
+
+      {/* Host único de los avisos de eliminación. Va acá y no en cada pantalla
+          porque la fila que se borra se desmonta, y con ella se iría su
+          propio toast antes de poder leerse. */}
+      <AvisosDeEliminacion />
     </div>
   );
 }

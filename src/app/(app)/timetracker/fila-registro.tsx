@@ -38,16 +38,12 @@ export function FilaRegistro({
   conceptos,
   seleccionado,
   onToggle,
-  onEliminado,
 }: {
   registro: RegistroFila;
   proyectos: OpcionSelect[];
   conceptos: OpcionConcepto[];
   seleccionado: boolean;
   onToggle: (id: string) => void;
-  // Avisa que el borrado terminó. El toast lo muestra la tabla: al eliminar,
-  // esta fila desaparece, y con ella se iría cualquier aviso que dibujara.
-  onEliminado?: () => void;
 }) {
   const editable = registro.editable;
   const filaRef = useRef<HTMLDivElement>(null);
@@ -146,10 +142,8 @@ export function FilaRegistro({
             <>
               <BotonEditarIcono onClick={editarPrimeraCelda} />
               <BotonEliminarIcono
-                onConfirm={async () => {
-                  await eliminarRegistro(registro.id);
-                  onEliminado?.();
-                }}
+                onConfirm={() => eliminarRegistro(registro.id)}
+                mensaje="Hora enviada a papelera"
               />
             </>
           ) : (

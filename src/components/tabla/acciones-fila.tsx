@@ -7,6 +7,7 @@ import {
   BTN_ICON_DANGER_SM,
   BTN_ICON_CONFIRM_SM,
 } from "@/lib/ui";
+import { avisarEliminado, avisarErrorAlEliminar } from "@/components/ui/avisos";
 
 // Íconos únicos compartidos por todas las acciones de tabla de la app, para
 // que Time Tracking, Time Off, Equipo, Gantt (y las de Settings, vía
@@ -79,11 +80,19 @@ export function BotonEditarIcono({
 export function BotonEliminarIcono({
   onConfirm,
   label = "Eliminar",
+  mensaje,
 }: {
   // Puede devolver una promesa: se espera antes de soltar el botón para que
   // la fila no vuelva a su estado normal antes de que el borrado termine.
+  //
+  // Si devuelve algo con `error`, se avisa el error y NO se dice que se
+  // eliminó: la fila puede seguir ahí y el toast no puede contradecirla.
   onConfirm: () => void | Promise<unknown>;
   label?: string;
+  // Qué anunciar cuando salió bien ("Tarea enviada a papelera"). Sin esto no
+  // se avisa nada: el aviso lo pide quien borra, porque solo ahí se sabe qué
+  // se borró y a dónde fue.
+  mensaje?: string;
 }) {
   const [confirmando, setConfirmando] = useState(false);
   // La confirmación corre dentro de una transición: es lo que hace que React
@@ -111,8 +120,13 @@ export function BotonEliminarIcono({
       disabled={pending}
       onClick={() =>
         start(async () => {
-          await onConfirm();
+          const r = (await onConfirm()) as { error?: string } | void;
           setConfirmando(false);
+          if (r && typeof r === "object" && r.error) {
+            avisarErrorAlEliminar(r.error);
+          } else if (mensaje) {
+            avisarEliminado(mensaje);
+          }
         })
       }
       className={BTN_ICON_CONFIRM_SM}

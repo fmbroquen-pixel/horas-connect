@@ -11,6 +11,23 @@ import {
 import { RETENCION_DIAS } from "./constantes";
 import { Modal } from "@/components/ui/modal";
 import { BTN_SECONDARY_SM, BTN_DANGER_SM, BTN_DANGER_CONFIRM_SM } from "@/lib/ui";
+import { avisarEliminado } from "@/components/ui/avisos";
+
+// Mensajes completos por tipo y no una etiqueta + sufijo: el género cambia
+// ("Hora restaurada" pero "Viático restaurado") y armarlo por concatenación
+// obliga a elegir una sola terminación que va a estar mal para la mitad.
+const RESTAURADO: Record<TipoEliminado, string> = {
+  hora: "Hora restaurada",
+  viatico: "Viático restaurado",
+  vacacion: "Licencia restaurada",
+  roadmap: "Ítem del plan restaurado",
+};
+const BORRADO: Record<TipoEliminado, string> = {
+  hora: "Hora eliminada definitivamente",
+  viatico: "Viático eliminado definitivamente",
+  vacacion: "Licencia eliminada definitivamente",
+  roadmap: "Ítem del plan eliminado definitivamente",
+};
 
 // Papelera contextual de un módulo: muestra únicamente los registros
 // eliminados de ese tipo. Se abre desde el menú de acciones (⋮).
@@ -45,6 +62,7 @@ export function PapeleraModal({
     startRestaurar(async () => {
       await restaurarItem(item.tipo, item.id);
       setItems((prev) => prev?.filter((i) => i.id !== item.id) ?? null);
+      avisarEliminado(RESTAURADO[item.tipo]);
     });
   };
 
@@ -53,6 +71,7 @@ export function PapeleraModal({
     startRestaurar(async () => {
       await eliminarDefinitivo(item.tipo, item.id);
       setItems((prev) => prev?.filter((i) => i.id !== item.id) ?? null);
+      avisarEliminado(BORRADO[item.tipo]);
     });
   };
 

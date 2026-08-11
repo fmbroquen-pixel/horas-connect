@@ -25,13 +25,9 @@ const INPUT =
 export function FilaViatico({
   viatico,
   proyectos,
-  onEliminado,
 }: {
   viatico: ViaticoFila;
   proyectos: OpcionSelect[];
-  // Avisa que el borrado terminó. El toast lo muestra la lista: al eliminar,
-  // esta fila desaparece, y con ella se iría cualquier aviso que dibujara.
-  onEliminado?: () => void;
 }) {
   const [editando, setEditando] = useState(false);
 
@@ -75,10 +71,8 @@ export function FilaViatico({
           <span className="flex justify-center gap-1">
             <BotonEditarIcono onClick={() => setEditando(true)} />
             <BotonEliminarIcono
-              onConfirm={async () => {
-                await eliminarViatico(viatico.id);
-                onEliminado?.();
-              }}
+              onConfirm={() => eliminarViatico(viatico.id)}
+              mensaje="Viático enviado a papelera"
             />
           </span>
         </div>

@@ -213,6 +213,7 @@ export function ListaRoadmapCard({
           />
           <BotonEliminarIcono
             onConfirm={() => eliminarLista(lista.id)}
+            mensaje="Lista enviada a papelera"
             label="Eliminar lista"
           />
         </span>
