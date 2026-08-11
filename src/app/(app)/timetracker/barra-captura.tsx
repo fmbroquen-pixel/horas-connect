@@ -218,10 +218,15 @@ export function BarraCaptura({
           </span>
         </div>
 
-        {/* Al extremo derecho y separado del último campo: es la acción que
-            cierra la carga, no una columna más del formulario. Mismo bloque
-            en Expenses. */}
-        <span className="ml-auto pl-3">
+        {/* Cae justo sobre la columna de acciones de la tabla de abajo, no
+            pegado a USD total: guardar acá y editar/eliminar allá son lo
+            mismo —lo que se le hace al registro— y comparten carril.
+
+            El ancho es el de esa columna (130px) más 4px: la barra tiene
+            padding 3 y las filas de la tabla padding 4, así que sin esa
+            compensación el carril quedaría corrido esos 4px. En Expenses los
+            dos paddings coinciden y por eso ahí va sin sumar nada. */}
+        <span className="ml-auto flex w-[134px] justify-center pr-1">
           <BotonGuardarIcono pending={pending} exito={guardados} />
         </span>
       </div>

@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import {
   BTN_ICON_SM,
-  BTN_ICON_PRIMARY_SM,
+  BTN_ICON_OK_SM,
   BTN_ICON_DANGER_SM,
   BTN_ICON_CONFIRM_SM,
 } from "@/lib/ui";
@@ -54,7 +54,7 @@ function Spinner() {
   return (
     <span
       aria-hidden
-      className="block h-[15px] w-[15px] animate-spin rounded-full border-2 border-white/40 border-t-white"
+      className="block h-[15px] w-[15px] animate-spin rounded-full border-2 border-dc-green/25 border-t-dc-green"
     />
   );
 }
@@ -169,7 +169,7 @@ export function BotonGuardarIcono({
       type="submit"
       form={form}
       disabled={pending || disabled}
-      className={`${BTN_ICON_PRIMARY_SM} ${celebrando ? "dc-guardado" : ""}`}
+      className={`${BTN_ICON_OK_SM} ${celebrando ? "dc-guardado" : ""}`}
       title={label}
       aria-label={label}
     >

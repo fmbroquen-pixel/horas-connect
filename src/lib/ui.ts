@@ -15,17 +15,16 @@ export const BTN_SECONDARY_SM = `${BASE} rounded-lg border border-dc-line px-2 p
 // pero cuadrado, para alojar un SVG de ~15px. Siempre con title/aria-label.
 export const BTN_ICON_SM = `${BASE} rounded-lg border border-dc-line p-1.5 text-dc-muted hover:border-dc-peri hover:bg-dc-peri/10 hover:text-dc-text`;
 
-// La acción PRINCIPAL de un formulario, en versión ícono: mismo cuadrado que
-// BTN_ICON_SM pero relleno. Sin esto, guardar y cancelar quedaban con el mismo
-// peso visual y el formulario dejaba de decir cuál es su acción esperada.
+// Confirmar un formulario (guardar, crear), en versión ícono: el mismo
+// cuadrado y el mismo radio que BTN_ICON_SM, en verde.
 //
-// Va en verde y no en el violeta de marca: es la única acción de la app que
+// Verde y no el violeta de marca porque es la única acción de la app que
 // CONFIRMA, y el violeta ya significa "acción" en general (agregar, aplicar,
-// navegar). El verde la separa de todas esas y la vuelve reconocible sin leer.
-//
-// El borde transparente no se ve, pero hace falta: sin él este botón mide 2px
-// menos que los de al lado —que sí llevan borde— y el par queda desparejo.
-export const BTN_ICON_PRIMARY_SM = `${BASE} rounded-lg border border-transparent bg-dc-green p-1.5 text-white hover:brightness-110`;
+// navegar). Pero DELINEADO y no relleno: un botón sólido verde se apropia de
+// la pantalla y pelea con la identidad violeta de CORE. El contorno alcanza
+// para distinguirlo de sus vecinos —que son grises— sin gritar, y deja el
+// verde lleno libre para lo único que sí es un evento: el pulso al guardar.
+export const BTN_ICON_OK_SM = `${BASE} rounded-lg border border-dc-green/55 p-1.5 text-dc-green hover:border-dc-green hover:bg-dc-green/10 hover:shadow-[0_0_10px_rgba(52,211,153,0.22)]`;
 
 // Acción destructiva (Borrar) y su confirmación.
 export const BTN_DANGER_SM = `${BASE} rounded-lg border border-dc-line px-2 py-1 text-xs text-dc-muted hover:border-dc-pink hover:bg-dc-pink/10 hover:text-dc-pink`;

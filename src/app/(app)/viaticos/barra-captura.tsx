@@ -201,9 +201,10 @@ export function BarraCapturaViatico({
           />
         </div>
 
-        {/* Mismo bloque que en Time Tracking: al extremo derecho y separado
-            del último campo. */}
-        <span className="ml-auto pl-3">
+        {/* Igual que en Time Tracking: cae sobre la columna de acciones de la
+            tabla de abajo. Acá el ancho es el de esa columna sin sumar nada,
+            porque la barra y las filas comparten el mismo padding. */}
+        <span className="ml-auto flex w-[130px] justify-center">
           <BotonGuardarIcono pending={pending} exito={guardados} />
         </span>
       </div>
