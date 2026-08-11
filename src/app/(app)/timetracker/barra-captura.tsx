@@ -116,13 +116,19 @@ export function BarraCaptura({
     <form
       ref={formRef}
       onSubmit={onSubmit}
-      className="shrink-0 rounded-xl border border-dc-peri/25 bg-dc-card p-3"
+      className="shrink-0 rounded-xl border border-dc-peri/25 bg-dc-card px-3 py-2"
       aria-label="Barra de captura de horas"
     >
       {/* Dueño de las horas cuando un admin carga para otro mentor. */}
       {usuarioId && <input type="hidden" name="usuarioId" value={usuarioId} />}
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="w-36" data-campo="fecha">
+      {/* Una sola fila, sin flex-wrap. Con wrap, los campos y el carril de
+          acciones suman más ancho del que suele haber disponible y el botón
+          se iba solo a un segundo renglón, dejando un hueco vacío arriba.
+          Sin wrap, los campos se comprimen —de ahí el min-w-0 en cada uno, que
+          es lo que permite a un flex item bajar del ancho de su contenido— y
+          el carril de la derecha se queda quieto. */}
+      <div className="flex items-end gap-2">
+        <div className="w-36 min-w-0" data-campo="fecha">
           <span className={LABEL}>Fecha</span>
           <DatePicker
             name="fecha"
@@ -136,7 +142,7 @@ export function BarraCaptura({
           />
         </div>
 
-        <div className="w-44" data-campo="clienteId">
+        <div className="w-44 min-w-0" data-campo="clienteId">
           <span className={LABEL}>Cliente</span>
           <Dropdown
             name="clienteId"
@@ -150,7 +156,7 @@ export function BarraCaptura({
           />
         </div>
 
-        <div className="w-52" data-campo="conceptoId">
+        <div className="w-52 min-w-0" data-campo="conceptoId">
           <span className={LABEL}>Concepto</span>
           <Dropdown
             name="conceptoId"
@@ -164,7 +170,7 @@ export function BarraCaptura({
           />
         </div>
 
-        <div className="w-32" data-campo="ownership">
+        <div className="w-32 min-w-0" data-campo="ownership">
           <span className={LABEL}>Ownership</span>
           <Dropdown
             name="ownership"
@@ -179,7 +185,7 @@ export function BarraCaptura({
           />
         </div>
 
-        <div className="w-24" data-campo="horas">
+        <div className="w-24 min-w-0" data-campo="horas">
           <span className={LABEL}>Horas</span>
           <input
             name="horas"
@@ -196,7 +202,7 @@ export function BarraCaptura({
           />
         </div>
 
-        <div className="w-32" data-campo="modalidad">
+        <div className="w-32 min-w-0" data-campo="modalidad">
           <span className={LABEL}>Modalidad</span>
           <Dropdown
             name="modalidad"
@@ -211,7 +217,7 @@ export function BarraCaptura({
           />
         </div>
 
-        <div className="w-24">
+        <div className="w-24 min-w-0">
           <span className={LABEL}>USD total</span>
           <span className="block truncate px-1 py-1.5 text-right text-sm tabular-nums text-dc-text">
             {total !== null ? formatMonto(total) : "—"}
@@ -226,7 +232,7 @@ export function BarraCaptura({
             padding 3 y las filas de la tabla padding 4, así que sin esa
             compensación el carril quedaría corrido esos 4px. En Expenses los
             dos paddings coinciden y por eso ahí va sin sumar nada. */}
-        <span className="ml-auto flex w-[134px] justify-center pr-1">
+        <span className="ml-auto flex w-[134px] shrink-0 justify-center pr-1">
           <BotonGuardarIcono pending={pending} exito={guardados} />
         </span>
       </div>

@@ -109,13 +109,16 @@ export function BarraCapturaViatico({
     <form
       ref={formRef}
       onSubmit={onSubmit}
-      className="shrink-0 rounded-xl border border-dc-peri/25 bg-dc-card p-3"
+      className="shrink-0 rounded-xl border border-dc-peri/25 bg-dc-card px-3 py-2"
       aria-label="Barra de captura de viáticos"
     >
       {/* Dueño del gasto cuando un admin carga para otra persona. */}
       {usuarioId && <input type="hidden" name="usuarioId" value={usuarioId} />}
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="w-36" data-campo="fecha">
+      {/* Una sola fila, igual que Time Tracking: sin flex-wrap los campos se
+          comprimen en vez de mandar el botón a un segundo renglón. El min-w-0
+          de cada campo es lo que les permite achicarse. */}
+      <div className="flex items-end gap-2">
+        <div className="w-36 min-w-0" data-campo="fecha">
           <span className={LABEL}>Fecha</span>
           <DatePicker
             name="fecha"
@@ -129,7 +132,7 @@ export function BarraCapturaViatico({
           />
         </div>
 
-        <div className="w-44" data-campo="clienteId">
+        <div className="w-44 min-w-0" data-campo="clienteId">
           <span className={LABEL}>Cliente</span>
           <Dropdown
             name="clienteId"
@@ -143,7 +146,7 @@ export function BarraCapturaViatico({
           />
         </div>
 
-        <div className="w-44" data-campo="concepto">
+        <div className="w-44 min-w-0" data-campo="concepto">
           <span className={LABEL}>Concepto</span>
           <Dropdown
             name="concepto"
@@ -157,7 +160,7 @@ export function BarraCapturaViatico({
           />
         </div>
 
-        <div className="w-28" data-campo="moneda">
+        <div className="w-28 min-w-0" data-campo="moneda">
           <span className={LABEL}>Moneda</span>
           <Dropdown
             name="moneda"
@@ -172,7 +175,7 @@ export function BarraCapturaViatico({
           />
         </div>
 
-        <div className="w-28" data-campo="monto">
+        <div className="w-28 min-w-0" data-campo="monto">
           <span className={LABEL}>Monto</span>
           <input
             name="monto"
@@ -188,7 +191,7 @@ export function BarraCapturaViatico({
           />
         </div>
 
-        <div className="w-56">
+        <div className="w-56 min-w-0">
           <span className={LABEL}>Comprobante (opcional)</span>
           <input
             ref={archivoRef}
@@ -204,7 +207,7 @@ export function BarraCapturaViatico({
         {/* Igual que en Time Tracking: cae sobre la columna de acciones de la
             tabla de abajo. Acá el ancho es el de esa columna sin sumar nada,
             porque la barra y las filas comparten el mismo padding. */}
-        <span className="ml-auto flex w-[130px] justify-center">
+        <span className="ml-auto flex w-[130px] shrink-0 justify-center">
           <BotonGuardarIcono pending={pending} exito={guardados} />
         </span>
       </div>
