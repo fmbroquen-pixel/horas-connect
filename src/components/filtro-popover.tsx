@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 import { Dropdown } from "@/components/dropdown";
-import { DatePicker } from "@/components/date-picker";
+import { SelectorRango } from "@/components/selector-rango";
 import { dentroDeUnPopover } from "@/components/ui/popover-flotante";
 
 type Proyecto = { id: string; nombre: string };
@@ -84,29 +84,21 @@ export function FiltroPopover({
         {open && (
           <div className="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-dc-line bg-dc-deep p-4 shadow-xl">
             <form method="GET" action={basePath} className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="mb-1 block text-xs text-dc-muted">Desde</label>
-                  <DatePicker
-                    name="desde"
-                    value={desdeSel}
-                    onChange={setDesdeSel}
-                    max={maxHoy || undefined}
-                    className="w-full"
-                    ariaLabel="Desde"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-xs text-dc-muted">Hasta</label>
-                  <DatePicker
-                    name="hasta"
-                    value={hastaSel}
-                    onChange={setHastaSel}
-                    max={maxHoy || undefined}
-                    className="w-full"
-                    ariaLabel="Hasta"
-                  />
-                </div>
+              <div>
+                <label className="mb-1 block text-xs text-dc-muted">Período</label>
+                <SelectorRango
+                  desde={desdeSel}
+                  hasta={hastaSel}
+                  onChange={(d, h) => {
+                    setDesdeSel(d);
+                    setHastaSel(h);
+                  }}
+                  max={maxHoy || undefined}
+                />
+                {/* El formulario viaja por GET: el rango se manda en campos
+                    ocultos porque el selector es un botón, no un input. */}
+                <input type="hidden" name="desde" value={desdeSel} />
+                <input type="hidden" name="hasta" value={hastaSel} />
               </div>
               {!soloFechas && (
                 <div>

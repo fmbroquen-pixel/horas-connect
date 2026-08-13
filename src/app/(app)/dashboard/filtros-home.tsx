@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { DatePicker } from "@/components/date-picker";
+import { SelectorRango } from "@/components/selector-rango";
 import { dentroDeUnPopover } from "@/components/ui/popover-flotante";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 import { useRecalculo } from "./recalculo";
@@ -125,39 +125,17 @@ export function FiltrosHome({
 
         {open && (
           <div className="dc-menu dc-pop-in absolute right-0 z-40 mt-2 w-80 rounded-xl border border-dc-line bg-dc-deep p-4 shadow-[0_12px_32px_rgba(0,0,0,0.45)]">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <span className="mb-1 block text-xs text-dc-muted">Desde</span>
-                <DatePicker
-                  value={desdeSel}
-                  onChange={setDesdeSel}
-                  max={maxHoy}
-                  rangeStart={desdeSel}
-                  rangeEnd={hastaSel}
-                  className="w-full"
-                  ariaLabel="Desde"
-                />
-              </div>
-              <div>
-                <span className="mb-1 block text-xs text-dc-muted">Hasta</span>
-                {/* Los dos calendarios se limitan solo por hoy, igual que el
-                    filtro del resto de la app. Antes se limitaban entre sí
-                    —Desde no podía pasar de Hasta y Hasta no podía bajar de
-                    Desde— y eso trababa la mitad de los rangos: para mover el
-                    rango hacia adelante había que tocar Hasta primero y hacia
-                    atrás Desde primero, así que quien empezaba siempre por
-                    Desde se encontraba con los días en gris sin explicación.
-                    Si el rango queda al revés se ordena al aplicar. */}
-                <DatePicker
-                  value={hastaSel}
-                  onChange={setHastaSel}
-                  max={maxHoy}
-                  rangeStart={desdeSel}
-                  rangeEnd={hastaSel}
-                  className="w-full"
-                  ariaLabel="Hasta"
-                />
-              </div>
+            <div>
+              <span className="mb-1 block text-xs text-dc-muted">Período</span>
+              <SelectorRango
+                desde={desdeSel}
+                hasta={hastaSel}
+                onChange={(d, h) => {
+                  setDesdeSel(d);
+                  setHastaSel(h);
+                }}
+                max={maxHoy}
+              />
             </div>
 
             <div className="mt-3">
