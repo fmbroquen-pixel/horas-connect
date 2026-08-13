@@ -57,9 +57,16 @@ export function FiltrosHome({
     });
 
   const aplicar = () => {
+    // Se ordena acá y no en los calendarios: elegir primero la fecha "grande"
+    // es una forma legítima de armar un rango, y trabarla obliga a adivinar en
+    // qué orden hay que tocar los campos.
+    const invertido = desdeSel && hastaSel && desdeSel > hastaSel;
+    const desdeFinal = invertido ? hastaSel : desdeSel;
+    const hastaFinal = invertido ? desdeSel : hastaSel;
+
     const params = new URLSearchParams();
-    if (desdeSel) params.set("desde", desdeSel);
-    if (hastaSel) params.set("hasta", hastaSel);
+    if (desdeFinal) params.set("desde", desdeFinal);
+    if (hastaFinal) params.set("hasta", hastaFinal);
     // "Todos" no viaja en la URL: es el default y así el link queda limpio.
     if (sel.size > 0 && sel.size < proyectos.length) {
       params.set("proyectos", [...sel].join(","));
@@ -116,7 +123,7 @@ export function FiltrosHome({
                 <DatePicker
                   value={desdeSel}
                   onChange={setDesdeSel}
-                  max={hastaSel || maxHoy}
+                  max={maxHoy}
                   rangeStart={desdeSel}
                   rangeEnd={hastaSel}
                   className="w-full"
@@ -125,10 +132,17 @@ export function FiltrosHome({
               </div>
               <div>
                 <span className="mb-1 block text-xs text-dc-muted">Hasta</span>
+                {/* Los dos calendarios se limitan solo por hoy, igual que el
+                    filtro del resto de la app. Antes se limitaban entre sí
+                    —Desde no podía pasar de Hasta y Hasta no podía bajar de
+                    Desde— y eso trababa la mitad de los rangos: para mover el
+                    rango hacia adelante había que tocar Hasta primero y hacia
+                    atrás Desde primero, así que quien empezaba siempre por
+                    Desde se encontraba con los días en gris sin explicación.
+                    Si el rango queda al revés se ordena al aplicar. */}
                 <DatePicker
                   value={hastaSel}
                   onChange={setHastaSel}
-                  min={desdeSel || undefined}
                   max={maxHoy}
                   rangeStart={desdeSel}
                   rangeEnd={hastaSel}

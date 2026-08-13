@@ -269,21 +269,21 @@ export default async function DashboardPage({
         <ZonaRecalculable className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden pb-2">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
             <Kpi
-              etiqueta="Horas estimadas de proyectos"
+              etiqueta="Hs estimadas de proyectos"
               valor={formatHorasHsMin(presupuestadas)}
-              info="El plan completo de los proyectos elegidos, no lo que cae en el rango: el filtro de fechas no lo mueve. Las tareas no ejecutadas siguen contando, porque esas horas estaban comprometidas con el cliente."
+              info="Suma de horas estimadas de todas las tareas. Es el plan completo de los proyectos elegidos: el filtro de fechas no lo mueve."
             />
             <Kpi
-              etiqueta="Hs Presupuestadas Entregadas"
+              etiqueta="Hs estimadas entregadas"
               valor={formatHorasHsMin(entregadas)}
-              info="Horas estimadas de las tareas finalizadas cuyo fin cae dentro del rango elegido. Las no ejecutadas no suman acá, aunque en la barra de avance de cada lista sí cuenten como cerradas."
+              info="Suma de horas estimadas de todas las tareas con estado Finalizado, tomando las que terminan dentro del rango elegido."
             />
             <Kpi
               etiqueta="Hs Time Tracker Total"
               valor={formatHorasHsMin(horasTotal)}
             />
             <Kpi
-              etiqueta="Horas Time Tracker Usuario"
+              etiqueta="Hs Time Tracker Usuario"
               valor={formatHorasHsMin(horasUsuario)}
               destacado
             />

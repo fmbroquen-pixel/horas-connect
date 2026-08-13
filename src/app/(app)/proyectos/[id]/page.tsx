@@ -74,16 +74,18 @@ export default async function ProyectoHomePage({
     // del alto disponible en vez de empujar la página hacia abajo.
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="grid shrink-0 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <Kpi titulo="Mentor Owner" valor={owner} />
+        <Kpi titulo="Mentor Owner" valor={owner} texto />
         {/* Los dos backups van juntos: la card no lleva texto secundario. */}
-        <Kpi titulo="Mentor Backup" valor={backups.join(", ") || "-"} />
+        <Kpi titulo="Mentor Backup" valor={backups.join(", ") || "-"} texto />
         <Kpi
-          titulo="Horas estimadas de proyecto"
+          titulo="Hs estimadas de proyecto"
           valor={formatHorasHsMin(presupuestadas)}
+          info="Suma de horas estimadas de todas las tareas."
         />
         <Kpi
-          titulo="Hs Presupuestadas Entregadas"
+          titulo="Hs estimadas entregadas"
           valor={formatHorasHsMin(entregadas)}
+          info="Suma de horas estimadas de todas las tareas con estado Finalizado."
         />
         <Kpi titulo="Hs Time Tracker Total" valor={formatHorasHsMin(reales)} />
       </div>
@@ -173,14 +175,35 @@ function BarraProgreso({
   );
 }
 
-function Kpi({ titulo, valor }: { titulo: string; valor: string }) {
+function Kpi({
+  titulo,
+  valor,
+  info,
+  texto = false,
+}: {
+  titulo: string;
+  valor: string;
+  // Los KPIs de horas explican su criterio acá en vez de dejar que se deduzca
+  // comparando números. Mismo componente que en el Home de CORE.
+  info?: string;
+  // Un nombre no es una cifra: va más chico, sin tabular-nums y en hasta dos
+  // líneas. Con el tamaño de las cifras, "María Fernanda Rodríguez" entraba
+  // recortada a la cuarta letra; en dos líneas entra casi siempre entera y,
+  // cuando no, el título sigue mostrando el nombre completo.
+  texto?: boolean;
+}) {
   return (
     <div className={CARD}>
-      <p className="text-[11px] uppercase leading-tight tracking-wide text-dc-muted">
+      <p className="flex items-start gap-1.5 text-[11px] uppercase leading-tight tracking-wide text-dc-muted">
         {titulo}
+        {info && <InfoButton>{info}</InfoButton>}
       </p>
       <p
-        className="mt-1 truncate font-display text-lg tabular-nums text-white"
+        className={
+          texto
+            ? "mt-1 line-clamp-2 text-sm font-medium leading-snug text-white"
+            : "mt-1 truncate font-display text-lg tabular-nums text-white"
+        }
         title={valor}
       >
         {valor}
