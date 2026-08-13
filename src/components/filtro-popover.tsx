@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
+import { dentroDeUnPopover } from "@/components/ui/popover-flotante";
 
 type Proyecto = { id: string; nombre: string };
 
@@ -39,6 +40,10 @@ export function FiltroPopover({
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
+      // Un clic en el calendario o en un desplegable NO cierra el panel: viven
+      // en un portal a <body>, así que para `contains` caen afuera aunque se
+      // vean adentro.
+      if (dentroDeUnPopover(e.target)) return;
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", onClick);
@@ -69,12 +74,11 @@ export function FiltroPopover({
           onClick={() => setOpen((o) => !o)}
           title="Filtrar"
           aria-label="Filtrar"
-          className="flex items-center gap-1.5 rounded-lg border border-dc-line px-3 py-1.5 text-sm text-dc-muted transition hover:border-dc-peri hover:text-dc-text"
+          className="flex items-center rounded-lg border border-dc-line p-1.5 text-dc-muted transition hover:border-dc-peri hover:bg-dc-peri/10 hover:text-dc-text"
         >
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
           </svg>
-          Filtrar
         </button>
 
         {open && (
@@ -124,9 +128,21 @@ export function FiltroPopover({
                 <button type="submit" className={BTN_PRIMARY_SM}>
                   Aplicar
                 </button>
-                <a href={basePath} className={BTN_SECONDARY_SM}>
+                {/* Limpia los campos y deja el panel abierto: es el punto de
+                    partida para armar otro filtro, no un "aplicar todo". Antes
+                    era un enlace al listado sin filtros, así que limpiar
+                    navegaba y cerraba de una. */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDesdeSel("");
+                    setHastaSel("");
+                    setProyectoSel("");
+                  }}
+                  className={BTN_SECONDARY_SM}
+                >
                   Limpiar
-                </a>
+                </button>
               </div>
             </form>
           </div>

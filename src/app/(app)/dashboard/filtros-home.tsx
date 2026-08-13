@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { DatePicker } from "@/components/date-picker";
+import { dentroDeUnPopover } from "@/components/ui/popover-flotante";
 import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 import { useRecalculo } from "./recalculo";
 
@@ -40,6 +41,10 @@ export function FiltrosHome({
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
+      // Un clic en el calendario o en un desplegable NO cierra el panel: viven
+      // en un portal a <body>, así que para `contains` caen afuera aunque se
+      // vean adentro.
+      if (dentroDeUnPopover(e.target)) return;
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", onClick);
@@ -76,12 +81,16 @@ export function FiltrosHome({
     setOpen(false);
   };
 
-  // Limpiar vacía la selección y NO cierra ni navega: es el punto de partida
-  // para armar un filtro nuevo, no un "volver a todos". Antes hacía las tres
-  // cosas al revés —marcaba todos los proyectos, navegaba y cerraba—, así que
-  // el botón que promete limpiar terminaba aplicando el filtro más amplio
-  // posible y sacándote del popup.
-  const limpiar = () => setSel(new Set());
+  // Limpiar vacía fechas y selección y NO cierra ni navega: es el punto de
+  // partida para armar un filtro nuevo, no un "volver a todos". Antes hacía
+  // las tres cosas al revés —marcaba todos los proyectos, navegaba y cerraba—,
+  // así que el botón que promete limpiar terminaba aplicando el filtro más
+  // amplio posible y sacándote del popup.
+  const limpiar = () => {
+    setDesdeSel("");
+    setHastaSel("");
+    setSel(new Set());
+  };
 
   const parcial = seleccionados.length < proyectos.length;
 
@@ -107,12 +116,11 @@ export function FiltrosHome({
           title="Filtrar"
           aria-label="Filtrar"
           aria-expanded={open}
-          className="flex items-center gap-1.5 rounded-lg border border-dc-line px-3 py-1.5 text-sm text-dc-muted transition hover:border-dc-peri hover:text-dc-text"
+          className="flex items-center rounded-lg border border-dc-line p-1.5 text-dc-muted transition hover:border-dc-peri hover:bg-dc-peri/10 hover:text-dc-text"
         >
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z" />
           </svg>
-          Filtrar
         </button>
 
         {open && (
@@ -192,7 +200,7 @@ export function FiltrosHome({
               <button
                 type="button"
                 onClick={limpiar}
-                disabled={sel.size === 0}
+                disabled={sel.size === 0 && !desdeSel && !hastaSel}
                 className={`${BTN_SECONDARY_SM} disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 Limpiar

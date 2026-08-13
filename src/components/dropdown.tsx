@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
+  ATRIBUTO_POPOVER,
   POPOVER_FLOTANTE,
   usePopoverFlotante,
 } from "@/components/ui/popover-flotante";
@@ -151,6 +152,7 @@ export function Dropdown({
           ref={listaRef}
           role="listbox"
           className={`${POPOVER_FLOTANTE} max-h-64 min-w-max overflow-auto p-1`}
+          {...{ [ATRIBUTO_POPOVER]: "" }}
         >
           {options.map((o, i) => {
             const activa = o.value === value;

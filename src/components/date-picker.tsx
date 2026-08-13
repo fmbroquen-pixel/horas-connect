@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
+  ATRIBUTO_POPOVER,
   POPOVER_FLOTANTE,
   usePopoverFlotante,
 } from "@/components/ui/popover-flotante";
@@ -215,6 +216,7 @@ export function DatePicker({
           aria-label="Elegir fecha"
           onKeyDown={onKeyDown}
           className={`${POPOVER_FLOTANTE} w-64 p-3`}
+          {...{ [ATRIBUTO_POPOVER]: "" }}
         >
           <div className="mb-2 flex items-center justify-between">
             <button type="button" aria-label="Mes anterior" onClick={() => setCursor((c) => new Date(c.getFullYear(), c.getMonth() - 1, 1))} className="rounded-lg p-1 text-dc-muted transition hover:bg-dc-line/50 hover:text-dc-text">

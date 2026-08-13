@@ -102,3 +102,21 @@ export function usePopoverFlotante(
 // apareció al sacarlos a un portal.
 export const POPOVER_FLOTANTE =
   "dc-menu dc-pop-in fixed z-[70] rounded-xl border border-dc-line bg-dc-deep shadow-[0_12px_32px_rgba(0,0,0,0.45)]";
+
+// Marca que llevan todos los popovers flotantes. Va como atributo y no como
+// clase porque no pinta nada: existe solo para poder reconocerlos desde afuera.
+export const ATRIBUTO_POPOVER = "data-dc-popover";
+
+// ¿El clic cayó dentro de un popover flotante?
+//
+// Hace falta porque estos popovers viven en un portal a <body>: para cualquier
+// panel que se cierre "al hacer clic afuera", un clic en el calendario de un
+// DatePicker o en el menú de un Dropdown ES afuera, aunque visualmente esté
+// adentro. Sin esto, abrir el calendario dentro del panel de filtros y elegir
+// un día cerraba el panel antes de que el día llegara a seleccionarse: parecía
+// que el date picker no dejaba elegir fechas.
+export function dentroDeUnPopover(nodo: EventTarget | null): boolean {
+  return (
+    nodo instanceof Element && nodo.closest(`[${ATRIBUTO_POPOVER}]`) !== null
+  );
+}
