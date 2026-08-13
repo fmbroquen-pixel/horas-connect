@@ -270,6 +270,22 @@ input[type="number"]::-webkit-inner-spin-button {
    desplazamiento, así que la barra se va adelgazando de 3px a 0 mientras se
    desvanece. Con el alpha conserva su ancho y solo pierde color, que es lo
    que se lee como un apagado y no como algo que se encoge. */
+/* Fila seleccionada por su checkbox. Es el mismo realce con el que llega una
+   tarea desde "Próximas dos semanas", pero quieto: acá no marca un instante
+   sino un estado, y se apaga cuando se destilda, no solo.
+
+   Los valores son los del fotograma 0% de dc-fila-destino, abajo. Si se toca
+   uno hay que tocar el otro: son el mismo realce y la gracia es que se vean
+   iguales.
+
+   Fondo y sombra inset, nada que ocupe espacio: la fila no cambia de alto ni
+   corre a las de al lado, y se pueden marcar muchas a la vez sin que la tabla
+   se mueva. */
+.dc-fila-seleccionada {
+  background-color: rgba(139, 140, 255, 0.28);
+  box-shadow: inset 3px 0 0 0 var(--dc-peri);
+}
+
 @keyframes dc-fila-destino {
   0%,
   45% {

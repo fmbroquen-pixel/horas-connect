@@ -140,11 +140,14 @@ export function FilaTareaRoadmap({
     // El realce es fondo + una barra lateral por inset shadow. Ninguno de los
     // dos ocupa espacio: la fila no cambia de alto ni empuja a las de abajo
     // al abrir el calendario.
+    // Sin transición de color: la selección tiene que prender y apagar en el
+    // acto. Con los 150ms que había, destildar dejaba el violeta yéndose de a
+    // poco y parecía que la fila seguía a medio seleccionar.
     <div
       ref={filaRef}
-      className={`border-b border-dc-line px-4 py-2 transition-colors duration-150 last:border-0 ${
-        destacada ? "dc-fila-destino" : ""
-      } ${
+      className={`border-b border-dc-line px-4 py-2 last:border-0 ${
+        seleccionada ? "dc-fila-seleccionada" : ""
+      } ${destacada ? "dc-fila-destino" : ""} ${
         editandoFechas
           ? "bg-dc-peri/[0.07] shadow-[inset_3px_0_0_0_var(--color-dc-peri)]"
           : ""
