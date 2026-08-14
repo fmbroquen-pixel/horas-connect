@@ -29,12 +29,16 @@ export function SelectorRango({
   desde,
   hasta,
   onChange,
+  onCerrar,
   max,
   className = "",
 }: {
   desde: string;
   hasta: string;
   onChange: (desde: string, hasta: string) => void;
+  // Se llama al cerrar el calendario. Es el momento en que el filtro se
+  // aplica: no hay botón Aplicar, cerrar ES confirmar.
+  onCerrar?: () => void;
   // Tope superior (normalmente hoy): no tiene sentido filtrar el futuro.
   max?: string;
   className?: string;
@@ -62,19 +66,34 @@ export function SelectorRango({
     return () => window.removeEventListener("mouseup", soltar);
   }, [arrastrando]);
 
-  const cancelar = () => {
+  const cerrar = () => {
     setParcial(null);
     setHover(null);
     setArrastrando(false);
     setAbierto(false);
+    onCerrar?.();
   };
+
+  // Clic afuera del calendario: se cierra y el cierre aplica. "Afuera" es
+  // afuera del calendario, no del panel de filtros: elegir el rango y seguir
+  // tocando los proyectos tiene que confirmar las fechas igual.
+  useEffect(() => {
+    if (!abierto) return;
+    const alClic = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (popRef.current?.contains(t) || anclaRef.current?.contains(t)) return;
+      cerrar();
+    };
+    document.addEventListener("mousedown", alClic);
+    return () => document.removeEventListener("mousedown", alClic);
+  });
 
   useEffect(() => {
     if (!abierto) return;
     const alTeclado = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        cancelar();
+        cerrar();
       }
     };
     document.addEventListener("keydown", alTeclado);
@@ -155,7 +174,7 @@ export function SelectorRango({
       <button
         ref={anclaRef}
         type="button"
-        onClick={() => (abierto ? cancelar() : abrir())}
+        onClick={() => (abierto ? cerrar() : abrir())}
         aria-haspopup="dialog"
         aria-expanded={abierto}
         aria-label="Rango de fechas"

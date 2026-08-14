@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { BTN_SECONDARY_SM } from "@/lib/ui";
 import { Dropdown } from "@/components/dropdown";
 import { SelectorRango } from "@/components/selector-rango";
 import { dentroDeUnPopover } from "@/components/ui/popover-flotante";
@@ -31,11 +32,27 @@ export function FiltroPopover({
   maxHoy: string;
   soloFechas?: boolean;
 }) {
+  const router = useRouter();
+  // La navegación va dentro de una transición: React mantiene la tabla actual
+  // en pantalla mientras llega la nueva, en vez de parpadear en blanco.
+  const [aplicando, start] = useTransition();
   const [open, setOpen] = useState(false);
   const [proyectoSel, setProyectoSel] = useState(proyectoId);
   const [desdeSel, setDesdeSel] = useState(desde);
   const [hastaSel, setHastaSel] = useState(hasta);
   const ref = useRef<HTMLDivElement>(null);
+
+  // No hay botón Aplicar: confirmar es cerrar. Un rango a medias nunca llega
+  // hasta acá —el selector solo avisa cuando el rango está completo—, así que
+  // no hay nada que validar.
+  const aplicar = () => {
+    const params = new URLSearchParams();
+    if (desdeSel) params.set("desde", desdeSel);
+    if (hastaSel) params.set("hasta", hastaSel);
+    if (proyectoSel) params.set("proyecto", proyectoSel);
+    const qs = params.toString();
+    start(() => router.push(qs ? `${basePath}?${qs}` : basePath));
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -44,11 +61,16 @@ export function FiltroPopover({
       // en un portal a <body>, así que para `contains` caen afuera aunque se
       // vean adentro.
       if (dentroDeUnPopover(e.target)) return;
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        aplicar();
+        setOpen(false);
+      }
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
-  }, [open]);
+    // Sin array de dependencias: el efecto necesita el `aplicar` de este
+    // render, con los valores actuales.
+  });
 
   const proyectoNombre = proyectos.find((p) => p.id === proyectoId)?.nombre;
   const hayRango = Boolean(desde || hasta);
@@ -83,7 +105,7 @@ export function FiltroPopover({
 
         {open && (
           <div className="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-dc-line bg-dc-deep p-4 shadow-xl">
-            <form method="GET" action={basePath} className="space-y-3">
+            <div className="space-y-3">
               <div>
                 <label className="mb-1 block text-xs text-dc-muted">Período</label>
                 <SelectorRango
@@ -93,12 +115,9 @@ export function FiltroPopover({
                     setDesdeSel(d);
                     setHastaSel(h);
                   }}
+                  onCerrar={aplicar}
                   max={maxHoy || undefined}
                 />
-                {/* El formulario viaja por GET: el rango se manda en campos
-                    ocultos porque el selector es un botón, no un input. */}
-                <input type="hidden" name="desde" value={desdeSel} />
-                <input type="hidden" name="hasta" value={hastaSel} />
               </div>
               {!soloFechas && (
                 <div>
@@ -116,10 +135,13 @@ export function FiltroPopover({
                   />
                 </div>
               )}
-              <div className="flex items-center gap-2 pt-1">
-                <button type="submit" className={BTN_PRIMARY_SM}>
-                  Aplicar
-                </button>
+              {/* Sin botón Aplicar: se confirma al cerrar el calendario o el
+                  panel. Limpiar sigue explícito porque vaciar no es algo que
+                  uno haga sin querer. */}
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <span className="text-[11px] text-dc-muted">
+                  {aplicando ? "Actualizando…" : "Se aplica al cerrar"}
+                </span>
                 {/* Limpia los campos y deja el panel abierto: es el punto de
                     partida para armar otro filtro, no un "aplicar todo". Antes
                     era un enlace al listado sin filtros, así que limpiar
@@ -136,7 +158,7 @@ export function FiltroPopover({
                   Limpiar
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         )}
       </div>

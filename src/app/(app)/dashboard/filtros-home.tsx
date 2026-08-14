@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { SelectorRango } from "@/components/selector-rango";
 import { dentroDeUnPopover } from "@/components/ui/popover-flotante";
-import { BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
+import { BTN_SECONDARY_SM } from "@/lib/ui";
 import { useRecalculo } from "./recalculo";
 
 type Proyecto = { id: string; nombre: string };
@@ -38,18 +38,6 @@ export function FiltrosHome({
   const [sel, setSel] = useState<Set<string>>(new Set(seleccionados));
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      // Un clic en el calendario o en un desplegable NO cierra el panel: viven
-      // en un portal a <body>, así que para `contains` caen afuera aunque se
-      // vean adentro.
-      if (dentroDeUnPopover(e.target)) return;
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [open]);
 
   const todos = proyectos.length > 0 && sel.size === proyectos.length;
 
@@ -78,8 +66,26 @@ export function FiltrosHome({
     }
     const qs = params.toString();
     navegar(qs ? `/dashboard?${qs}` : "/dashboard");
-    setOpen(false);
   };
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      // Un clic en el calendario o en un desplegable NO cierra el panel: viven
+      // en un portal a <body>, así que para `contains` caen afuera aunque se
+      // vean adentro.
+      if (dentroDeUnPopover(e.target)) return;
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        // Cerrar el panel confirma: no hay botón Aplicar.
+        aplicar();
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
+    // Sin array de dependencias: el efecto tiene que ver el `aplicar` de
+    // este render, con las fechas y proyectos actuales.
+  });
 
   // Limpiar vacía fechas y selección y NO cierra ni navega: es el punto de
   // partida para armar un filtro nuevo, no un "volver a todos". Antes hacía
@@ -134,6 +140,7 @@ export function FiltrosHome({
                   setDesdeSel(d);
                   setHastaSel(h);
                 }}
+                onCerrar={aplicar}
                 max={maxHoy}
               />
             </div>
@@ -174,7 +181,13 @@ export function FiltrosHome({
               </div>
             </div>
 
-            <div className="mt-4 flex justify-end gap-2">
+            {/* Sin botón Aplicar: el filtro se confirma al cerrar el
+                calendario o el panel. Limpiar sigue siendo explícito porque
+                vaciar no es algo que uno haga sin querer. */}
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <span className="text-[11px] text-dc-muted">
+                {recalculando ? "Actualizando…" : "Se aplica al cerrar"}
+              </span>
               <button
                 type="button"
                 onClick={limpiar}
@@ -182,14 +195,6 @@ export function FiltrosHome({
                 className={`${BTN_SECONDARY_SM} disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 Limpiar
-              </button>
-              <button
-                type="button"
-                onClick={aplicar}
-                disabled={sel.size === 0 || recalculando}
-                className={`${BTN_PRIMARY_SM} disabled:cursor-not-allowed disabled:opacity-50`}
-              >
-                {recalculando ? "Aplicando…" : "Aplicar"}
               </button>
             </div>
           </div>
