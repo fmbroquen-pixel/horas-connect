@@ -16,7 +16,7 @@ import { FiltrosHome } from "./filtros-home";
 import { MODULOS } from "@/lib/modulos";
 import { EstadoProyectos } from "./estado-proyectos";
 import { EtapasProximas, type EtapaProxima } from "./etapas-proximas";
-import { RecalculoProvider, ZonaRecalculable } from "./recalculo";
+import { BloqueRecalculable, RecalculoProvider, ZonaRecalculable } from "./recalculo";
 
 const MAX_DIAS_FILTRO = 365;
 const CARD = "rounded-2xl border border-dc-line bg-dc-card";
@@ -267,26 +267,37 @@ export default async function DashboardPage({
         // junto a un `overflow-y: auto` el navegador lo degrada a `hidden`,
         // así que se escribe hidden y no se promete otra cosa.)
         <ZonaRecalculable className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto overflow-x-hidden pb-2">
+          {/* Cada KPI avisa por su cuenta que está recalculando: el filtro no
+              cambia todo, y un loader sobre la pantalla entera taparía
+              justamente lo que hay que ver, que es cuáles números se mueven. */}
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Kpi
-              etiqueta="Hs estimadas de proyectos"
-              valor={formatHorasHsMin(presupuestadas)}
-              info="Suma de horas estimadas de todas las tareas. Es el plan completo de los proyectos elegidos: el filtro de fechas no lo mueve."
-            />
-            <Kpi
-              etiqueta="Hs estimadas entregadas"
-              valor={formatHorasHsMin(entregadas)}
-              info="Suma de horas estimadas de todas las tareas con estado Finalizado, tomando las que terminan dentro del rango elegido."
-            />
-            <Kpi
-              etiqueta="Hs Time Tracker Total"
-              valor={formatHorasHsMin(horasTotal)}
-            />
-            <Kpi
-              etiqueta="Hs Time Tracker Usuario"
-              valor={formatHorasHsMin(horasUsuario)}
-              destacado
-            />
+            <BloqueRecalculable>
+              <Kpi
+                etiqueta="Hs estimadas de proyectos"
+                valor={formatHorasHsMin(presupuestadas)}
+                info="Suma de horas estimadas de todas las tareas. Es el plan completo de los proyectos elegidos: el filtro de fechas no lo mueve."
+              />
+            </BloqueRecalculable>
+            <BloqueRecalculable>
+              <Kpi
+                etiqueta="Hs estimadas entregadas"
+                valor={formatHorasHsMin(entregadas)}
+                info="Suma de horas estimadas de todas las tareas con estado Finalizado, tomando las que terminan dentro del rango elegido."
+              />
+            </BloqueRecalculable>
+            <BloqueRecalculable>
+              <Kpi
+                etiqueta="Hs Time Tracker Total"
+                valor={formatHorasHsMin(horasTotal)}
+              />
+            </BloqueRecalculable>
+            <BloqueRecalculable>
+              <Kpi
+                etiqueta="Hs Time Tracker Usuario"
+                valor={formatHorasHsMin(horasUsuario)}
+                destacado
+              />
+            </BloqueRecalculable>
           </div>
 
           {/* Fila superior: el estado del portafolio a la izquierda y, a la
@@ -294,9 +305,11 @@ export default async function DashboardPage({
               celda larga estira su track y aparece scroll horizontal de
               pantalla en vez de recortarse dentro de la card. */}
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-            <div className="flex h-[30rem] min-w-0 flex-col">
-              <EstadoProyectos clienteIds={ids} />
-            </div>
+            <BloqueRecalculable className="flex h-[30rem] min-w-0 flex-col">
+              <div className="flex min-h-0 flex-1 flex-col">
+                <EstadoProyectos clienteIds={ids} />
+              </div>
+            </BloqueRecalculable>
             {/* Con Cumpleaños oculto, Etapas próximas ocupa la columna
                 entera; al reactivarlo vuelven las dos filas de siempre. */}
             <div
@@ -346,6 +359,7 @@ export default async function DashboardPage({
           </div>
 
           {/* Debajo, los dos gráficos, uno por fila. */}
+          <BloqueRecalculable>
           <div className={`${CARD} flex h-72 flex-col px-5 py-3`}>
             <div className="flex shrink-0 items-center gap-2">
               <h2 className="font-display text-sm uppercase text-white">
@@ -361,7 +375,9 @@ export default async function DashboardPage({
               />
             </div>
           </div>
+          </BloqueRecalculable>
 
+          <BloqueRecalculable>
           <div className={`${CARD} flex h-72 flex-col px-5 py-3`}>
             <div className="flex shrink-0 items-center gap-2">
               <h2 className="font-display text-sm uppercase text-white">
@@ -376,6 +392,7 @@ export default async function DashboardPage({
               <SemaforoEvolucion fechas={semanasSemaforo} series={seriesSemaforo} />
             </div>
           </div>
+          </BloqueRecalculable>
         </ZonaRecalculable>
       )}
     </div>

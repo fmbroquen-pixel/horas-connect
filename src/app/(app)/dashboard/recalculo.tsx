@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ZonaCargable } from "@/components/ui/zona-cargable";
 
 // Estado compartido de "estoy recalculando" entre el filtro y los bloques que
 // dependen de él.
@@ -61,5 +62,22 @@ export function ZonaRecalculable({
     >
       {children}
     </div>
+  );
+}
+
+// Un bloque del Home que se recalcula con el filtro. Es el puente entre el
+// contexto (cliente) y las cards, que se arman en el Server Component.
+export function BloqueRecalculable({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const { recalculando } = useRecalculo();
+  return (
+    <ZonaCargable cargando={recalculando} className={className}>
+      {children}
+    </ZonaCargable>
   );
 }
