@@ -2,8 +2,7 @@
 
 import { useRef } from "react";
 import { actualizarCampoRegistro, eliminarRegistro } from "./actions";
-import { formatMonto, hoyISO, restarDiasISO } from "@/lib/formato";
-import { DIAS_VENTANA_EDICION } from "./constantes";
+import { formatMonto, hoyISO } from "@/lib/formato";
 import { GRID_TIMETRACKER } from "./grid";
 import {
   CeldaFecha,
@@ -45,7 +44,6 @@ export function FilaRegistro({
   seleccionado: boolean;
   onToggle: (id: string) => void;
 }) {
-  const editable = registro.editable;
   const filaRef = useRef<HTMLDivElement>(null);
 
   const guardar = (campo: Parameters<typeof actualizarCampoRegistro>[1]) =>
@@ -62,17 +60,13 @@ export function FilaRegistro({
   return (
     <div ref={filaRef} className="border-b border-dc-line px-4 py-2 last:border-0">
       <div className={GRID_TIMETRACKER}>
-        {editable ? (
-          <input
-            type="checkbox"
-            checked={seleccionado}
-            onChange={() => onToggle(registro.id)}
-            className="h-4 w-4 accent-dc-purple"
-            aria-label="Seleccionar fila"
-          />
-        ) : (
-          <span />
-        )}
+        <input
+          type="checkbox"
+          checked={seleccionado}
+          onChange={() => onToggle(registro.id)}
+          className="h-4 w-4 accent-dc-purple"
+          aria-label="Seleccionar fila"
+        />
 
         <CeldaFecha
           valor={registro.fecha}
@@ -80,8 +74,6 @@ export function FilaRegistro({
           ariaLabel="Fecha"
           mostrar={mostrarFecha}
           max={hoyISO()}
-          min={restarDiasISO(hoyISO(), DIAS_VENTANA_EDICION)}
-          editable={editable}
         />
 
         <CeldaOpciones
@@ -89,7 +81,6 @@ export function FilaRegistro({
           opciones={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
           onGuardar={guardar("clienteId")}
           ariaLabel="Cliente"
-          editable={editable}
         />
 
         <CeldaOpciones
@@ -102,7 +93,6 @@ export function FilaRegistro({
           // siguen etiquetando su historial.
           etiqueta={registro.conceptoNombre}
           placeholder="Elegí un concepto"
-          editable={editable}
         />
 
         <CeldaOpciones
@@ -110,14 +100,12 @@ export function FilaRegistro({
           opciones={OPCIONES_OWNERSHIP}
           onGuardar={guardar("ownership")}
           ariaLabel="Ownership"
-          editable={editable}
         />
 
         <CeldaHoras
           valor={registro.horas}
           onGuardar={guardar("horas")}
           ariaLabel="Horas"
-          editable={editable}
         />
 
         <CeldaOpciones
@@ -125,7 +113,6 @@ export function FilaRegistro({
           opciones={OPCIONES_MODALIDAD}
           onGuardar={guardar("modalidad")}
           ariaLabel="Modalidad"
-          editable={editable}
         />
 
         {/* Calculados a partir de la tarifa vigente: no se editan. */}
@@ -138,22 +125,11 @@ export function FilaRegistro({
 
         {/* Editar → Eliminar, el mismo par y el mismo orden que Expenses. */}
         <span className="flex justify-center gap-1">
-          {editable ? (
-            <>
-              <BotonEditarIcono onClick={editarPrimeraCelda} />
-              <BotonEliminarIcono
-                onConfirm={() => eliminarRegistro(registro.id)}
-                mensaje="Hora enviada a papelera"
-              />
-            </>
-          ) : (
-            <span
-              className="text-xs text-dc-muted"
-              title={`Pasados ${DIAS_VENTANA_EDICION} días el registro queda fijo`}
-            >
-              Cerrado
-            </span>
-          )}
+          <BotonEditarIcono onClick={editarPrimeraCelda} />
+          <BotonEliminarIcono
+            onConfirm={() => eliminarRegistro(registro.id)}
+            mensaje="Hora enviada a papelera"
+          />
         </span>
       </div>
     </div>

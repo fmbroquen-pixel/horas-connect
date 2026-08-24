@@ -7,7 +7,6 @@ import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { formatHorasHsMin, parseHorasHsMin } from "@/lib/horas";
 import { SOLO_ACTIVOS, revalidarHoras } from "@/lib/registros-horas";
 import { fechaDesdeISO, hoyUTC } from "@/lib/dias-habiles";
-import { DIAS_VENTANA_EDICION, limiteVentana } from "./constantes";
 import type { Modalidad, Ownership } from "@/generated/prisma/client";
 
 const RegistroSchema = z.object({
@@ -44,11 +43,6 @@ function validarFecha(fechaISO: string): { fecha?: Date; error?: string } {
   // el corte queda estrictamente después.
   if (fecha > hoyUTC()) return { error: "No se pueden cargar horas futuras." };
 
-  if (fecha < limiteVentana()) {
-    return {
-      error: `Solo se pueden cargar o modificar registros de los últimos ${DIAS_VENTANA_EDICION} días.`,
-    };
-  }
   return { fecha };
 }
 
@@ -170,11 +164,6 @@ async function registroEditable(id: string, usuarioId: string, esAdmin: boolean)
   if (!registro || registro.eliminadoEn) return { error: "Registro no encontrado." };
   if (!esAdmin && registro.usuarioId !== usuarioId) {
     return { error: "No podés modificar registros de otra persona." };
-  }
-  if (!esAdmin && registro.fecha < limiteVentana()) {
-    return {
-      error: `Los registros de hace más de ${DIAS_VENTANA_EDICION} días ya no se pueden modificar.`,
-    };
   }
   return { registro };
 }
@@ -315,12 +304,9 @@ export async function editarRegistros(
     if (!concepto) return { error: "Concepto inválido." };
   }
 
-  const limite = limiteVentana();
   let actualizados = 0;
 
   for (const fila of filas) {
-    if (!esAdmin && fila.fecha < limite) continue;
-
     if (campo === "clienteId") {
       // El concepto no se toca: clasifica la actividad y sigue valiendo
       // aunque las horas se muevan a otro proyecto.

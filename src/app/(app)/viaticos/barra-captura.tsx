@@ -3,8 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { crearViatico, type CampoViatico } from "./actions";
 import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
-import { hoyISO, restarDiasISO } from "@/lib/formato";
-import { DIAS_VENTANA_CARGA } from "@/lib/ventana-carga";
+import { hoyISO } from "@/lib/formato";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import { ToastAviso } from "@/components/ui/toast-aviso";
@@ -125,7 +124,6 @@ export function BarraCapturaViatico({
             value={valores.fecha}
             onChange={(v) => set("fecha", v)}
             max={hoyISO()}
-            min={restarDiasISO(hoyISO(), DIAS_VENTANA_CARGA)}
             invalido={estado?.campo === "fecha"}
             className="w-full"
             ariaLabel="Fecha"

@@ -24,7 +24,6 @@ export type RegistroFila = {
   horas: string; // hs:min
   tarifaUsd: number;
   montoUsd: number;
-  editable: boolean;
 };
 
 export const ETIQUETA_OWNERSHIP: Record<string, string> = {

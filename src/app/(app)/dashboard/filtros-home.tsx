@@ -1,40 +1,30 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { SelectorRango } from "@/components/selector-rango";
 import { dentroDeUnPopover } from "@/components/ui/popover-flotante";
 import { BTN_SECONDARY_SM } from "@/lib/ui";
 import { useRecalculo } from "./recalculo";
 
 type Proyecto = { id: string; nombre: string };
 
-function fmt(iso: string) {
-  if (!iso) return "";
-  const [a, m, d] = iso.split("-");
-  return `${d}/${m}/${a}`;
-}
-
-// Filtro del Home: rango de fechas + selección múltiple de proyectos. A
-// diferencia del FiltroPopover del resto de la app (un solo proyecto), acá se
-// eligen varios y el default —sin parámetro en la URL— son todos los
-// accesibles: así el Home abre mostrando el panorama completo.
+// Filtro de proyectos del Home. El período lo maneja el selector mensual de
+// al lado: acá quedó solo la selección múltiple de proyectos, que es lo único
+// propio de esta pantalla —el resto de la app filtra por un proyecto.
 export function FiltrosHome({
-  desde,
-  hasta,
-  maxHoy,
+  anio,
+  mes,
   proyectos,
   seleccionados,
 }: {
-  desde: string;
-  hasta: string;
-  maxHoy: string;
+  // Viajan en la URL junto con los proyectos, para no perder el mes al
+  // cambiar la selección.
+  anio: number;
+  mes: number;
   proyectos: Proyecto[];
   seleccionados: string[];
 }) {
   const { recalculando, navegar } = useRecalculo();
   const [open, setOpen] = useState(false);
-  const [desdeSel, setDesdeSel] = useState(desde);
-  const [hastaSel, setHastaSel] = useState(hasta);
   const [sel, setSel] = useState<Set<string>>(new Set(seleccionados));
   const ref = useRef<HTMLDivElement>(null);
 
@@ -50,30 +40,21 @@ export function FiltrosHome({
     });
 
   const aplicar = () => {
-    // Se ordena acá y no en los calendarios: elegir primero la fecha "grande"
-    // es una forma legítima de armar un rango, y trabarla obliga a adivinar en
-    // qué orden hay que tocar los campos.
-    const invertido = desdeSel && hastaSel && desdeSel > hastaSel;
-    const desdeFinal = invertido ? hastaSel : desdeSel;
-    const hastaFinal = invertido ? desdeSel : hastaSel;
-
     const params = new URLSearchParams();
-    if (desdeFinal) params.set("desde", desdeFinal);
-    if (hastaFinal) params.set("hasta", hastaFinal);
+    params.set("anio", String(anio));
+    params.set("mes", String(mes));
     // "Todos" no viaja en la URL: es el default y así el link queda limpio.
     if (sel.size > 0 && sel.size < proyectos.length) {
       params.set("proyectos", [...sel].join(","));
     }
-    const qs = params.toString();
-    navegar(qs ? `/dashboard?${qs}` : "/dashboard");
+    navegar(`/dashboard?${params.toString()}`);
   };
 
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      // Un clic en el calendario o en un desplegable NO cierra el panel: viven
-      // en un portal a <body>, así que para `contains` caen afuera aunque se
-      // vean adentro.
+      // Un clic en un desplegable NO cierra el panel: vive en un portal a
+      // <body>, así que para `contains` cae afuera aunque se vea adentro.
       if (dentroDeUnPopover(e.target)) return;
       if (ref.current && !ref.current.contains(e.target as Node)) {
         // Cerrar el panel confirma: no hay botón Aplicar.
@@ -84,34 +65,23 @@ export function FiltrosHome({
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
     // Sin array de dependencias: el efecto tiene que ver el `aplicar` de
-    // este render, con las fechas y proyectos actuales.
+    // este render, con los proyectos actuales.
   });
 
-  // Limpiar vacía fechas y selección y NO cierra ni navega: es el punto de
-  // partida para armar un filtro nuevo, no un "volver a todos". Antes hacía
-  // las tres cosas al revés —marcaba todos los proyectos, navegaba y cerraba—,
-  // así que el botón que promete limpiar terminaba aplicando el filtro más
-  // amplio posible y sacándote del popup.
-  const limpiar = () => {
-    setDesdeSel("");
-    setHastaSel("");
-    setSel(new Set());
-  };
+  // Limpiar vacía la selección y NO cierra ni navega: es el punto de partida
+  // para armar un filtro nuevo, no un "volver a todos".
+  const limpiar = () => setSel(new Set());
 
   const parcial = seleccionados.length < proyectos.length;
 
   return (
     <div className="flex items-center gap-2">
       <span className="hidden rounded-full border border-dc-line bg-dc-card px-3 py-1 text-xs text-dc-muted sm:inline-flex">
-        <span className="text-dc-peri">Filtros activos&nbsp;→&nbsp;</span>
+        <span className="text-dc-peri">Proyectos&nbsp;→&nbsp;</span>
         <span className="text-dc-text">
-          {fmt(desde)} – {fmt(hasta)}
-        </span>
-        <span className="text-dc-text">
-          &nbsp;·&nbsp;
           {parcial
-            ? `${seleccionados.length} de ${proyectos.length} proyectos`
-            : "Todos los proyectos"}
+            ? `${seleccionados.length} de ${proyectos.length}`
+            : "Todos"}
         </span>
       </span>
 
@@ -132,20 +102,6 @@ export function FiltrosHome({
         {open && (
           <div className="dc-menu dc-pop-in absolute right-0 z-40 mt-2 w-80 rounded-xl border border-dc-line bg-dc-deep p-4 shadow-[0_12px_32px_rgba(0,0,0,0.45)]">
             <div>
-              <span className="mb-1 block text-xs text-dc-muted">Período</span>
-              <SelectorRango
-                desde={desdeSel}
-                hasta={hastaSel}
-                onChange={(d, h) => {
-                  setDesdeSel(d);
-                  setHastaSel(h);
-                }}
-                onCerrar={aplicar}
-                max={maxHoy}
-              />
-            </div>
-
-            <div className="mt-3">
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-xs text-dc-muted">Proyectos</span>
                 <button
@@ -181,9 +137,7 @@ export function FiltrosHome({
               </div>
             </div>
 
-            {/* Sin botón Aplicar: el filtro se confirma al cerrar el
-                calendario o el panel. Limpiar sigue siendo explícito porque
-                vaciar no es algo que uno haga sin querer. */}
+            {/* Sin botón Aplicar: se confirma al cerrar el panel. */}
             <div className="mt-4 flex items-center justify-between gap-2">
               <span className="text-[11px] text-dc-muted">
                 {recalculando ? "Actualizando…" : "Se aplica al cerrar"}
@@ -191,7 +145,7 @@ export function FiltrosHome({
               <button
                 type="button"
                 onClick={limpiar}
-                disabled={sel.size === 0 && !desdeSel && !hastaSel}
+                disabled={sel.size === 0}
                 className={`${BTN_SECONDARY_SM} disabled:cursor-not-allowed disabled:opacity-50`}
               >
                 Limpiar

@@ -6,7 +6,9 @@ import { getUsuariosQueReportan, resolverUsuarioDestino } from "@/lib/registrar-
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { fechaDesdeISO } from "@/lib/dias-habiles";
 import { MODULOS } from "@/lib/modulos";
-import { hoyISO, rangoDefault30 } from "@/lib/formato";
+import { hoyISO } from "@/lib/formato";
+import { mesDeParams, rangoDelMes } from "@/lib/mes";
+import { SelectorMes } from "@/components/selector-mes";
 import { createAdminClient, BUCKET_COMPROBANTES } from "@/lib/supabase/admin";
 import { FiltroPopover } from "@/components/filtro-popover";
 import { InfoButton } from "@/components/info-button";
@@ -23,8 +25,8 @@ export default async function ViaticosPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    desde?: string;
-    hasta?: string;
+    anio?: string;
+    mes?: string;
     proyecto?: string;
     usuario?: string;
   }>;
@@ -40,7 +42,10 @@ export default async function ViaticosPage({
   const esAdmin = actor.rol === "admin";
 
   const params = await searchParams;
-  const { desde, hasta } = rangoDefault30(params.desde, params.hasta);
+  // El período es un mes, igual que en Analytics. El mes en curso se corta
+  // en hoy; los anteriores van completos.
+  const { anio, mes } = mesDeParams(params.anio, params.mes);
+  const { desde, hasta } = rangoDelMes(anio, mes);
 
   // Dueño de los gastos. Solo un admin puede elegir otro; para el resto
   // resolverUsuarioDestino devuelve siempre el propio actor (y si el param es
@@ -132,10 +137,20 @@ export default async function ViaticosPage({
           <span />
         )}
         <div className="flex items-center gap-2">
+          {/* Período: un mes, con el mismo selector de Analytics. El filtro de
+              proyecto queda aparte y sin fechas: un rango libre además del mes
+              serían dos formas de decir lo mismo. */}
+          <SelectorMes
+            anio={anio}
+            mes={mes}
+            basePath="/viaticos"
+            extra={{ proyecto: proyectoId, usuario: params.usuario }}
+          />
           <FiltroPopover
             basePath="/viaticos"
-            desde={desde}
-            hasta={hasta}
+            desde=""
+            hasta=""
+            sinFechas
             proyectoId={proyectoId ?? ""}
             proyectos={opcionesProyecto}
             maxHoy={hoyISO()}

@@ -41,7 +41,7 @@ export default async function RentabilidadPage({
               : "Tus clientes asignados"}
           </p>
         </div>
-        <SelectorMes anio={anio} mes={mes} />
+        <SelectorMes anio={anio} mes={mes} basePath="/rentabilidad" />
       </div>
 
       {/* KPIs */}

@@ -27,8 +27,8 @@ export function TablaRegistros({
   const [campo, setCampo] = useState<CampoMasivo>("clienteId");
   const [valor, setValor] = useState("");
 
-  const editables = filas.filter((f) => f.editable);
-  const todasSel = editables.length > 0 && sel.size === editables.length;
+  // Ya no hay filas cerradas: todo el historial se puede editar y borrar.
+  const todasSel = filas.length > 0 && sel.size === filas.length;
 
   const toggle = (id: string) =>
     setSel((s) => {
@@ -39,7 +39,7 @@ export function TablaRegistros({
     });
 
   const toggleTodas = () =>
-    setSel(todasSel ? new Set() : new Set(editables.map((f) => f.id)));
+    setSel(todasSel ? new Set() : new Set(filas.map((f) => f.id)));
 
   const limpiar = () => {
     setSel(new Set());
@@ -177,7 +177,7 @@ export function TablaRegistros({
               type="checkbox"
               checked={todasSel}
               onChange={toggleTodas}
-              disabled={editables.length === 0}
+              disabled={filas.length === 0}
               className="h-4 w-4 accent-dc-purple"
               aria-label="Seleccionar todo"
             />

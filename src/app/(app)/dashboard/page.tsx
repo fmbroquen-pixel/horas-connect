@@ -7,6 +7,8 @@ import { tareasVivas } from "@/lib/roadmap-papelera";
 import { formatHorasHsMin } from "@/lib/horas";
 import { construirCurvaHoras } from "@/lib/curva-horas";
 import { hoyISO, semanaActualISO } from "@/lib/formato";
+import { mesDeParams, rangoDelMes } from "@/lib/mes";
+import { SelectorMes } from "@/components/selector-mes";
 import { InfoButton } from "@/components/info-button";
 import { CurvaHoras } from "@/components/curva-horas";
 import { SemaforoEvolucion, NIVEL_SEMAFORO } from "@/components/semaforo-evolucion";
@@ -18,7 +20,6 @@ import { EstadoProyectos } from "./estado-proyectos";
 import { EtapasProximas, type EtapaProxima } from "./etapas-proximas";
 import { BloqueRecalculable, RecalculoProvider, ZonaRecalculable } from "./recalculo";
 
-const MAX_DIAS_FILTRO = 365;
 const CARD = "rounded-2xl border border-dc-line bg-dc-card";
 
 // Home de CORE: el panorama del portafolio del usuario. Un mentor ve los
@@ -28,7 +29,7 @@ const CARD = "rounded-2xl border border-dc-line bg-dc-card";
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ desde?: string; hasta?: string; proyectos?: string }>;
+  searchParams: Promise<{ anio?: string; mes?: string; proyectos?: string }>;
 }) {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
@@ -38,15 +39,12 @@ export default async function DashboardPage({
 
   const params = await searchParams;
 
-  // Rango por defecto: últimos 90 días, para que la curva acumulada tenga
-  // suficientes semanas como para leerse.
+  // El período es un mes, igual que en Analytics: el mes en curso se corta en
+  // hoy y los anteriores van completos. Antes era un rango libre con un tope
+  // de 365 días; el tope se fue con el rango.
   const hoy = hoyISO();
-  let desde = validarISO(params.desde) ?? restarDias(hoy, 90);
-  let hasta = validarISO(params.hasta) ?? hoy;
-  if (desde > hasta) [desde, hasta] = [hasta, desde];
-  if (diasEntre(desde, hasta) > MAX_DIAS_FILTRO) {
-    desde = restarDias(hasta, MAX_DIAS_FILTRO);
-  }
+  const { anio, mes } = mesDeParams(params.anio, params.mes);
+  const { desde, hasta } = rangoDelMes(anio, mes);
 
   const proyectos = await getProyectosConRol(usuario.id);
   const idsAccesibles = proyectos.map((p) => p.id);
@@ -239,13 +237,25 @@ export default async function DashboardPage({
         <h1 className="font-display text-xl uppercase text-white">
           Hola, {usuario.nombre.split(" ")[0]}
         </h1>
-        <FiltrosHome
-          desde={desde}
-          hasta={hasta}
-          maxHoy={hoy}
-          proyectos={proyectos.map((p) => ({ id: p.id, nombre: p.nombre }))}
-          seleccionados={ids}
-        />
+        <div className="flex items-center gap-3">
+          <SelectorMes
+            anio={anio}
+            mes={mes}
+            basePath="/dashboard"
+            extra={{
+              proyectos:
+                ids.length > 0 && ids.length < idsAccesibles.length
+                  ? ids.join(",")
+                  : undefined,
+            }}
+          />
+          <FiltrosHome
+            anio={anio}
+            mes={mes}
+            proyectos={proyectos.map((p) => ({ id: p.id, nombre: p.nombre }))}
+            seleccionados={ids}
+          />
+        </div>
       </div>
 
       {idsAccesibles.length === 0 ? (
@@ -430,18 +440,3 @@ function Kpi({
   );
 }
 
-function validarISO(valor?: string): string | undefined {
-  return valor && /^\d{4}-\d{2}-\d{2}$/.test(valor) ? valor : undefined;
-}
-
-function restarDias(iso: string, dias: number): string {
-  const fecha = new Date(iso + "T00:00:00Z");
-  fecha.setUTCDate(fecha.getUTCDate() - dias);
-  return fecha.toISOString().slice(0, 10);
-}
-
-function diasEntre(desdeISO: string, hastaISO: string): number {
-  const desde = new Date(desdeISO + "T00:00:00Z");
-  const hasta = new Date(hastaISO + "T00:00:00Z");
-  return Math.round((hasta.getTime() - desde.getTime()) / 86400000);
-}

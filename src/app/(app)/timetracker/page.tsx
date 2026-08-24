@@ -9,22 +9,23 @@ import {
 import { getConceptosActivos } from "@/lib/conceptos";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { formatHorasHsMin } from "@/lib/horas";
-import { hoyISO, rangoDefault30 } from "@/lib/formato";
+import { hoyISO } from "@/lib/formato";
+import { mesDeParams, rangoDelMes } from "@/lib/mes";
+import { SelectorMes } from "@/components/selector-mes";
 import { FiltroPopover } from "@/components/filtro-popover";
 import { InfoButton } from "@/components/info-button";
 import { TablaRegistros } from "./tabla-registros";
 import { AccionesMenu } from "./acciones-menu";
 import { BarraCaptura } from "./barra-captura";
 import { SelectorUsuario } from "@/components/selector-usuario";
-import { DIAS_VENTANA_EDICION, limiteVentana } from "./constantes";
 import type { MapaTarifas, RegistroFila } from "./tipos";
 
 export default async function TimetrackerPage({
   searchParams,
 }: {
   searchParams: Promise<{
-    desde?: string;
-    hasta?: string;
+    anio?: string;
+    mes?: string;
     proyecto?: string;
     usuario?: string;
   }>;
@@ -35,8 +36,10 @@ export default async function TimetrackerPage({
   if (actor.rol === "reader") redirect("/rentabilidad");
 
   const params = await searchParams;
-  // Por defecto, últimos 30 días.
-  const { desde, hasta } = rangoDefault30(params.desde, params.hasta);
+  // El período es un mes, igual que en Analytics. El mes en curso se corta
+  // en hoy; los anteriores van completos.
+  const { anio, mes } = mesDeParams(params.anio, params.mes);
+  const { desde, hasta } = rangoDelMes(anio, mes);
 
   const esAdmin = actor.rol === "admin";
 
@@ -89,8 +92,6 @@ export default async function TimetrackerPage({
 
   // Mismo corte que valida el servidor al guardar, del mismo helper: si se
   // calculara acá aparte, la tabla podría mostrar como editable una fila que
-  // la action después rechaza.
-  const limite = limiteVentana();
 
   // Etiqueta de la columna Concepto: el nombre guardado, aunque el concepto
   // esté dado de baja y ya no figure en el desplegable. Si el registro es
@@ -110,7 +111,6 @@ export default async function TimetrackerPage({
       horas: formatHorasHsMin(Number(r.horas)),
       tarifaUsd: Number(r.tarifaUsdAplicada),
       montoUsd: Number(r.montoUsd),
-      editable: r.fecha >= limite,
     }));
 
   const sinTarifa = Object.keys(tarifas).length === 0;
@@ -128,8 +128,7 @@ export default async function TimetrackerPage({
         <h1 className="font-display text-lg uppercase text-white">Time Tracking</h1>
         <InfoButton>
           Cargá las horas como número decimal (por ejemplo 1,5 o 1.5) y se
-          muestran como 1:30. Se pueden cargar y corregir registros de los
-          últimos {DIAS_VENTANA_EDICION} días; no se admiten fechas futuras.
+          muestran como 1:30. Se pueden cargar y corregir registros de los No se admiten fechas futuras.
         </InfoButton>
       </div>
 
@@ -163,10 +162,20 @@ export default async function TimetrackerPage({
           <span />
         )}
         <div className="flex items-center gap-2">
+          {/* Período: un mes, con el mismo selector de Analytics. El filtro de
+              proyecto queda aparte y sin fechas: un rango libre además del mes
+              serían dos formas de decir lo mismo. */}
+          <SelectorMes
+            anio={anio}
+            mes={mes}
+            basePath="/timetracker"
+            extra={{ proyecto: proyectoId, usuario: params.usuario }}
+          />
           <FiltroPopover
             basePath="/timetracker"
-            desde={desde}
-            hasta={hasta}
+            desde=""
+            hasta=""
+            sinFechas
             proyectoId={proyectoId ?? ""}
             proyectos={opcionesProyecto}
             maxHoy={hoyISO()}
