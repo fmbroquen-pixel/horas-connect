@@ -305,10 +305,11 @@ export default async function DashboardPage({
               celda larga estira su track y aparece scroll horizontal de
               pantalla en vez de recortarse dentro de la card. */}
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-            <BloqueRecalculable className="flex h-[30rem] min-w-0 flex-col">
-              <div className="flex min-h-0 flex-1 flex-col">
-                <EstadoProyectos clienteIds={ids} />
-              </div>
+            <BloqueRecalculable
+              className="flex h-[30rem] min-w-0 flex-col"
+              claseContenido="flex min-h-0 flex-1 flex-col"
+            >
+              <EstadoProyectos clienteIds={ids} />
             </BloqueRecalculable>
             {/* Con Cumpleaños oculto, Etapas próximas ocupa la columna
                 entera; al reactivarlo vuelven las dos filas de siempre. */}

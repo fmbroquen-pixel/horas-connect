@@ -70,13 +70,19 @@ export function ZonaRecalculable({
 export function BloqueRecalculable({
   children,
   className,
+  claseContenido,
 }: {
   children: React.ReactNode;
   className?: string;
+  claseContenido?: string;
 }) {
   const { recalculando } = useRecalculo();
   return (
-    <ZonaCargable cargando={recalculando} className={className}>
+    <ZonaCargable
+      cargando={recalculando}
+      className={className}
+      claseContenido={claseContenido}
+    >
       {children}
     </ZonaCargable>
   );

@@ -14,17 +14,23 @@ export function ZonaCargable({
   cargando,
   children,
   className = "",
+  claseContenido = "",
 }: {
   cargando: boolean;
   children: React.ReactNode;
   className?: string;
+  // Clases del envoltorio interno. Hace falta cuando el hijo se acota con
+  // flex-1/min-h-0: este div queda EN EL MEDIO de esa cadena, y si no la
+  // continúa, el hijo pierde su límite de alto y se desborda encima de lo que
+  // sigue. Para una card de alto fijo no hace falta.
+  claseContenido?: string;
 }) {
   return (
     <div className={`relative ${className}`}>
       {/* La key cambia al terminar la carga: eso remonta el envoltorio y hace
           que la animación de entrada vuelva a correr, así el valor nuevo
           aparece con un fundido en vez de saltar. */}
-      <div key={cargando ? "cargando" : "listo"} className={cargando ? "invisible" : "dc-fade-in"}>
+      <div key={cargando ? "cargando" : "listo"} className={`${claseContenido} ${cargando ? "invisible" : "dc-fade-in"}`}>
         {children}
       </div>
       {cargando && (
