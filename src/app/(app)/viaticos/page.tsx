@@ -7,6 +7,7 @@ import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { fechaDesdeISO } from "@/lib/dias-habiles";
 import { MODULOS } from "@/lib/modulos";
 import { hoyISO } from "@/lib/formato";
+import { marcaDeEdicion } from "@/lib/edicion";
 import { mesDeParams, rangoDelMes } from "@/lib/mes";
 import { SelectorMes } from "@/components/selector-mes";
 import { createAdminClient, BUCKET_COMPROBANTES } from "@/lib/supabase/admin";
@@ -70,6 +71,7 @@ export default async function ViaticosPage({
       },
       orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
       take: 300,
+      include: { editadoPor: { select: { nombre: true } } },
     }),
     esAdmin ? getUsuariosQueReportan() : Promise.resolve([]),
   ]);
@@ -93,6 +95,7 @@ export default async function ViaticosPage({
         monto: Number(v.monto),
         concepto: v.concepto,
         archivoUrl,
+        edicion: marcaDeEdicion(v.editadoPor, v.updatedAt),
       };
     }),
   );

@@ -24,6 +24,8 @@ export type RegistroFila = {
   horas: string; // hs:min
   tarifaUsd: number;
   montoUsd: number;
+  // "Editado por X el dd/mm/aaaa", o null si nunca se editó.
+  edicion: string | null;
 };
 
 export const ETIQUETA_OWNERSHIP: Record<string, string> = {

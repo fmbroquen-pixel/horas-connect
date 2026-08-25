@@ -12,6 +12,7 @@ import {
 } from "@/components/tabla/celda-editable";
 import type { OpcionConcepto, OpcionSelect, RegistroFila } from "./tipos";
 import { BotonEditarIcono, BotonEliminarIcono } from "@/components/tabla/acciones-fila";
+import { MarcaEdicion } from "@/components/tabla/marca-edicion";
 
 const OPCIONES_OWNERSHIP = [
   { value: "owner", label: "Owner" },
@@ -124,7 +125,8 @@ export function FilaRegistro({
         </CeldaSoloLectura>
 
         {/* Editar → Eliminar, el mismo par y el mismo orden que Expenses. */}
-        <span className="flex justify-center gap-1">
+        <span className="flex items-center justify-center gap-1">
+          <MarcaEdicion detalle={registro.edicion} />
           <BotonEditarIcono onClick={editarPrimeraCelda} />
           <BotonEliminarIcono
             onConfirm={() => eliminarRegistro(registro.id)}

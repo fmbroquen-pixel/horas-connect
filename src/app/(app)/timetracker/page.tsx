@@ -10,6 +10,7 @@ import { getConceptosActivos } from "@/lib/conceptos";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { formatHorasHsMin } from "@/lib/horas";
 import { hoyISO } from "@/lib/formato";
+import { marcaDeEdicion } from "@/lib/edicion";
 import { mesDeParams, rangoDelMes } from "@/lib/mes";
 import { SelectorMes } from "@/components/selector-mes";
 import { FiltroPopover } from "@/components/filtro-popover";
@@ -80,6 +81,7 @@ export default async function TimetrackerPage({
         include: {
           concepto: { select: { nombre: true } },
           etapa: { select: { etiqueta: true } },
+          editadoPor: { select: { nombre: true } },
         },
       }),
       esAdmin ? getUsuariosQueReportan() : Promise.resolve([]),
@@ -111,6 +113,7 @@ export default async function TimetrackerPage({
       horas: formatHorasHsMin(Number(r.horas)),
       tarifaUsd: Number(r.tarifaUsdAplicada),
       montoUsd: Number(r.montoUsd),
+      edicion: marcaDeEdicion(r.editadoPor, r.updatedAt),
     }));
 
   const sinTarifa = Object.keys(tarifas).length === 0;

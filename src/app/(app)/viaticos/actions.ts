@@ -130,6 +130,8 @@ export async function crearViatico(
       monto: r.datos.monto,
       concepto: r.datos.concepto,
       archivoPath,
+      // Mismo criterio que en Time Tracking: la edición deja quién la hizo.
+      editadoPorId: actor.id,
     },
   });
 

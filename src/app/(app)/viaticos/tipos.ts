@@ -12,6 +12,8 @@ export type ViaticoFila = {
   monto: number;
   concepto: string;
   archivoUrl: string | null;
+  // "Editado por X el dd/mm/aaaa", o null si nunca se editó.
+  edicion: string | null;
 };
 
 export const ETIQUETA_CONCEPTO: Record<string, string> = {

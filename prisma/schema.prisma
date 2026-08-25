@@ -311,9 +311,11 @@ model Usuario {
   tarifas            Tarifa[]
   registros          RegistroHoras[]    @relation("Mentor")
   registrosCreados   RegistroHoras[]    @relation("CreadoPor")
+  registrosEditados  RegistroHoras[]    @relation("EditadoPor")
   proyectosAsignados ProyectoAsignado[]
   viaticos           Viatico[]          @relation("Gasto")
   viaticosCreados    Viatico[]          @relation("ViaticoCreadoPor")
+  viaticosEditados   Viatico[]          @relation("ViaticoEditadoPor")
   listasEliminadas   ListaRoadmap[]     @relation("ListaEliminadaPor")
   tareasEliminadas   TareaRoadmap[]     @relation("TareaEliminadaPor")
   vacaciones         Vacacion[]
@@ -436,6 +438,14 @@ model RegistroHoras {
   creadoPorId String  @map("creado_por_id")
   creadoPor   Usuario @relation("CreadoPor", fields: [creadoPorId], references: [id])
 
+  // Quien lo modifico por ultima vez. Null = nunca se edito.
+  //
+  // Editar pisa el valor viejo sin dejar rastro, y desde que se saco la
+  // ventana de 45 dias eso alcanza a todo el historial. updatedAt ya decia
+  // CUANDO; faltaba QUIEN, que es lo que permite preguntar.
+  editadoPorId String?  @map("editado_por_id")
+  editadoPor   Usuario? @relation("EditadoPor", fields: [editadoPorId], references: [id])
+
   // Borrado logico: si tiene fecha, el registro esta en la papelera.
   eliminadoEn DateTime? @map("eliminado_en")
 
@@ -466,6 +476,10 @@ model Viatico {
   // rastro de quién lo ingresó.
   creadoPorId String  @map("creado_por_id")
   creadoPor   Usuario @relation("ViaticoCreadoPor", fields: [creadoPorId], references: [id])
+
+  // Mismo criterio que en Time Tracking: quien lo edito por ultima vez.
+  editadoPorId String?  @map("editado_por_id")
+  editadoPor   Usuario? @relation("ViaticoEditadoPor", fields: [editadoPorId], references: [id])
 
   clienteId String          @map("cliente_id")
   cliente   Cliente         @relation(fields: [clienteId], references: [id])

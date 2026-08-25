@@ -157,8 +157,9 @@ export async function crearRegistro(
   return {};
 }
 
-// Solo el dueño del registro (o un admin) puede modificarlo, y solo si la
-// fecha original y la nueva están dentro de la ventana de edición.
+// Solo el dueño del registro (o un admin) puede modificarlo. Ya no hay
+// ventana de tiempo: el historial completo es editable, y por eso cada edición
+// deja registrado quién la hizo.
 async function registroEditable(id: string, usuarioId: string, esAdmin: boolean) {
   const registro = await prisma.registroHoras.findUnique({ where: { id } });
   if (!registro || registro.eliminadoEn) return { error: "Registro no encontrado." };
@@ -208,6 +209,9 @@ export async function actualizarCampoRegistro(
       ownership: d.ownership,
       tarifaUsdAplicada: d.tarifa,
       montoUsd: Math.round(d.horas * d.tarifa * 100) / 100,
+      // Editar pisa el valor viejo sin dejar rastro. updatedAt ya guarda
+      // cuándo; esto guarda quién, que es lo que permite preguntar.
+      editadoPorId: usuario.id,
     },
   });
 
@@ -312,12 +316,12 @@ export async function editarRegistros(
       // aunque las horas se muevan a otro proyecto.
       await prisma.registroHoras.update({
         where: { id: fila.id },
-        data: { clienteId: valor },
+        data: { clienteId: valor, editadoPorId: usuario.id },
       });
     } else if (campo === "conceptoId") {
       await prisma.registroHoras.update({
         where: { id: fila.id },
-        data: { conceptoId: valor },
+        data: { conceptoId: valor, editadoPorId: usuario.id },
       });
     } else {
       const modalidad = (campo === "modalidad" ? valor : fila.modalidad) as Modalidad;
@@ -331,6 +335,7 @@ export async function editarRegistros(
           ownership,
           tarifaUsdAplicada: tarifa,
           montoUsd: Math.round(Number(fila.horas) * tarifa * 100) / 100,
+          editadoPorId: usuario.id,
         },
       });
     }

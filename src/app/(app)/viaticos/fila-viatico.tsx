@@ -15,6 +15,7 @@ import {
   BotonEliminarIcono,
   BotonGuardarIcono,
 } from "@/components/tabla/acciones-fila";
+import { MarcaEdicion } from "@/components/tabla/marca-edicion";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 
@@ -67,7 +68,8 @@ export function FilaViatico({
               Tracking. Solo íconos: el texto de estas dos acciones se repetía
               en cada fila y competía con los datos, que es lo que hay que
               leer. */}
-          <span className="flex justify-center gap-1">
+          <span className="flex items-center justify-center gap-1">
+            <MarcaEdicion detalle={viatico.edicion} />
             <BotonEditarIcono onClick={() => setEditando(true)} />
             <BotonEliminarIcono
               onConfirm={() => eliminarViatico(viatico.id)}
