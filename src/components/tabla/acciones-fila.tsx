@@ -7,7 +7,7 @@ import {
   BTN_ICON_DANGER_SM,
   BTN_ICON_CONFIRM_SM,
 } from "@/lib/ui";
-import { avisarEliminado, avisarErrorAlEliminar } from "@/components/ui/avisos";
+import { avisarOk, avisarError } from "@/components/ui/avisos";
 
 // Íconos únicos compartidos por todas las acciones de tabla de la app, para
 // que Time Tracking, Time Off, Equipo, Gantt (y las de Settings, vía
@@ -123,9 +123,9 @@ export function BotonEliminarIcono({
           const r = (await onConfirm()) as { error?: string } | void;
           setConfirmando(false);
           if (r && typeof r === "object" && r.error) {
-            avisarErrorAlEliminar(r.error);
+            avisarError(r.error);
           } else if (mensaje) {
-            avisarEliminado(mensaje);
+            avisarOk(mensaje);
           }
         })
       }

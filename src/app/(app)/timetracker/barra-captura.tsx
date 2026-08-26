@@ -1,8 +1,9 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { crearRegistro, type CampoRegistro } from "./actions";
 import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
+import { avisarOk } from "@/components/ui/avisos";
 import { parseHorasHsMin, reformatEntradaHoras } from "@/lib/horas";
 import { formatMonto, hoyISO } from "@/lib/formato";
 import { Dropdown } from "@/components/dropdown";
@@ -51,10 +52,8 @@ export function BarraCaptura({
   const [estado, setEstado] = useState<{ error?: string; campo?: CampoRegistro }>();
   const [aviso, setAviso] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  // Cuántos registros se guardaron bien en esta sesión de carga. Lo lee el
-  // botón para pulsar el check: acá se carga de a muchos seguidos y sin una
-  // señal por registro no se sabe si el último entró.
-  const [guardados, setGuardados] = useState(0);
+  const [abierto, setAbierto] = useState(false);
+
   const formRef = useRef<HTMLFormElement>(null);
 
   const set = (campo: keyof typeof valores, valor: string) => {
@@ -66,6 +65,13 @@ export function BarraCaptura({
     const cont = formRef.current?.querySelector(`[data-campo="${campo}"]`);
     (cont?.querySelector("button, input") as HTMLElement | undefined)?.focus();
   };
+
+  // Al desplegarse, el foco entra al primer campo: abrir y tener que buscar
+  // dónde empezar a escribir es medio gesto de más en algo que se hace varias
+  // veces por semana.
+  useEffect(() => {
+    if (abierto) setTimeout(() => enfocar("fecha"), 20);
+  }, [abierto]);
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -86,8 +92,10 @@ export function BarraCaptura({
         // (y la fecha del día); limpia los campos que cambian.
         setValores((v) => ({ ...v, conceptoId: "", horas: "" }));
         setEstado(undefined);
-        setGuardados((n) => n + 1);
-        setTimeout(() => enfocar("conceptoId"), 20);
+        setAbierto(false);
+        // El formulario se pliega, así que la confirmación la da el toast
+        // (y la fila nueva en la tabla).
+        avisarOk("Hora registrada");
       } else {
         setEstado(r);
         if (r.error) setAviso(r.error);
@@ -111,10 +119,36 @@ export function BarraCaptura({
     if (formateado) set("horas", formateado);
   };
 
+  // Plegada por defecto: la pantalla es para MIRAR lo cargado, y un formulario
+  // siempre abierto se comía la mitad del alto útil para algo que se usa unas
+  // pocas veces por día. Mismo patrón que "Agregar tarea" en Follow Up.
+  if (!abierto) {
+    return (
+      <button
+        type="button"
+        onClick={() => setAbierto(true)}
+        className="flex w-full shrink-0 items-center gap-2 rounded-xl border border-dashed border-dc-peri/30 px-3 py-2 text-left text-sm text-dc-muted transition hover:border-dc-peri/60 hover:bg-dc-card hover:text-dc-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40"
+      >
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Agregar hora
+      </button>
+    );
+  }
+
   return (
     <form
       ref={formRef}
       onSubmit={onSubmit}
+      onKeyDown={(e) => {
+        // Esc cancela y pliega. No borra lo cargado: si se vuelve a abrir,
+        // sigue ahí.
+        if (e.key === "Escape") {
+          e.preventDefault();
+          setAbierto(false);
+        }
+      }}
       className="shrink-0 rounded-xl border border-dc-peri/25 bg-dc-card px-3 py-2"
       aria-label="Barra de captura de horas"
     >
@@ -231,7 +265,7 @@ export function BarraCaptura({
             compensación el carril quedaría corrido esos 4px. En Expenses los
             dos paddings coinciden y por eso ahí va sin sumar nada. */}
         <span className="ml-auto flex w-[134px] shrink-0 justify-center pr-1">
-          <BotonGuardarIcono pending={pending} exito={guardados} />
+          <BotonGuardarIcono pending={pending} />
         </span>
       </div>
 

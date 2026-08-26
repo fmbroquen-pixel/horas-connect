@@ -6,7 +6,7 @@ import { FilaRegistro } from "./fila-registro";
 import { GRID_TIMETRACKER } from "./grid";
 import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 import { Dropdown } from "@/components/dropdown";
-import { avisarEliminado } from "@/components/ui/avisos";
+import { avisarOk } from "@/components/ui/avisos";
 import type { OpcionConcepto, OpcionSelect, RegistroFila } from "./tipos";
 
 export function TablaRegistros({
@@ -52,7 +52,7 @@ export function TablaRegistros({
     start(async () => {
       await eliminarRegistros([...sel]);
       limpiar();
-      avisarEliminado(
+      avisarOk(
         cuantos === 1 ? "Hora enviada a papelera" : `${cuantos} horas enviadas a papelera`,
       );
     });

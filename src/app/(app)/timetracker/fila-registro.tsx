@@ -13,6 +13,7 @@ import {
 import type { OpcionConcepto, OpcionSelect, RegistroFila } from "./tipos";
 import { BotonEditarIcono, BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 import { MarcaEdicion } from "@/components/tabla/marca-edicion";
+import { CarrilAcciones } from "@/components/tabla/carril-acciones";
 
 const OPCIONES_OWNERSHIP = [
   { value: "owner", label: "Owner" },
@@ -125,14 +126,13 @@ export function FilaRegistro({
         </CeldaSoloLectura>
 
         {/* Editar → Eliminar, el mismo par y el mismo orden que Expenses. */}
-        <span className="flex items-center justify-center gap-1">
-          <MarcaEdicion detalle={registro.edicion} />
+        <CarrilAcciones temporal={<MarcaEdicion detalle={registro.edicion} />}>
           <BotonEditarIcono onClick={editarPrimeraCelda} />
           <BotonEliminarIcono
             onConfirm={() => eliminarRegistro(registro.id)}
             mensaje="Hora enviada a papelera"
           />
-        </span>
+        </CarrilAcciones>
       </div>
     </div>
   );

@@ -16,6 +16,7 @@ import {
   BotonGuardarIcono,
 } from "@/components/tabla/acciones-fila";
 import { MarcaEdicion } from "@/components/tabla/marca-edicion";
+import { CarrilAcciones } from "@/components/tabla/carril-acciones";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 
@@ -68,14 +69,13 @@ export function FilaViatico({
               Tracking. Solo íconos: el texto de estas dos acciones se repetía
               en cada fila y competía con los datos, que es lo que hay que
               leer. */}
-          <span className="flex items-center justify-center gap-1">
-            <MarcaEdicion detalle={viatico.edicion} />
+          <CarrilAcciones temporal={<MarcaEdicion detalle={viatico.edicion} />}>
             <BotonEditarIcono onClick={() => setEditando(true)} />
             <BotonEliminarIcono
               onConfirm={() => eliminarViatico(viatico.id)}
               mensaje="Viático enviado a papelera"
             />
-          </span>
+          </CarrilAcciones>
         </div>
       </div>
     );
@@ -173,10 +173,10 @@ function FormEdicion({
         />
         {/* Mismo par que en modo lectura: la acción principal primero, la
             secundaria después, con el mismo tamaño y separación. */}
-        <span className="flex justify-center gap-1">
+        <CarrilAcciones>
           <BotonGuardarIcono pending={pending} />
           <BotonCancelarIcono onClick={onCerrar} />
-        </span>
+        </CarrilAcciones>
       </div>
       {state?.error && <p className="mt-2 text-xs text-dc-pink">{state.error}</p>}
     </form>

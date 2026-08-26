@@ -11,7 +11,7 @@ import {
 import { RETENCION_DIAS } from "./constantes";
 import { Modal } from "@/components/ui/modal";
 import { BTN_SECONDARY_SM, BTN_DANGER_SM, BTN_DANGER_CONFIRM_SM } from "@/lib/ui";
-import { avisarEliminado } from "@/components/ui/avisos";
+import { avisarOk } from "@/components/ui/avisos";
 
 // Mensajes completos por tipo y no una etiqueta + sufijo: el género cambia
 // ("Hora restaurada" pero "Viático restaurado") y armarlo por concatenación
@@ -62,7 +62,7 @@ export function PapeleraModal({
     startRestaurar(async () => {
       await restaurarItem(item.tipo, item.id);
       setItems((prev) => prev?.filter((i) => i.id !== item.id) ?? null);
-      avisarEliminado(RESTAURADO[item.tipo]);
+      avisarOk(RESTAURADO[item.tipo]);
     });
   };
 
@@ -71,7 +71,7 @@ export function PapeleraModal({
     startRestaurar(async () => {
       await eliminarDefinitivo(item.tipo, item.id);
       setItems((prev) => prev?.filter((i) => i.id !== item.id) ?? null);
-      avisarEliminado(BORRADO[item.tipo]);
+      avisarOk(BORRADO[item.tipo]);
     });
   };
 
