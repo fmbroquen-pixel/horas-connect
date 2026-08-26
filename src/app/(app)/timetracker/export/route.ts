@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
-import { rangoDefault30 } from "@/lib/formato";
+import { mesDeParams, rangoDelMes } from "@/lib/mes";
 
 const ETIQUETA_OWNERSHIP: Record<string, string> = {
   owner: "Owner",
@@ -45,10 +45,14 @@ export async function GET(request: NextRequest) {
 
   const sp = request.nextUrl.searchParams;
   const formato = sp.get("formato") === "csv" ? "csv" : "xlsx";
-  const { desde, hasta } = rangoDefault30(
-    sp.get("desde") ?? undefined,
-    sp.get("hasta") ?? undefined,
+  // El mismo mes que muestra la pantalla. Antes leía un rango libre; al pasar
+  // el filtro a mensual, el enlace dejó de mandarlo y la exportación caía sin
+  // avisar a "los últimos 30 días": mirabas junio y bajabas agosto.
+  const { anio, mes } = mesDeParams(
+    sp.get("anio") ?? undefined,
+    sp.get("mes") ?? undefined,
   );
+  const { desde, hasta } = rangoDelMes(anio, mes);
   // Los mismos proyectos que muestra la pantalla. Vacío = todos.
   const idsProyecto = (sp.get("proyectos") ?? "")
     .split(",")

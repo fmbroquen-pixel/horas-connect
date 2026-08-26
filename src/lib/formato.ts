@@ -33,18 +33,6 @@ export function restarDiasISO(iso: string, dias: number): string {
   return fecha.toISOString().slice(0, 10);
 }
 
-// Rango por defecto de los últimos 30 días (o el rango pasado por parámetros
-// si es válido). Devuelve strings YYYY-MM-DD listos para el filtro.
-export function rangoDefault30(
-  desdeParam?: string,
-  hastaParam?: string,
-): { desde: string; hasta: string } {
-  const hoy = hoyISO();
-  const desde = esISO(desdeParam) ? desdeParam! : restarDiasISO(hoy, 30);
-  const hasta = esISO(hastaParam) ? hastaParam! : hoy;
-  return desde > hasta ? { desde: hasta, hasta: desde } : { desde, hasta };
-}
-
 // Los 7 días (Lunes a Domingo) de la semana actual, según la fecha local del
 // sistema. Mismo criterio Lunes=0…Domingo=6 que usa el DatePicker.
 export function semanaActualISO(): string[] {
