@@ -41,3 +41,7 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# Punto de restauracion de la tabla tarifas, generado antes de normalizar las
+# vigencias. No va al repo: son datos de produccion.
+respaldo-tarifas-*.json

@@ -67,6 +67,11 @@ export default async function UsuarioDetallePage({
     };
   });
 
+  // Desde cuándo rige la tarifa que está cargada. Las cuatro combinaciones se
+  // guardan juntas, así que alcanza con mirar la primera vigente.
+  const vigenteDesdeActual =
+    vigentes.find((v) => v.modalidad !== "valor_cero")?.vigenteDesde ?? null;
+
   const buscarValor = (modalidad: string, ownership: string) => {
     const t = vigentes.find((v) => v.modalidad === modalidad && v.ownership === ownership);
     return t ? Number(t.valorUsd) : undefined;
@@ -119,6 +124,11 @@ export default async function UsuarioDetallePage({
                 virtualOwner: buscarValor("virtual", "owner"),
                 virtualBackup: buscarValor("virtual", "backup"),
               }}
+              vigenteDesdeActual={
+                vigenteDesdeActual
+                  ? vigenteDesdeActual.toLocaleDateString("es-AR", { timeZone: "UTC" })
+                  : null
+              }
               action={guardarTarifa.bind(null, usuario.id)}
             />
           </div>

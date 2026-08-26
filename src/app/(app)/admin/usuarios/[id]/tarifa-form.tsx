@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { BTN_PRIMARY } from "@/lib/ui";
+import { DatePicker } from "@/components/date-picker";
+import { hoyISO } from "@/lib/formato";
 
 type ValoresActuales = {
   presencialOwner?: number;
@@ -18,13 +20,20 @@ type Accion = (
 export function TarifaForm({
   tipoActual,
   valores,
+  vigenteDesdeActual,
   action,
 }: {
   tipoActual: "fija" | "variable" | null;
   valores: ValoresActuales;
+  // Desde cuándo rige lo que hay cargado hoy, para que se vea contra qué se
+  // está cambiando. Null si el usuario todavía no tiene tarifa.
+  vigenteDesdeActual: string | null;
   action: Accion;
 }) {
   const [tipo, setTipo] = useState<"fija" | "variable">(tipoActual ?? "variable");
+  // Arranca en hoy: el caso normal es "de acá en adelante vale esto". Se
+  // cambia para cargar una tarifa que ya venía rigiendo desde antes.
+  const [desde, setDesde] = useState(hoyISO());
   const [state, formAction, pending] = useActionState(action, undefined);
 
   const valorFijaInicial =
@@ -151,6 +160,25 @@ export function TarifaForm({
           </div>
         </div>
       )}
+
+      <div>
+        <label className="mb-1 block text-xs text-dc-muted">Vigente desde</label>
+        <div className="w-40">
+          <DatePicker
+            name="vigenteDesde"
+            value={desde}
+            onChange={setDesde}
+            ariaLabel="Vigente desde"
+          />
+        </div>
+        <p className="mt-1.5 text-xs text-dc-muted">
+          {vigenteDesdeActual
+            ? `Lo cargado hoy rige desde el ${vigenteDesdeActual}. `
+            : ""}
+          Las horas se valúan con la tarifa que regía en la fecha del registro,
+          así que esta fecha decide qué horas quedan a cada valor.
+        </p>
+      </div>
 
       <p className="text-xs text-dc-muted">
         Las horas cargadas como &quot;Valor cero&quot; siempre valen USD 0,

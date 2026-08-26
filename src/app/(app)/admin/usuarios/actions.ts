@@ -3,6 +3,8 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { diaUtc, reconstruirVigencias } from "@/lib/vigencias";
+import { fechaDesdeISO } from "@/lib/dias-habiles";
 import { requireAdmin } from "@/lib/require-admin";
 import { MAX_BACKUPS } from "./constantes";
 import { Prisma } from "@/generated/prisma/client";
@@ -82,9 +84,16 @@ const COMBOS_FACTURABLES: { modalidad: Modalidad; ownership: Ownership }[] = [
   { modalidad: "virtual", ownership: "backup" },
 ];
 
+// Desde cuándo rige lo que se está guardando. Es una fecha de calendario, no
+// un instante: se interpreta en UTC como el resto del sistema.
+const VigenciaSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Fecha de vigencia inválida." });
+
 const TarifaFijaSchema = z.object({
   tipoTarifa: z.literal("fija"),
   valorUsd: z.coerce.number().min(0, { error: "El valor no puede ser negativo." }),
+  vigenteDesde: VigenciaSchema,
 });
 
 const TarifaVariableSchema = z.object({
@@ -93,6 +102,7 @@ const TarifaVariableSchema = z.object({
   presencialBackup: z.coerce.number().min(0),
   virtualOwner: z.coerce.number().min(0),
   virtualBackup: z.coerce.number().min(0),
+  vigenteDesde: VigenciaSchema,
 });
 
 export async function guardarTarifa(
@@ -108,8 +118,10 @@ export async function guardarTarifa(
     const parsed = TarifaFijaSchema.safeParse({
       tipoTarifa,
       valorUsd: formData.get("valorUsd"),
+      vigenteDesde: formData.get("vigenteDesde"),
     });
-    if (!parsed.success) return { error: "Valor inválido." };
+    if (!parsed.success) return { error: "Valor o fecha de vigencia inválidos." };
+    const desde = fechaDesdeISO(parsed.data.vigenteDesde);
 
     await prisma.usuario.update({
       where: { id: usuarioId },
@@ -121,6 +133,7 @@ export async function guardarTarifa(
         combo.modalidad,
         combo.ownership,
         parsed.data.valorUsd,
+        desde,
       );
     }
   } else if (tipoTarifa === "variable") {
@@ -130,8 +143,12 @@ export async function guardarTarifa(
       presencialBackup: formData.get("presencialBackup"),
       virtualOwner: formData.get("virtualOwner"),
       virtualBackup: formData.get("virtualBackup"),
+      vigenteDesde: formData.get("vigenteDesde"),
     });
-    if (!parsed.success) return { error: "Alguno de los valores es inválido." };
+    if (!parsed.success) {
+      return { error: "Alguno de los valores o la fecha de vigencia es inválido." };
+    }
+    const desde = fechaDesdeISO(parsed.data.vigenteDesde);
 
     await prisma.usuario.update({
       where: { id: usuarioId },
@@ -142,24 +159,28 @@ export async function guardarTarifa(
       "presencial",
       "owner",
       parsed.data.presencialOwner,
+      desde,
     );
     await upsertTarifaVigente(
       usuarioId,
       "presencial",
       "backup",
       parsed.data.presencialBackup,
+      desde,
     );
     await upsertTarifaVigente(
       usuarioId,
       "virtual",
       "owner",
       parsed.data.virtualOwner,
+      desde,
     );
     await upsertTarifaVigente(
       usuarioId,
       "virtual",
       "backup",
       parsed.data.virtualBackup,
+      desde,
     );
   } else {
     return { error: "Elegí un tipo de tarifa." };
@@ -171,31 +192,86 @@ export async function guardarTarifa(
   return { error: undefined };
 }
 
-// Cierra la tarifa vigente para esa combinación (si el valor cambió) y crea
-// una nueva. Si el valor es igual al vigente, no toca nada (evita ensuciar
-// el historial con filas idénticas).
+// Declara que a partir de `vigenteDesde` esa combinación vale `valorUsd`.
+//
+// Antes esto cerraba la vigente con `new Date()` y abría la nueva con el mismo
+// instante, o sea que la vigencia era "desde que apreté Guardar". Eso alcanzaba
+// mientras nadie mirara para atrás, pero al calcular el monto con la tarifa de
+// la fecha del registro pasó a importar: cargar horas de julio y recién en
+// agosto configurar la tarifa dejaba esas horas del lado equivocado del corte.
+// Ahora la fecha se declara.
+//
+// El cierre de cada tramo no se escribe acá: se deriva de la fecha del tramo
+// siguiente, en reordenarHistorial.
 async function upsertTarifaVigente(
   usuarioId: string,
   modalidad: Modalidad,
   ownership: Ownership,
   valorUsd: number,
+  vigenteDesde: Date,
 ) {
-  const vigente = await prisma.tarifa.findFirst({
-    where: { usuarioId, modalidad, ownership, vigenteHasta: null },
+  const desde = diaUtc(vigenteDesde);
+
+  // Un valor por combinación y día. Si ya se había declarado algo para ese
+  // día, se corrige en lugar de apilar otra fila —que además chocaría contra
+  // el unique de (usuario, modalidad, ownership, vigenteDesde)—.
+  const mismoDia = await prisma.tarifa.findFirst({
+    where: { usuarioId, modalidad, ownership, vigenteDesde: desde },
+    select: { id: true },
   });
 
-  if (vigente && Number(vigente.valorUsd) === valorUsd) return;
-
-  const ahora = new Date();
-  if (vigente) {
+  if (mismoDia) {
     await prisma.tarifa.update({
-      where: { id: vigente.id },
-      data: { vigenteHasta: ahora },
+      where: { id: mismoDia.id },
+      data: { valorUsd },
+    });
+  } else {
+    await prisma.tarifa.create({
+      data: { usuarioId, modalidad, ownership, valorUsd, vigenteDesde: desde },
     });
   }
-  await prisma.tarifa.create({
-    data: { usuarioId, modalidad, ownership, valorUsd, vigenteDesde: ahora },
+
+  await reordenarHistorial(usuarioId, modalidad, ownership);
+}
+
+// Deja el historial de una combinación consistente después de escribirlo: sin
+// huecos, sin solapamientos y sin las filas que no llegaron a regir. La regla
+// está en lib/vigencias; acá solo se lee, se aplica y se guarda.
+async function reordenarHistorial(
+  usuarioId: string,
+  modalidad: Modalidad,
+  ownership: Ownership,
+) {
+  const filas = await prisma.tarifa.findMany({
+    where: { usuarioId, modalidad, ownership },
+    select: { id: true, valorUsd: true, vigenteDesde: true, createdAt: true },
   });
+
+  const plan = reconstruirVigencias(
+    filas.map((f) => ({
+      id: f.id,
+      valorUsd: Number(f.valorUsd),
+      // Normalizadas a día: las filas viejas se guardaron con la hora del
+      // clic, y sin esto dos cambios del mismo día no se reconocen como el
+      // mismo punto de la línea de tiempo.
+      vigenteDesde: diaUtc(f.vigenteDesde),
+      createdAt: f.createdAt,
+    })),
+  );
+
+  await prisma.$transaction([
+    // Los borrados van primero: liberan el unique por (combinación, fecha)
+    // antes de que las que quedan se muevan a su día normalizado.
+    ...(plan.eliminar.length > 0
+      ? [prisma.tarifa.deleteMany({ where: { id: { in: plan.eliminar } } })]
+      : []),
+    ...plan.actualizar.map((a) =>
+      prisma.tarifa.update({
+        where: { id: a.id },
+        data: { vigenteDesde: a.vigenteDesde, vigenteHasta: a.vigenteHasta },
+      }),
+    ),
+  ]);
 }
 
 async function asegurarTarifaCero(usuarioId: string) {
