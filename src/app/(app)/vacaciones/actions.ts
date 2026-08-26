@@ -71,7 +71,11 @@ export async function actualizarVacacion(
   const esAdmin = usuario.rol === "admin";
 
   const existente = await prisma.vacacion.findUnique({ where: { id } });
-  if (!existente) return { error: "Registro no encontrado." };
+  // Lo que está en papelera no se edita: cambiaría en silencio y volvería
+  // distinto si alguien lo restaura.
+  if (!existente || existente.eliminadoEn) {
+    return { error: "Registro no encontrado." };
+  }
   if (!esAdmin && existente.usuarioId !== usuario.id) {
     return { error: "No podés modificar vacaciones de otra persona." };
   }
@@ -98,7 +102,8 @@ export async function eliminarVacacion(id: string): Promise<void> {
   const esAdmin = usuario.rol === "admin";
 
   const existente = await prisma.vacacion.findUnique({ where: { id } });
-  if (!existente) throw new Error("Registro no encontrado.");
+  // Ya en papelera: no se vuelve a borrar, o se pisaría la fecha original.
+  if (!existente || existente.eliminadoEn) throw new Error("Registro no encontrado.");
   if (!esAdmin && existente.usuarioId !== usuario.id) {
     throw new Error("No podés borrar vacaciones de otra persona.");
   }

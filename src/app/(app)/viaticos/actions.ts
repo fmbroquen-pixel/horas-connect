@@ -219,7 +219,9 @@ export async function eliminarViatico(id: string): Promise<void> {
   const esAdmin = actor.rol === "admin";
 
   const existente = await prisma.viatico.findUnique({ where: { id } });
-  if (!existente) throw new Error("Viático no encontrado.");
+  // Ya en papelera: no se vuelve a borrar. Hacerlo pisaría la fecha de
+  // eliminación original, que es el dato con el que se cuenta la retención.
+  if (!existente || existente.eliminadoEn) throw new Error("Viático no encontrado.");
   if (!esAdmin && existente.usuarioId !== actor.id) {
     throw new Error("No podés borrar viáticos de otra persona.");
   }
