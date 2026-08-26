@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { rangoDelMes } from "./mes";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { esMesActual, mesAnterior, rangoDelMes } from "./mes";
 
 // La regla del período, con el 24/08/2026 como "hoy" (el ejemplo del pedido).
 const HOY = "2026-08-24";
@@ -38,5 +38,38 @@ describe("rangoDelMes", () => {
   it("un mes futuro no puede pasar de hoy", () => {
     // No se navega hacia adelante, pero la URL es una entrada pública.
     expect(rangoDelMes(2026, 12, HOY).hasta).toBe(HOY);
+  });
+});
+
+describe("esMesActual", () => {
+  afterEach(() => vi.useRealTimers());
+
+  // Se congela el reloj al mediodía local para que el día no dependa del huso
+  // de la máquina que corre los tests.
+  const congelar = (iso: string) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(`${iso}T12:00:00`));
+  };
+
+  it("el mes en curso es el actual", () => {
+    congelar(HOY);
+    expect(esMesActual({ anio: 2026, mes: 8 })).toBe(true);
+  });
+
+  it("el mes anterior no lo es", () => {
+    congelar(HOY);
+    expect(esMesActual(mesAnterior({ anio: 2026, mes: 8 }))).toBe(false);
+  });
+
+  it("el mismo número de mes de otro año tampoco", () => {
+    // Si solo se comparara el mes, agosto de 2025 pasaría por actual.
+    congelar(HOY);
+    expect(esMesActual({ anio: 2025, mes: 8 })).toBe(false);
+  });
+
+  it("cruzando el año, diciembre es actual y enero siguiente no", () => {
+    congelar("2026-12-31");
+    expect(esMesActual({ anio: 2026, mes: 12 })).toBe(true);
+    expect(esMesActual({ anio: 2027, mes: 1 })).toBe(false);
   });
 });

@@ -7,7 +7,7 @@ import { tareasVivas } from "@/lib/roadmap-papelera";
 import { formatHorasHsMin } from "@/lib/horas";
 import { construirCurvaHoras } from "@/lib/curva-horas";
 import { hoyISO, semanaActualISO } from "@/lib/formato";
-import { mesDeParams, rangoDelMes } from "@/lib/mes";
+import { esMesActual, mesDeParams, rangoDelMes } from "@/lib/mes";
 import { InfoButton } from "@/components/info-button";
 import { CurvaHoras } from "@/components/curva-horas";
 import { SemaforoEvolucion, NIVEL_SEMAFORO } from "@/components/semaforo-evolucion";
@@ -44,6 +44,11 @@ export default async function DashboardPage({
   const hoy = hoyISO();
   const { anio, mes } = mesDeParams(params.anio, params.mes);
   const { desde, hasta } = rangoDelMes(anio, mes);
+
+  // "Próximas dos semanas" cuenta desde HOY, no desde el mes elegido. Parada
+  // en un mes anterior estaría respondiendo una pregunta que nadie hizo, así
+  // que se apaga y ni siquiera se consulta la base.
+  const mesEnCurso = esMesActual({ anio, mes });
 
   const proyectos = await getProyectosConRol(usuario.id);
   const idsAccesibles = proyectos.map((p) => p.id);
@@ -98,23 +103,25 @@ export default async function DashboardPage({
     // Etapas próximas: lo que arranca en los próximos 14 días y todavía no
     // empezó. No usa el rango del filtro —que mira hacia atrás— sino una
     // ventana fija hacia adelante: la pregunta es "qué se viene".
-    prisma.tareaRoadmap.findMany({
-      where: {
-        ...tareasVivas({ clienteId: { in: ids } }),
-        estado: "sin_iniciar",
-        fechaInicio: { gte: hoyUtc, lte: en14dias },
-      },
-      orderBy: { fechaInicio: "asc" },
-      select: {
-        id: true,
-        nombre: true,
-        fechaInicio: true,
-        personas: true,
-        lista: {
-          select: { id: true, clienteId: true, cliente: { select: { nombre: true } } },
-        },
-      },
-    }),
+    mesEnCurso
+      ? prisma.tareaRoadmap.findMany({
+          where: {
+            ...tareasVivas({ clienteId: { in: ids } }),
+            estado: "sin_iniciar",
+            fechaInicio: { gte: hoyUtc, lte: en14dias },
+          },
+          orderBy: { fechaInicio: "asc" },
+          select: {
+            id: true,
+            nombre: true,
+            fechaInicio: true,
+            personas: true,
+            lista: {
+              select: { id: true, clienteId: true, cliente: { select: { nombre: true } } },
+            },
+          },
+        })
+      : Promise.resolve([]),
     // Evolución del semáforo: para cada semana vale el último evento ocurrido
     // hasta ella —incluidos los anteriores al rango, o el gráfico arrancaría
     // vacío aunque el proyecto ya tuviera un estado.
@@ -346,12 +353,24 @@ export default async function DashboardPage({
               </div>
               )}
 
-              <EtapasProximas
-                etapas={etapasProximas}
-                hasta={`${String(en14dias.getUTCDate()).padStart(2, "0")}/${String(
-                  en14dias.getUTCMonth() + 1,
-                ).padStart(2, "0")}`}
-              />
+              {/* Envuelta como el resto de los bloques que dependen del
+                  filtro: al cambiar los proyectos elegidos también se
+                  recalcula, y hasta ahora era la única card que se quedaba
+                  quieta mientras las demás avisaban. La cadena de alto se
+                  continúa en el envoltorio interno, si no la lista con su
+                  overflow pierde el límite y se desborda de la card. */}
+              <BloqueRecalculable
+                className="flex min-h-0 min-w-0 flex-col"
+                claseContenido="flex min-h-0 flex-1 flex-col"
+              >
+                <EtapasProximas
+                  etapas={etapasProximas}
+                  activa={mesEnCurso}
+                  hasta={`${String(en14dias.getUTCDate()).padStart(2, "0")}/${String(
+                    en14dias.getUTCMonth() + 1,
+                  ).padStart(2, "0")}`}
+                />
+              </BloqueRecalculable>
             </div>
           </div>
 

@@ -58,3 +58,12 @@ export function esFuturo({ anio, mes }: { anio: number; mes: number }): boolean 
   const hoy = mesActual();
   return anio > hoy.anio || (anio === hoy.anio && mes > hoy.mes);
 }
+
+// ¿Es EL mes en curso? Distinto de `esFuturo`: acá interesa la coincidencia
+// exacta, no el orden. Lo usa "Próximas dos semanas", que mira hacia adelante
+// desde hoy y por eso solo tiene sentido parada en el mes actual: verla desde
+// un mes anterior mezclaría dos tiempos en la misma pantalla.
+export function esMesActual({ anio, mes }: { anio: number; mes: number }): boolean {
+  const hoy = mesActual();
+  return anio === hoy.anio && mes === hoy.mes;
+}

@@ -50,9 +50,14 @@ function IconoPersonas({ dos }: { dos: boolean }) {
 export function EtapasProximas({
   etapas,
   hasta,
+  activa,
 }: {
   etapas: EtapaProxima[];
   hasta: string; // dd/mm de corte de la ventana
+  // Solo tiene sentido parada en el mes actual: la ventana se cuenta desde
+  // HOY, así que mirándola desde un mes anterior mostraría cosas que arrancan
+  // después del mes que se está viendo. Ver el comentario de standby abajo.
+  activa: boolean;
 }) {
   const [filtro, setFiltro] = useState("todas");
 
@@ -66,15 +71,31 @@ export function EtapasProximas({
     // con min-width:auto, o sea que NO bajan del ancho mínimo de su contenido
     // aunque el track mida menos. Sin esto la card se plantaba en su ancho
     // natural y se salía de la columna.
-    <div className="flex min-h-0 min-w-0 flex-col rounded-2xl border border-dc-line bg-dc-card p-5">
+    // En standby la card no se esconde ni se achica: sigue ocupando su lugar
+    // para que la columna no se reacomode al cambiar de mes, y baja de
+    // opacidad para que se lea como apagada y no como vacía.
+    <div
+      aria-disabled={!activa}
+      // flex-1 y no solo flex: por defecto un ítem flex encoge cuando el
+      // contenido sobra pero no estira cuando falta (grow 0). Con la lista
+      // llena eso alcanzaba —encogía a los 30rem de la fila—, pero en standby
+      // el cuerpo es una línea de texto y la card se quedaba en 135px al lado
+      // de una de 480. Con grow queda del alto de su fila en los dos estados.
+      className={`flex min-h-0 min-w-0 flex-1 flex-col rounded-2xl border border-dc-line bg-dc-card p-5 transition-opacity duration-300 ${
+        activa ? "" : "opacity-50"
+      }`}
+    >
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex items-baseline gap-1.5">
           <h2 className="text-base font-semibold text-white">Próximas dos semanas</h2>
-          <span className="text-xs text-dc-muted">hasta {hasta}</span>
+          {/* La fecha de corte no se muestra en standby: es exactamente la
+              mezcla de tiempos que se quiere evitar (un corte futuro al pie de
+              un mes pasado). */}
+          {activa && <span className="text-xs text-dc-muted">hasta {hasta}</span>}
           <InfoButton>
-            Tareas sin iniciar que arrancan en los próximos 14 días. Esta card
-            usa siempre esa ventana hacia adelante, así que el filtro de fechas
-            de arriba no la modifica; el de proyectos sí.
+            Tareas sin iniciar que arrancan en los próximos 14 días, contados
+            desde hoy. Por eso solo está activa en el mes actual: en un mes
+            anterior queda en standby. El filtro de proyectos sí la modifica.
           </InfoButton>
         </div>
 
@@ -84,13 +105,14 @@ export function EtapasProximas({
               key={f.value}
               type="button"
               onClick={() => setFiltro(f.value)}
+              disabled={!activa}
               aria-pressed={filtro === f.value}
-              title={f.label}
+              title={activa ? f.label : "Disponible en el mes actual"}
               aria-label={f.label}
-              className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs tabular-nums transition ${
+              className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs tabular-nums transition disabled:cursor-not-allowed ${
                 filtro === f.value
                   ? "bg-dc-peri/20 text-dc-text"
-                  : "text-dc-muted hover:text-dc-text"
+                  : `text-dc-muted ${activa ? "hover:text-dc-text" : ""}`
               }`}
             >
               {f.personas === 0 ? (
@@ -106,7 +128,14 @@ export function EtapasProximas({
         </div>
       </div>
 
-      {visibles.length === 0 ? (
+      {!activa ? (
+        // Ocupa el alto que le toca en vez de encogerse al texto: el standby
+        // dura todo el mes que se esté mirando, y una card de 135px al lado de
+        // una de 480 se lee como algo roto, no como algo apagado.
+        <p className="flex min-h-0 flex-1 items-center justify-center text-sm text-dc-muted">
+          Disponible en el mes actual.
+        </p>
+      ) : visibles.length === 0 ? (
         <p className="text-sm text-dc-muted">
           {etapas.length === 0
             ? "No hay etapas que arranquen en los próximos 14 días."
