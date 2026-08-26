@@ -130,8 +130,6 @@ export async function crearViatico(
       monto: r.datos.monto,
       concepto: r.datos.concepto,
       archivoPath,
-      // Mismo criterio que en Time Tracking: la edición deja quién la hizo.
-      editadoPorId: actor.id,
     },
   });
 
@@ -139,48 +137,82 @@ export async function crearViatico(
   return {};
 }
 
-// Edición de una fila del historial. El dueño no cambia acá: se edita el
-// gasto de quien ya lo tiene asignado.
-export async function actualizarViatico(
+// Guardado de UN campo, disparado por la edición inline de la tabla. Mismo
+// contrato que actualizarCampoRegistro en Time Tracking: el resto de los
+// valores se leen del viático guardado y se vuelven a validar en conjunto, así
+// las reglas cruzadas (el cliente tiene que estar asignado, la fecha no puede
+// ser futura) siguen valiendo aunque se haya tocado una sola celda.
+export async function actualizarCampoViatico(
   id: string,
-  _prevState: unknown,
+  campo: CampoViatico,
+  valor: string,
+): Promise<Resultado> {
+  const actor = await requireGuest();
+  const esAdmin = actor.rol === "admin";
+
+  const existente = await prisma.viatico.findUnique({ where: { id } });
+  if (!existente || existente.eliminadoEn) return { error: "Viático no encontrado." };
+  if (!esAdmin && existente.usuarioId !== actor.id) {
+    return { error: "No podés modificar viáticos de otra persona." };
+  }
+
+  const fd = new FormData();
+  fd.set("fecha", campo === "fecha" ? valor : existente.fecha.toISOString().slice(0, 10));
+  fd.set("clienteId", campo === "clienteId" ? valor : existente.clienteId);
+  fd.set("concepto", campo === "concepto" ? valor : existente.concepto);
+  fd.set("moneda", campo === "moneda" ? valor : existente.moneda);
+  fd.set("monto", campo === "monto" ? valor : String(existente.monto));
+
+  const r = await validarEntrada(existente.usuarioId, fd);
+  if (r.error || !r.datos) return { error: r.error, campo: r.campo };
+
+  await prisma.viatico.update({
+    where: { id },
+    data: {
+      editadoPorId: actor.id,
+      fecha: r.datos.fecha,
+      clienteId: r.datos.clienteId,
+      moneda: r.datos.moneda,
+      monto: r.datos.monto,
+      concepto: r.datos.concepto,
+    },
+  });
+
+  revalidar();
+  return {};
+}
+
+// El comprobante se reemplaza aparte: es un archivo y no entra en una celda de
+// texto. Sube el nuevo y deja de apuntar al anterior.
+export async function actualizarComprobante(
+  id: string,
   formData: FormData,
 ): Promise<Resultado> {
   const actor = await requireGuest();
   const esAdmin = actor.rol === "admin";
 
   const existente = await prisma.viatico.findUnique({ where: { id } });
-  if (!existente) return { error: "Viático no encontrado." };
+  if (!existente || existente.eliminadoEn) return { error: "Viático no encontrado." };
   if (!esAdmin && existente.usuarioId !== actor.id) {
     return { error: "No podés modificar viáticos de otra persona." };
   }
 
-  const r = await validarEntrada(existente.usuarioId, formData);
-  if (r.error || !r.datos) return { error: r.error };
-
-  let archivoPath = existente.archivoPath;
   const archivo = formData.get("archivo");
-  if (archivo instanceof File && archivo.size > 0) {
-    const subida = await subirComprobante(existente.usuarioId, archivo);
-    if (subida.error) return { error: subida.error };
-    archivoPath = subida.path ?? archivoPath;
+  if (!(archivo instanceof File) || archivo.size === 0) {
+    return { error: "No llegó ningún archivo." };
   }
+  const subida = await subirComprobante(existente.usuarioId, archivo);
+  if (subida.error) return { error: subida.error };
 
   await prisma.viatico.update({
     where: { id },
-    data: {
-      fecha: r.datos.fecha,
-      clienteId: r.datos.clienteId,
-      moneda: r.datos.moneda,
-      monto: r.datos.monto,
-      concepto: r.datos.concepto,
-      archivoPath,
-    },
+    data: { archivoPath: subida.path, editadoPorId: actor.id },
   });
 
   revalidar();
   return {};
 }
+
 
 export async function eliminarViatico(id: string): Promise<void> {
   const actor = await requireGuest();

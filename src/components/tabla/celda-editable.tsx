@@ -161,6 +161,7 @@ export function CeldaTexto({
   editable = true,
   formatearAlGuardar,
   placeholder = "—",
+  mostrar,
 }: {
   valor: string;
   onGuardar: GuardarCampo;
@@ -170,6 +171,10 @@ export function CeldaTexto({
   // Normaliza lo tipeado antes de mandarlo (por ejemplo, horas "1,5" → "1:30").
   formatearAlGuardar?: (v: string) => string;
   placeholder?: string;
+  // Cómo se LEE el valor cuando la celda no está en edición. Se edita siempre
+  // en crudo: con el formato puesto —un separador de miles, por ejemplo— el
+  // campo no se puede seguir escribiendo.
+  mostrar?: (v: string) => string;
 }) {
   const c = useCelda(valor, onGuardar);
   // Escape desmonta el input y eso dispara un blur: sin esta marca, el blur
@@ -179,7 +184,7 @@ export function CeldaTexto({
   if (!editable) {
     return (
       <CeldaSoloLectura alinear={alinear} titulo={c.local}>
-        {c.local || placeholder}
+        {c.local ? (mostrar ? mostrar(c.local) : c.local) : placeholder}
       </CeldaSoloLectura>
     );
   }
@@ -221,7 +226,7 @@ export function CeldaTexto({
           alinear={alinear}
           titulo={c.local || ariaLabel}
         >
-          {c.local || placeholder}
+          {c.local ? (mostrar ? mostrar(c.local) : c.local) : placeholder}
         </Lectura>
       )}
     </Celda>

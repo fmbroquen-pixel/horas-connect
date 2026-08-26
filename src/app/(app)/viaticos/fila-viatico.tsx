@@ -1,7 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { actualizarViatico, eliminarViatico } from "./actions";
+import { useRef, useTransition } from "react";
+import {
+  actualizarCampoViatico,
+  actualizarComprobante,
+  eliminarViatico,
+} from "./actions";
 import { formatMonto, hoyISO } from "@/lib/formato";
 import {
   GRID_VIATICOS,
@@ -10,19 +14,37 @@ import {
   type ViaticoFila,
 } from "./tipos";
 import {
-  BotonCancelarIcono,
-  BotonEditarIcono,
-  BotonEliminarIcono,
-  BotonGuardarIcono,
-} from "@/components/tabla/acciones-fila";
+  CeldaFecha,
+  CeldaOpciones,
+  CeldaTexto,
+} from "@/components/tabla/celda-editable";
+import { BotonEditarIcono, BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 import { MarcaEdicion } from "@/components/tabla/marca-edicion";
 import { CarrilAcciones } from "@/components/tabla/carril-acciones";
-import { Dropdown } from "@/components/dropdown";
-import { DatePicker } from "@/components/date-picker";
+import { avisarError } from "@/components/ui/avisos";
 
-const INPUT =
-  "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
+const OPCIONES_CONCEPTO = Object.entries(ETIQUETA_CONCEPTO).map(
+  ([value, label]) => ({ value, label }),
+);
+const OPCIONES_MONEDA = [
+  { value: "ARS", label: "ARS" },
+  { value: "USD", label: "USD" },
+];
 
+function mostrarFecha(iso: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "—";
+  const [a, m, d] = iso.split("-");
+  return `${d}/${m}/${a}`;
+}
+
+// Fila del historial con edición inline, igual que Time Tracking: cada celda
+// se edita en el lugar y se guarda sola al salir del campo o con Enter.
+//
+// Antes esta fila era texto plano y editar abría un formulario que reemplazaba
+// la fila entera. Eso dejaba dos criterios distintos en la app para lo mismo:
+// en Time Tracking los datos editables se anunciaban solos al pasar por
+// encima, y acá no se distinguían de los que no lo son. Ahora las dos usan las
+// mismas celdas, así que la señal de "esto se puede tocar" es la misma.
 export function FilaViatico({
   viatico,
   proyectos,
@@ -30,160 +52,143 @@ export function FilaViatico({
   viatico: ViaticoFila;
   proyectos: OpcionSelect[];
 }) {
-  const [editando, setEditando] = useState(false);
+  const filaRef = useRef<HTMLDivElement>(null);
+  const archivoRef = useRef<HTMLInputElement>(null);
+  const [subiendo, start] = useTransition();
 
-  if (!editando) {
-    const proyecto = proyectos.find((p) => p.id === viatico.clienteId);
-    return (
-      <div className="border-b border-dc-line px-3 py-2 last:border-0">
-        <div className={GRID_VIATICOS}>
-          <span className="text-center text-sm text-dc-text">{mostrarFecha(viatico.fecha)}</span>
-          <span className="truncate text-center text-sm text-dc-text">
-            {proyecto?.nombre ?? "—"}
-          </span>
-          <span className="text-center text-sm text-dc-muted">
-            {ETIQUETA_CONCEPTO[viatico.concepto] ?? viatico.concepto}
-          </span>
-          <span className="text-center text-sm text-dc-muted">{viatico.moneda}</span>
-          <span className="text-center text-sm tabular-nums text-dc-text">
-            {formatMonto(viatico.monto)}
-          </span>
-          <span className="text-center text-sm">
-            {viatico.archivoUrl ? (
-              <a
-                href={viatico.archivoUrl}
-                target="_blank"
-                rel="noreferrer"
-                title="Ver comprobante"
-                className="inline-flex text-dc-peri hover:text-dc-pink"
-              >
-                <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                </svg>
-              </a>
-            ) : (
-              <span className="text-dc-muted">—</span>
-            )}
-          </span>
-          {/* Editar → Eliminar, el mismo par y el mismo orden que Time
-              Tracking. Solo íconos: el texto de estas dos acciones se repetía
-              en cada fila y competía con los datos, que es lo que hay que
-              leer. */}
-          <CarrilAcciones temporal={<MarcaEdicion detalle={viatico.edicion} />}>
-            <BotonEditarIcono onClick={() => setEditando(true)} />
-            <BotonEliminarIcono
-              onConfirm={() => eliminarViatico(viatico.id)}
-              mensaje="Viático enviado a papelera"
-            />
-          </CarrilAcciones>
-        </div>
-      </div>
-    );
-  }
+  const guardar = (campo: Parameters<typeof actualizarCampoViatico>[1]) =>
+    async (valor: string) => actualizarCampoViatico(viatico.id, campo, valor);
+
+  // El lápiz entra a la primera celda editable, la misma acción que hacer clic
+  // en ella. En una tabla que se edita celda por celda no hay ningún "modo
+  // edición" que abrir; lo que aporta el botón es hacer visible que se puede.
+  const editarPrimeraCelda = () => {
+    const celda = filaRef.current?.querySelector<HTMLElement>("[data-celda-editable]");
+    celda?.click();
+  };
+
+  const subirArchivo = (archivo: File) =>
+    start(async () => {
+      const fd = new FormData();
+      fd.set("archivo", archivo);
+      const r = await actualizarComprobante(viatico.id, fd);
+      if (r.error) avisarError(r.error);
+      if (archivoRef.current) archivoRef.current.value = "";
+    });
 
   return (
-    <FormEdicion
-      viatico={viatico}
-      proyectos={proyectos}
-      onCerrar={() => setEditando(false)}
-    />
-  );
-}
-
-function FormEdicion({
-  viatico,
-  proyectos,
-  onCerrar,
-}: {
-  viatico: ViaticoFila;
-  proyectos: OpcionSelect[];
-  onCerrar: () => void;
-}) {
-  const [fecha, setFecha] = useState(viatico.fecha);
-  const [clienteId, setClienteId] = useState(viatico.clienteId);
-  const [moneda, setMoneda] = useState<string>(viatico.moneda);
-  const [concepto, setConcepto] = useState(viatico.concepto);
-
-  const accion = actualizarViatico.bind(null, viatico.id);
-  const [state, formAction, pending] = useActionState(
-    async (prev: { error?: string } | undefined, formData: FormData) => {
-      const result = await accion(prev, formData);
-      if (!result.error) onCerrar();
-      return result;
-    },
-    undefined,
-  );
-
-  return (
-    <form
-      action={formAction}
-      className="border-b border-dc-line bg-dc-card px-3 py-2 last:border-0"
-    >
+    <div ref={filaRef} className="border-b border-dc-line px-3 py-2 last:border-0">
       <div className={GRID_VIATICOS}>
-        <DatePicker
-          name="fecha"
-          value={fecha}
-          onChange={setFecha}
-          max={hoyISO()}
-          className="w-full"
+        <CeldaFecha
+          valor={viatico.fecha}
+          onGuardar={guardar("fecha")}
           ariaLabel="Fecha"
+          mostrar={mostrarFecha}
+          max={hoyISO()}
         />
-        <Dropdown
-          name="clienteId"
-          value={clienteId}
-          onChange={setClienteId}
-          options={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
+
+        <CeldaOpciones
+          valor={viatico.clienteId}
+          opciones={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
+          onGuardar={guardar("clienteId")}
           ariaLabel="Cliente"
         />
-        <Dropdown
-          name="concepto"
-          value={concepto}
-          onChange={setConcepto}
-          options={Object.entries(ETIQUETA_CONCEPTO).map(([valor, etiqueta]) => ({
-            value: valor,
-            label: etiqueta,
-          }))}
+
+        <CeldaOpciones
+          valor={viatico.concepto}
+          opciones={OPCIONES_CONCEPTO}
+          onGuardar={guardar("concepto")}
           ariaLabel="Concepto"
         />
-        <Dropdown
-          name="moneda"
-          value={moneda}
-          onChange={setMoneda}
-          options={[
-            { value: "ARS", label: "ARS" },
-            { value: "USD", label: "USD" },
-          ]}
+
+        <CeldaOpciones
+          valor={viatico.moneda}
+          opciones={OPCIONES_MONEDA}
+          onGuardar={guardar("moneda")}
           ariaLabel="Moneda"
         />
-        <input
-          name="monto"
-          type="number"
-          step="0.01"
-          min="0.01"
-          defaultValue={viatico.monto}
-          required
-          className={`${INPUT} text-right`}
+
+        <CeldaTexto
+          valor={String(viatico.monto)}
+          onGuardar={guardar("monto")}
+          ariaLabel="Monto"
+          // Se muestra formateado y se edita en crudo: con el separador de
+          // miles puesto, el campo no se puede seguir escribiendo.
+          mostrar={(v) => formatMonto(Number(v))}
         />
-        <input
-          name="archivo"
-          type="file"
-          accept="image/*,.pdf"
-          aria-label="Comprobante"
-          className="text-xs text-dc-muted file:mr-1 file:rounded-lg file:border file:border-dc-line file:bg-dc-deeper file:px-2 file:py-1 file:text-xs file:text-dc-muted"
-        />
-        {/* Mismo par que en modo lectura: la acción principal primero, la
-            secundaria después, con el mismo tamaño y separación. */}
-        <CarrilAcciones>
-          <BotonGuardarIcono pending={pending} />
-          <BotonCancelarIcono onClick={onCerrar} />
+
+        {/* El comprobante no entra en una celda de texto: se ve con el clip y
+            se reemplaza con el mismo gesto, eligiendo otro archivo. */}
+        <span className="flex items-center justify-center gap-1">
+          {viatico.archivoUrl && (
+            <a
+              href={viatico.archivoUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Ver comprobante"
+              aria-label="Ver comprobante"
+              className="inline-flex text-dc-peri transition hover:text-dc-pink"
+            >
+              <IconoClip />
+            </a>
+          )}
+          <button
+            type="button"
+            onClick={() => archivoRef.current?.click()}
+            disabled={subiendo}
+            title={viatico.archivoUrl ? "Reemplazar comprobante" : "Adjuntar comprobante"}
+            aria-label={viatico.archivoUrl ? "Reemplazar comprobante" : "Adjuntar comprobante"}
+            className="inline-flex rounded-md p-1 text-dc-muted transition hover:bg-dc-peri/10 hover:text-dc-text disabled:opacity-50"
+          >
+            {viatico.archivoUrl ? <IconoReemplazar /> : <IconoAdjuntar />}
+          </button>
+          <input
+            ref={archivoRef}
+            type="file"
+            accept="image/*,.pdf"
+            hidden
+            aria-hidden
+            tabIndex={-1}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) subirArchivo(f);
+            }}
+          />
+        </span>
+
+        <CarrilAcciones temporal={<MarcaEdicion detalle={viatico.edicion} />}>
+          <BotonEditarIcono onClick={editarPrimeraCelda} />
+          <BotonEliminarIcono
+            onConfirm={() => eliminarViatico(viatico.id)}
+            mensaje="Viático enviado a papelera"
+          />
         </CarrilAcciones>
       </div>
-      {state?.error && <p className="mt-2 text-xs text-dc-pink">{state.error}</p>}
-    </form>
+    </div>
   );
 }
 
-function mostrarFecha(iso: string): string {
-  const [a, m, d] = iso.split("-");
-  return `${d}/${m}/${a}`;
+function IconoClip() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+    </svg>
+  );
+}
+
+function IconoAdjuntar() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function IconoReemplazar() {
+  return (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 3v5h5" />
+      <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
+    </svg>
+  );
 }
