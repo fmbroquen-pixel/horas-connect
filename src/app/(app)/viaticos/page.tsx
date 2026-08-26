@@ -16,7 +16,7 @@ import { SelectorUsuario } from "@/components/selector-usuario";
 import { GRID_VIATICOS, type ViaticoFila } from "./tipos";
 import { BarraCapturaViatico } from "./barra-captura";
 import { FilaViatico } from "./fila-viatico";
-import { PapeleraMenu } from "../papelera/papelera-menu";
+import { AccionesViaticos } from "./menu-acciones";
 
 // Expenses comparte el patrón de Time Tracking: selector de usuario (solo
 // admin), barra de captura permanente arriba y el historial abajo con sus
@@ -155,8 +155,15 @@ export default async function ViaticosPage({
             opciones={opcionesProyecto}
             seleccionados={idsFiltro}
             extra={{ usuario: params.usuario }}
+            conMenu={false}
           />
-          <PapeleraMenu tipo="viatico" />
+          <AccionesViaticos
+            anio={anio}
+            mes={mes}
+            proyectosOpciones={opcionesProyecto}
+            proyectosSeleccionados={idsFiltro}
+            usuarioId={esOtroUsuario ? destino.id : ""}
+          />
         </div>
       </div>
 

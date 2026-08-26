@@ -180,17 +180,14 @@ export default async function TimetrackerPage({
             opciones={opcionesProyecto}
             seleccionados={idsFiltro}
             extra={{ usuario: params.usuario }}
+            conMenu={false}
           />
           {!sinTarifa && (
             <AccionesMenu
-              desde={desde}
-              hasta={hasta}
-              // Se exporta exactamente lo que se está viendo. Si están todos
-              // seleccionados no viaja el filtro: es el mismo criterio que la
-              // URL de la pantalla.
-              proyectos={
-                idsFiltro.length === idsPermitidos.length ? "" : idsFiltro.join(",")
-              }
+              anio={anio}
+              mes={mes}
+              proyectosOpciones={opcionesProyecto}
+              proyectosSeleccionados={idsFiltro}
               usuarioId={esOtroUsuario ? destino.id : ""}
             />
           )}
