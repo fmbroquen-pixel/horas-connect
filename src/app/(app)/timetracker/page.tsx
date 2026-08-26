@@ -65,14 +65,14 @@ export default async function TimetrackerPage({
       ? pedidos.filter((id) => idsPermitidos.includes(id))
       : idsPermitidos;
 
-  const [conceptos, tarifasVigentes, registros, usuariosQueReportan] =
+  const [conceptos, tarifasDelUsuario, registros, usuariosQueReportan] =
     await Promise.all([
       // Catálogo de conceptos (Settings → Conceptos): clasifica en qué se
       // consumieron las horas, así que no depende del cliente elegido.
       getConceptosActivos(),
-      prisma.tarifa.findMany({
-        where: { usuarioId: destino.id, vigenteHasta: null },
-      }),
+      // Historial completo: el total en vivo se calcula con la tarifa de la
+      // fecha que se esté cargando, no con la de hoy.
+      prisma.tarifa.findMany({ where: { usuarioId: destino.id } }),
       prisma.registroHoras.findMany({
         where: {
           usuarioId: destino.id,
@@ -95,8 +95,13 @@ export default async function TimetrackerPage({
     ]);
 
   const tarifas: MapaTarifas = {};
-  for (const t of tarifasVigentes) {
-    tarifas[`${t.modalidad}-${t.ownership}`] = Number(t.valorUsd);
+  for (const t of tarifasDelUsuario) {
+    const k = `${t.modalidad}-${t.ownership}`;
+    (tarifas[k] ??= []).push({
+      valorUsd: Number(t.valorUsd),
+      vigenteDesde: t.vigenteDesde,
+      vigenteHasta: t.vigenteHasta,
+    });
   }
 
   // Mismo corte que valida el servidor al guardar, del mismo helper: si se

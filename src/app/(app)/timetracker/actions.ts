@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { tarifaVigenteA } from "@/lib/tarifas";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { formatHorasHsMin, parseHorasHsMin } from "@/lib/horas";
@@ -46,15 +47,26 @@ function validarFecha(fechaISO: string): { fecha?: Date; error?: string } {
   return { fecha };
 }
 
+// La tarifa que regía EN LA FECHA DEL REGISTRO, no la de hoy. La regla vive en
+// lib/tarifas; acá solo se traen las candidatas.
 async function resolverTarifa(
   usuarioId: string,
   modalidad: Modalidad,
   ownership: Ownership,
+  fecha: Date,
 ): Promise<number | null> {
-  const tarifa = await prisma.tarifa.findFirst({
-    where: { usuarioId, modalidad, ownership, vigenteHasta: null },
+  const tarifas = await prisma.tarifa.findMany({
+    where: { usuarioId, modalidad, ownership },
+    select: { valorUsd: true, vigenteDesde: true, vigenteHasta: true },
   });
-  return tarifa ? Number(tarifa.valorUsd) : null;
+  return tarifaVigenteA(
+    tarifas.map((t) => ({
+      valorUsd: Number(t.valorUsd),
+      vigenteDesde: t.vigenteDesde,
+      vigenteHasta: t.vigenteHasta,
+    })),
+    fecha,
+  );
 }
 
 async function validarEntrada(usuarioId: string, formData: FormData) {
@@ -104,6 +116,7 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
     usuarioId,
     parsed.data.modalidad,
     parsed.data.ownership,
+    fecha,
   );
   if (tarifa === null) {
     return {
@@ -326,7 +339,12 @@ export async function editarRegistros(
     } else {
       const modalidad = (campo === "modalidad" ? valor : fila.modalidad) as Modalidad;
       const ownership = (campo === "ownership" ? valor : fila.ownership) as Ownership;
-      const tarifa = await resolverTarifa(fila.usuarioId, modalidad, ownership);
+      const tarifa = await resolverTarifa(
+        fila.usuarioId,
+        modalidad,
+        ownership,
+        fila.fecha,
+      );
       if (tarifa === null) continue; // sin tarifa para esa combinación
       await prisma.registroHoras.update({
         where: { id: fila.id },

@@ -10,6 +10,8 @@ import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import { ToastAviso } from "@/components/ui/toast-aviso";
 import type { MapaTarifas, OpcionConcepto, OpcionSelect } from "./tipos";
+import { tarifaVigenteA } from "@/lib/tarifas";
+import { fechaDesdeISO } from "@/lib/dias-habiles";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -107,7 +109,14 @@ export function BarraCaptura({
   const cls = (campo: keyof typeof valores) =>
     `${INPUT} ${estado?.campo === campo ? INPUT_ERROR : ""}`;
 
-  const tarifa = tarifas[`${valores.modalidad}-${valores.ownership}`];
+  // La tarifa que va a aplicar el servidor: la de la fecha del registro. Sin
+  // fecha todavía no hay respuesta, y el total espera.
+  const tarifa = valores.fecha
+    ? (tarifaVigenteA(
+        tarifas[`${valores.modalidad}-${valores.ownership}`] ?? [],
+        fechaDesdeISO(valores.fecha),
+      ) ?? undefined)
+    : undefined;
   const horasDecimal = parseHorasHsMin(valores.horas);
   const total =
     tarifa !== undefined && horasDecimal !== null && horasDecimal > 0

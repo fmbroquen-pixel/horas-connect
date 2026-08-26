@@ -2,6 +2,7 @@
 
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
+import { tarifaVigenteA, type TarifaVigencia } from "@/lib/tarifas";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { getConceptosActivos } from "@/lib/conceptos";
@@ -138,11 +139,21 @@ async function procesar(usuarioId: string, archivo: File) {
   const idx = (col: string) => headersNorm.indexOf(col);
 
   const proyectos = await getProyectosPermitidos(usuarioId);
-  const tarifas = await prisma.tarifa.findMany({
-    where: { usuarioId, vigenteHasta: null },
-  });
-  const tarifaMap = new Map<string, number>();
-  for (const t of tarifas) tarifaMap.set(`${t.modalidad}-${t.ownership}`, Number(t.valorUsd));
+  // Todas las tarifas, no solo las vigentes: una importación trae historia y
+  // cada fila tiene que valuarse con la tarifa que regía EN SU FECHA. Con solo
+  // las vigentes, importar seis meses aplicaba la tarifa de hoy a todo.
+  const tarifas = await prisma.tarifa.findMany({ where: { usuarioId } });
+  const tarifasPorCombo = new Map<string, TarifaVigencia[]>();
+  for (const t of tarifas) {
+    const k = `${t.modalidad}-${t.ownership}`;
+    const lista = tarifasPorCombo.get(k) ?? [];
+    lista.push({
+      valorUsd: Number(t.valorUsd),
+      vigenteDesde: t.vigenteDesde,
+      vigenteHasta: t.vigenteHasta,
+    });
+    tarifasPorCombo.set(k, lista);
+  }
 
   const proyPorNombre = new Map(proyectos.map((p) => [normalizar(p.nombre), p]));
 
@@ -234,8 +245,12 @@ async function procesar(usuarioId: string, archivo: File) {
     if (horas === null || horas <= 0 || horas > 24) errores.push("Horas inválidas");
 
     let tarifa: number | undefined;
-    if (ownership && modalidad) {
-      tarifa = tarifaMap.get(`${modalidad}-${ownership}`);
+    if (ownership && modalidad && fechaISO) {
+      const aplicable = tarifaVigenteA(
+        tarifasPorCombo.get(`${modalidad}-${ownership}`) ?? [],
+        fechaDesdeISO(fechaISO),
+      );
+      tarifa = aplicable ?? undefined;
       if (tarifa === undefined) errores.push("Sin tarifa para esa combinación");
     }
 
