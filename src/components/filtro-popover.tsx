@@ -23,7 +23,6 @@ export function FiltroPopover({
   proyectos,
   maxHoy,
   soloFechas = false,
-  sinFechas = false,
 }: {
   basePath: string;
   desde: string;
@@ -32,10 +31,6 @@ export function FiltroPopover({
   proyectos: Proyecto[];
   maxHoy: string;
   soloFechas?: boolean;
-  // Deja el panel solo con el filtro de proyecto. Lo usan las pantallas que
-  // eligen el período con el selector mensual: ahí un rango libre además del
-  // mes serían dos formas de decir lo mismo, y podrían contradecirse.
-  sinFechas?: boolean;
 }) {
   const router = useRouter();
   // La navegación va dentro de una transición: React mantiene la tabla actual
@@ -52,8 +47,8 @@ export function FiltroPopover({
   // no hay nada que validar.
   const aplicar = () => {
     const params = new URLSearchParams();
-    if (!sinFechas && desdeSel) params.set("desde", desdeSel);
-    if (!sinFechas && hastaSel) params.set("hasta", hastaSel);
+    if (desdeSel) params.set("desde", desdeSel);
+    if (hastaSel) params.set("hasta", hastaSel);
     if (proyectoSel) params.set("proyecto", proyectoSel);
     const qs = params.toString();
     start(() => router.push(qs ? `${basePath}?${qs}` : basePath));
@@ -78,7 +73,7 @@ export function FiltroPopover({
   });
 
   const proyectoNombre = proyectos.find((p) => p.id === proyectoId)?.nombre;
-  const hayRango = !sinFechas && Boolean(desde || hasta);
+  const hayRango = Boolean(desde || hasta);
   const hayFiltro = hayRango || Boolean(proyectoId);
 
   return (
@@ -111,7 +106,6 @@ export function FiltroPopover({
         {open && (
           <div className="absolute right-0 z-30 mt-2 w-72 rounded-xl border border-dc-line bg-dc-deep p-4 shadow-xl">
             <div className="space-y-3">
-              {!sinFechas && (
               <div>
                 <label className="mb-1 block text-xs text-dc-muted">Período</label>
                 <SelectorRango
@@ -125,7 +119,6 @@ export function FiltroPopover({
                   max={maxHoy || undefined}
                 />
               </div>
-              )}
               {!soloFechas && (
                 <div>
                   <label className="mb-1 block text-xs text-dc-muted">Cliente</label>

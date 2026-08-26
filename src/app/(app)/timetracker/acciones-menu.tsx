@@ -10,12 +10,13 @@ const ITEM =
 export function AccionesMenu({
   desde,
   hasta,
-  proyecto,
+  proyectos,
   usuarioId = "",
 }: {
   desde: string;
   hasta: string;
-  proyecto: string;
+  // Ids separados por coma. Vacío = sin filtro de proyecto.
+  proyectos: string;
   // Usuario dueño de las horas cuando un admin opera para otro mentor:
   // se propaga a la importación y a la exportación.
   usuarioId?: string;
@@ -48,7 +49,7 @@ export function AccionesMenu({
   }, [open]);
 
   const params = new URLSearchParams({ desde, hasta });
-  if (proyecto) params.set("proyecto", proyecto);
+  if (proyectos) params.set("proyectos", proyectos);
   if (usuarioId) params.set("usuario", usuarioId);
   const url = (formato: string) =>
     `/timetracker/export?${params.toString()}&formato=${formato}`;

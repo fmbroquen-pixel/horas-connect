@@ -6,12 +6,11 @@ import { getUsuariosQueReportan, resolverUsuarioDestino } from "@/lib/registrar-
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { fechaDesdeISO } from "@/lib/dias-habiles";
 import { MODULOS } from "@/lib/modulos";
-import { hoyISO } from "@/lib/formato";
+
 import { marcaDeEdicion } from "@/lib/edicion";
 import { mesDeParams, rangoDelMes } from "@/lib/mes";
-import { SelectorMes } from "@/components/selector-mes";
+import { FiltrosMes } from "@/components/filtros-mes";
 import { createAdminClient, BUCKET_COMPROBANTES } from "@/lib/supabase/admin";
-import { FiltroPopover } from "@/components/filtro-popover";
 import { InfoButton } from "@/components/info-button";
 import { SelectorUsuario } from "@/components/selector-usuario";
 import { GRID_VIATICOS, type ViaticoFila } from "./tipos";
@@ -28,7 +27,7 @@ export default async function ViaticosPage({
   searchParams: Promise<{
     anio?: string;
     mes?: string;
-    proyecto?: string;
+    proyectos?: string;
     usuario?: string;
   }>;
 }) {
@@ -57,9 +56,17 @@ export default async function ViaticosPage({
   // Todo el contexto de la pantalla es el del usuario destino: si el admin
   // carga para otro, ve exactamente lo que esa persona vería.
   const proyectos = await getProyectosPermitidos(destino.id);
-  const proyectoId = proyectos.some((p) => p.id === params.proyecto)
-    ? params.proyecto
-    : undefined;
+  // Sin parámetro se muestran todos los permitidos; con parámetro, solo los
+  // pedidos que además lo sean (un id ajeno en la URL no abre nada).
+  const idsPermitidos = proyectos.map((p) => p.id);
+  const pedidos = (params.proyectos ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const idsFiltro =
+    pedidos.length > 0
+      ? pedidos.filter((id) => idsPermitidos.includes(id))
+      : idsPermitidos;
 
   const [viaticos, usuariosQueReportan] = await Promise.all([
     prisma.viatico.findMany({
@@ -67,7 +74,7 @@ export default async function ViaticosPage({
         usuarioId: destino.id,
         ...SOLO_ACTIVOS,
         fecha: { gte: fechaDesdeISO(desde), lte: fechaDesdeISO(hasta) },
-        ...(proyectoId ? { clienteId: proyectoId } : {}),
+        clienteId: { in: idsFiltro },
       },
       orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
       take: 300,
@@ -140,23 +147,14 @@ export default async function ViaticosPage({
           <span />
         )}
         <div className="flex items-center gap-2">
-          {/* Período: un mes, con el mismo selector de Analytics. El filtro de
-              proyecto queda aparte y sin fechas: un rango libre además del mes
-              serían dos formas de decir lo mismo. */}
-          <SelectorMes
+          {/* Mes + proyectos, el mismo componente que el Home. */}
+          <FiltrosMes
             anio={anio}
             mes={mes}
             basePath="/viaticos"
-            extra={{ proyecto: proyectoId, usuario: params.usuario }}
-          />
-          <FiltroPopover
-            basePath="/viaticos"
-            desde=""
-            hasta=""
-            sinFechas
-            proyectoId={proyectoId ?? ""}
-            proyectos={opcionesProyecto}
-            maxHoy={hoyISO()}
+            opciones={opcionesProyecto}
+            seleccionados={idsFiltro}
+            extra={{ usuario: params.usuario }}
           />
           <PapeleraMenu tipo="viatico" />
         </div>

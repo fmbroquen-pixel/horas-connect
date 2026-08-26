@@ -9,11 +9,10 @@ import {
 import { getConceptosActivos } from "@/lib/conceptos";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { formatHorasHsMin } from "@/lib/horas";
-import { hoyISO } from "@/lib/formato";
+
 import { marcaDeEdicion } from "@/lib/edicion";
 import { mesDeParams, rangoDelMes } from "@/lib/mes";
-import { SelectorMes } from "@/components/selector-mes";
-import { FiltroPopover } from "@/components/filtro-popover";
+import { FiltrosMes } from "@/components/filtros-mes";
 import { InfoButton } from "@/components/info-button";
 import { TablaRegistros } from "./tabla-registros";
 import { AccionesMenu } from "./acciones-menu";
@@ -27,7 +26,7 @@ export default async function TimetrackerPage({
   searchParams: Promise<{
     anio?: string;
     mes?: string;
-    proyecto?: string;
+    proyectos?: string;
     usuario?: string;
   }>;
 }) {
@@ -54,9 +53,17 @@ export default async function TimetrackerPage({
   // usuario destino: si el admin carga para otro, ve exactamente lo que ese
   // mentor vería.
   const proyectos = await getProyectosPermitidos(destino.id);
-  const proyectoId = proyectos.some((p) => p.id === params.proyecto)
-    ? params.proyecto
-    : undefined;
+  // Sin parámetro se muestran todos los permitidos; con parámetro, solo los
+  // pedidos que además lo sean (un id ajeno en la URL no abre nada).
+  const idsPermitidos = proyectos.map((p) => p.id);
+  const pedidos = (params.proyectos ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const idsFiltro =
+    pedidos.length > 0
+      ? pedidos.filter((id) => idsPermitidos.includes(id))
+      : idsPermitidos;
 
   const [conceptos, tarifasVigentes, registros, usuariosQueReportan] =
     await Promise.all([
@@ -74,7 +81,7 @@ export default async function TimetrackerPage({
             gte: new Date(desde + "T00:00:00Z"),
             lte: new Date(hasta + "T00:00:00Z"),
           },
-          ...(proyectoId ? { clienteId: proyectoId } : {}),
+          clienteId: { in: idsFiltro },
         },
         orderBy: [{ fecha: "desc" }, { createdAt: "desc" }],
         take: 500,
@@ -165,29 +172,25 @@ export default async function TimetrackerPage({
           <span />
         )}
         <div className="flex items-center gap-2">
-          {/* Período: un mes, con el mismo selector de Analytics. El filtro de
-              proyecto queda aparte y sin fechas: un rango libre además del mes
-              serían dos formas de decir lo mismo. */}
-          <SelectorMes
+          {/* Mes + proyectos, el mismo componente que el Home. */}
+          <FiltrosMes
             anio={anio}
             mes={mes}
             basePath="/timetracker"
-            extra={{ proyecto: proyectoId, usuario: params.usuario }}
-          />
-          <FiltroPopover
-            basePath="/timetracker"
-            desde=""
-            hasta=""
-            sinFechas
-            proyectoId={proyectoId ?? ""}
-            proyectos={opcionesProyecto}
-            maxHoy={hoyISO()}
+            opciones={opcionesProyecto}
+            seleccionados={idsFiltro}
+            extra={{ usuario: params.usuario }}
           />
           {!sinTarifa && (
             <AccionesMenu
               desde={desde}
               hasta={hasta}
-              proyecto={proyectoId ?? ""}
+              // Se exporta exactamente lo que se está viendo. Si están todos
+              // seleccionados no viaja el filtro: es el mismo criterio que la
+              // URL de la pantalla.
+              proyectos={
+                idsFiltro.length === idsPermitidos.length ? "" : idsFiltro.join(",")
+              }
               usuarioId={esOtroUsuario ? destino.id : ""}
             />
           )}

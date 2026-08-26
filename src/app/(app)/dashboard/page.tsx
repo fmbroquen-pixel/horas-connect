@@ -8,7 +8,6 @@ import { formatHorasHsMin } from "@/lib/horas";
 import { construirCurvaHoras } from "@/lib/curva-horas";
 import { hoyISO, semanaActualISO } from "@/lib/formato";
 import { mesDeParams, rangoDelMes } from "@/lib/mes";
-import { SelectorMes } from "@/components/selector-mes";
 import { InfoButton } from "@/components/info-button";
 import { CurvaHoras } from "@/components/curva-horas";
 import { SemaforoEvolucion, NIVEL_SEMAFORO } from "@/components/semaforo-evolucion";
@@ -237,25 +236,12 @@ export default async function DashboardPage({
         <h1 className="font-display text-xl uppercase text-white">
           Hola, {usuario.nombre.split(" ")[0]}
         </h1>
-        <div className="flex items-center gap-3">
-          <SelectorMes
-            anio={anio}
-            mes={mes}
-            basePath="/dashboard"
-            extra={{
-              proyectos:
-                ids.length > 0 && ids.length < idsAccesibles.length
-                  ? ids.join(",")
-                  : undefined,
-            }}
-          />
-          <FiltrosHome
-            anio={anio}
-            mes={mes}
-            proyectos={proyectos.map((p) => ({ id: p.id, nombre: p.nombre }))}
-            seleccionados={ids}
-          />
-        </div>
+        <FiltrosHome
+          anio={anio}
+          mes={mes}
+          proyectos={proyectos.map((p) => ({ id: p.id, nombre: p.nombre }))}
+          seleccionados={ids}
+        />
       </div>
 
       {idsAccesibles.length === 0 ? (

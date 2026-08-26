@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
-import { rangoDefault30, esISO } from "@/lib/formato";
+import { rangoDefault30 } from "@/lib/formato";
 
 const ETIQUETA_OWNERSHIP: Record<string, string> = {
   owner: "Owner",
@@ -49,7 +49,11 @@ export async function GET(request: NextRequest) {
     sp.get("desde") ?? undefined,
     sp.get("hasta") ?? undefined,
   );
-  const proyectoParam = sp.get("proyecto") ?? "";
+  // Los mismos proyectos que muestra la pantalla. Vacío = todos.
+  const idsProyecto = (sp.get("proyectos") ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
 
   // Un admin puede exportar el historial de otro mentor; el resto siempre
   // exporta el suyo, aunque manipule el query param.
@@ -68,7 +72,7 @@ export async function GET(request: NextRequest) {
         gte: new Date(desde + "T00:00:00Z"),
         lte: new Date(hasta + "T00:00:00Z"),
       },
-      ...(esISO(proyectoParam) || proyectoParam ? { clienteId: proyectoParam } : {}),
+      ...(idsProyecto.length > 0 ? { clienteId: { in: idsProyecto } } : {}),
     },
     include: { cliente: true, etapa: true, concepto: true },
     orderBy: [{ fecha: "asc" }, { createdAt: "asc" }],
