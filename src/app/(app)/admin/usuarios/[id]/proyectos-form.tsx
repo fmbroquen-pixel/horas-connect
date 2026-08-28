@@ -51,7 +51,12 @@ export function ProyectosForm({
   const [state, formAction, pending] = useActionState(
     async (prev: { error?: string; ok?: boolean } | undefined, fd: FormData) => {
       const r = await guardarProyectosAsignados(usuarioId, prev, fd);
-      if (r.ok) setToast(true);
+      if (r.ok) {
+        setToast(true);
+        // El reemplazo ya se aplicó; volver a mandarlo en el próximo guardado
+        // desplazaría a quien haya quedado como Owner desde entonces.
+        setDesplazar(new Set());
+      }
       return r;
     },
     undefined,
@@ -90,11 +95,36 @@ export function ProyectosForm({
     alternar(p.id, solapa);
   };
 
+  // Confirmar guarda. Antes solo dejaba el proyecto marcado y había que
+  // acordarse de apretar Guardar abajo: se confirmaba un cambio fuerte -alguien
+  // pierde un proyecto- y no pasaba nada visible, así que no quedaba claro si
+  // se habia aplicado.
+  //
+  // El FormData se arma a mano y no se deja que el form lea sus inputs: los
+  // hidden se renderizan recién en el próximo render, y para entonces el
+  // submit ya salió. Acá se manda el estado que va a quedar.
+  //
+  // Se guarda TODO lo pendiente, no solo el proyecto confirmado: es un único
+  // formulario y partirlo en dos escrituras dejaría al usuario sin saber cuál
+  // de sus marcas quedó.
   const confirmarCambio = () => {
     if (!aConfirmar) return;
-    alternar(aConfirmar.id, "owner");
-    setDesplazar((d) => new Set(d).add(aConfirmar.id));
+    const id = aConfirmar.id;
+
+    const nuevosRoles = new Map(roles).set(id, "owner" as RolAsignacion);
+    const nuevosDesplazar = new Set(desplazar).add(id);
+    setRoles(nuevosRoles);
+    setDesplazar(nuevosDesplazar);
     setAConfirmar(null);
+
+    const fd = new FormData();
+    for (const [clienteId, rol] of nuevosRoles) fd.append(rol, clienteId);
+    for (const clienteId of nuevosDesplazar) {
+      if (nuevosRoles.get(clienteId) === "owner") {
+        fd.append("desplazarOwner", clienteId);
+      }
+    }
+    formAction(fd);
   };
 
   // Quién ocupa hoy el rol, para mostrarlo debajo del nombre. En Owner es
@@ -169,7 +199,6 @@ export function ProyectosForm({
           const motivo = ocupacion(p, solapa);
           // Solo Backup bloquea: en Owner el titular actual se reemplaza.
           const deshabilitado = solapa === "backup" && motivo !== null && !marcado;
-          const reemplaza = desplazar.has(p.id) && marcado;
 
           return (
             <label
@@ -197,16 +226,10 @@ export function ProyectosForm({
                     Asignado como {propio === "owner" ? "Owner" : "Backup"}
                   </span>
                 )}
-                {reemplaza ? (
-                  <span className="block truncate text-[11px] text-dc-pink">
-                    Reemplaza a {p.ownerAjeno}
+                {motivo && (
+                  <span className="block truncate text-[11px] text-dc-muted">
+                    {motivo}
                   </span>
-                ) : (
-                  motivo && (
-                    <span className="block truncate text-[11px] text-dc-muted">
-                      {motivo}
-                    </span>
-                  )
                 )}
                 {p.sinRol && !propio && (
                   <span className="block text-[11px] text-dc-muted">

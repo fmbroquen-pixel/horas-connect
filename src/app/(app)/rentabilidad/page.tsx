@@ -134,7 +134,11 @@ export default async function RentabilidadPage({
         </div>
       </section>
 
-      {/* 03 Resumen por mentor */}
+      {/* 03 Resumen por mentor.
+          Sin guard de esAdmin a proposito: los honorarios de cada mentor se
+          muestran a todo el que llega a esta pantalla. Los guest no llegan
+          -hay un redirect arriba- y que los reader los vean esta decidido, no
+          olvidado. */}
       <section>
         <SecHead num="03" title="Resumen por mentor" />
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
