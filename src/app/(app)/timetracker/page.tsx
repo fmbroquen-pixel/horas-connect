@@ -12,7 +12,8 @@ import { formatHorasHsMin } from "@/lib/horas";
 
 import { marcaDeEdicion } from "@/lib/edicion";
 import { mesDeParams, rangoDelMes } from "@/lib/mes";
-import { FiltrosMes } from "@/components/filtros-mes";
+import { FiltrosMesRecalculo } from "@/components/filtros-mes-recalculo";
+import { RecalculoProvider, BloqueRecalculable } from "@/components/recalculo";
 import { InfoButton } from "@/components/info-button";
 import { TablaRegistros } from "./tabla-registros";
 import { AccionesMenu } from "./acciones-menu";
@@ -138,6 +139,9 @@ export default async function TimetrackerPage({
   const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
 
   return (
+    // El provider envuelve a los dos lados: el selector de mes dispara la
+    // navegacion y la tabla se atenua mientras el servidor recalcula.
+    <RecalculoProvider>
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-2">
         <h1 className="font-display text-lg uppercase text-white">Time Tracking</h1>
@@ -178,14 +182,13 @@ export default async function TimetrackerPage({
         )}
         <div className="flex items-center gap-2">
           {/* Mes + proyectos, el mismo componente que el Home. */}
-          <FiltrosMes
+          <FiltrosMesRecalculo
             anio={anio}
             mes={mes}
             basePath="/timetracker"
             opciones={opcionesProyecto}
             seleccionados={idsFiltro}
             extra={{ usuario: params.usuario }}
-            conMenu={false}
           />
           {!sinTarifa && (
             <AccionesMenu
@@ -214,7 +217,14 @@ export default async function TimetrackerPage({
         </div>
       )}
 
-      <div className="mt-3 flex min-h-0 flex-1 flex-col">
+      {/* Solo la tabla depende del mes: la barra de captura de arriba no, y
+          apagarla tambien haria parecer que se perdio lo que se esta
+          escribiendo. La cadena de alto se continua en el envoltorio interno,
+          si no la tabla con su scroll pierde el limite. */}
+      <BloqueRecalculable
+        className="mt-3 flex min-h-0 flex-1 flex-col"
+        claseContenido="flex min-h-0 flex-1 flex-col"
+      >
         {/* key por usuario: limpia la selección múltiple al cambiar de mentor. */}
         <TablaRegistros
           key={destino.id}
@@ -222,7 +232,8 @@ export default async function TimetrackerPage({
           proyectos={opcionesProyecto}
           conceptos={conceptos}
         />
-      </div>
+      </BloqueRecalculable>
     </div>
+    </RecalculoProvider>
   );
 }

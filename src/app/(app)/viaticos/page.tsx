@@ -9,7 +9,8 @@ import { MODULOS } from "@/lib/modulos";
 
 import { marcaDeEdicion } from "@/lib/edicion";
 import { mesDeParams, rangoDelMes } from "@/lib/mes";
-import { FiltrosMes } from "@/components/filtros-mes";
+import { FiltrosMesRecalculo } from "@/components/filtros-mes-recalculo";
+import { RecalculoProvider, BloqueRecalculable } from "@/components/recalculo";
 import { createAdminClient, BUCKET_COMPROBANTES } from "@/lib/supabase/admin";
 import { InfoButton } from "@/components/info-button";
 import { SelectorUsuario } from "@/components/selector-usuario";
@@ -115,6 +116,9 @@ export default async function ViaticosPage({
   const sinProyectos = proyectos.length === 0;
 
   return (
+    // El provider envuelve a los dos lados: el selector de mes dispara la
+    // navegacion y la tabla se atenua mientras el servidor recalcula.
+    <RecalculoProvider>
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex shrink-0 items-center gap-2">
         <h1 className="font-display text-lg uppercase text-white">Expenses</h1>
@@ -148,14 +152,13 @@ export default async function ViaticosPage({
         )}
         <div className="flex items-center gap-2">
           {/* Mes + proyectos, el mismo componente que el Home. */}
-          <FiltrosMes
+          <FiltrosMesRecalculo
             anio={anio}
             mes={mes}
             basePath="/viaticos"
             opciones={opcionesProyecto}
             seleccionados={idsFiltro}
             extra={{ usuario: params.usuario }}
-            conMenu={false}
           />
           <AccionesViaticos
             anio={anio}
@@ -180,7 +183,12 @@ export default async function ViaticosPage({
         </div>
       )}
 
-      <div className="mt-3 flex min-h-0 flex-1 overflow-x-auto dc-panel">
+      {/* Solo la tabla depende del mes: la barra de captura de arriba no. */}
+      <BloqueRecalculable
+        className="mt-3 flex min-h-0 flex-1 flex-col"
+        claseContenido="flex min-h-0 flex-1 flex-col"
+      >
+      <div className="flex min-h-0 flex-1 overflow-x-auto dc-panel">
         <div className="flex min-h-0 min-w-[860px] flex-1 flex-col">
           <div className={`dc-thead ${GRID_VIATICOS} shrink-0 border-b border-dc-line px-3`}>
             <span>Fecha</span>
@@ -215,6 +223,8 @@ export default async function ViaticosPage({
           </div>
         </div>
       </div>
+      </BloqueRecalculable>
     </div>
+    </RecalculoProvider>
   );
 }

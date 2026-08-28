@@ -2,6 +2,7 @@
 
 import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
+import { TRAZO_PROYECTO } from "@/components/ui/icono-proyecto";
 
 function PendingBar() {
   // Barra animada bajo la solapa mientras la navegación está en curso, para
@@ -18,14 +19,9 @@ function PendingBar() {
 }
 
 export const ICONOS: Record<string, React.ReactNode> = {
-  // Proyectos: maletín.
-  proyectos: (
-    <>
-      <rect x="3" y="7" width="18" height="13" rx="2" />
-      <path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
-      <path d="M3 12h18" />
-    </>
-  ),
+  // Proyectos: la misma carpeta que el indicador de proyectos filtrados. El
+  // trazo viene de ui/icono-proyecto para que no haya dos dibujos de lo mismo.
+  proyectos: TRAZO_PROYECTO,
   // Settings: engranaje simplificado.
   settings: (
     <>

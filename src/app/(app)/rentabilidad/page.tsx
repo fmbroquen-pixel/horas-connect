@@ -4,7 +4,8 @@ import { calcularReporte } from "@/lib/rentabilidad";
 import { formatMonto } from "@/lib/formato";
 import { formatHorasHsMin } from "@/lib/horas";
 import { MargenChart, HorasStackChart } from "./charts";
-import { SelectorMes } from "./selector-mes";
+import { SelectorMesAnalytics } from "./selector-mes";
+import { RecalculoProvider, BloqueRecalculable } from "@/components/recalculo";
 import { FacturacionInput } from "./facturacion-input";
 import { NotaMesEditor } from "./nota-mes-editor";
 
@@ -26,6 +27,10 @@ export default async function RentabilidadPage({
   const r = await calcularReporte(usuario, anio, mes);
 
   return (
+    // El provider envuelve a los dos lados: el selector de mes dispara la
+    // navegacion y cada bloque muestra su spinner mientras el servidor
+    // recalcula. Todo lo de abajo depende del periodo, asi que va envuelto.
+    <RecalculoProvider>
     <div className="space-y-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -41,13 +46,18 @@ export default async function RentabilidadPage({
               : "Tus clientes asignados"}
           </p>
         </div>
-        <SelectorMes anio={anio} mes={mes} basePath="/rentabilidad" />
+        <SelectorMesAnalytics anio={anio} mes={mes} />
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <BloqueRecalculable>
         <Kpi label="Clientes con actividad" value={String(r.kpis.proyectosConActividad)} />
+        </BloqueRecalculable>
+        <BloqueRecalculable>
         <Kpi label="Facturado" value={`$${formatMonto(r.kpis.facturado)}`} sub="USD" />
+        </BloqueRecalculable>
+        <BloqueRecalculable>
         <Kpi
           label="Margen global"
           value={`$${formatMonto(r.kpis.margen)}`}
@@ -58,16 +68,20 @@ export default async function RentabilidadPage({
           }
           destacado
         />
+        </BloqueRecalculable>
+        <BloqueRecalculable>
         <Kpi
           label="Horas entregadas"
           value={`${formatHorasHsMin(r.kpis.horas)} hs`}
           sub={`${formatHorasHsMin(r.kpis.horasFacturables)} hs facturables`}
         />
+        </BloqueRecalculable>
       </div>
 
       {/* 01 Margen por proyecto */}
       <section>
         <SecHead num="01" title="Margen por cliente" sub="Facturación menos costo de mentores, en USD." />
+        <BloqueRecalculable>
         <div className="mt-4 rounded-2xl border border-dc-line bg-dc-card p-5">
           <MargenChart
             proyectos={r.filasProyecto.map((f) => f.nombre)}
@@ -124,14 +138,17 @@ export default async function RentabilidadPage({
             </tbody>
           </table>
         </div>
+        </BloqueRecalculable>
       </section>
 
       {/* 02 Horas por proyecto y mentor */}
       <section>
         <SecHead num="02" title="Horas por cliente y mentor" sub="Horas entregadas, apiladas por quién las entregó." />
+        <BloqueRecalculable>
         <div className="mt-4 rounded-2xl border border-dc-line bg-dc-card p-5">
           <HorasStackChart stack={r.horasStack} />
         </div>
+        </BloqueRecalculable>
       </section>
 
       {/* 03 Resumen por mentor.
@@ -141,6 +158,7 @@ export default async function RentabilidadPage({
           olvidado. */}
       <section>
         <SecHead num="03" title="Resumen por mentor" />
+        <BloqueRecalculable>
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {r.filasMentor.map((m) => (
             <div key={m.usuarioId} className="rounded-2xl border border-dc-line bg-dc-card p-5">
@@ -159,11 +177,13 @@ export default async function RentabilidadPage({
             <p className="text-sm text-dc-muted">No hay horas cargadas este mes.</p>
           )}
         </div>
+        </BloqueRecalculable>
       </section>
 
       {/* 04 Totales por modalidad */}
       <section>
         <SecHead num="04" title="Horas por modalidad" />
+        <BloqueRecalculable>
         <div className="mt-4 flex flex-wrap gap-3">
           {r.totalesModalidad.map((t) => (
             <div key={t.modalidad} className="rounded-xl border border-dc-line bg-dc-card px-5 py-3">
@@ -175,11 +195,13 @@ export default async function RentabilidadPage({
             <p className="text-sm text-dc-muted">Sin horas cargadas.</p>
           )}
         </div>
+        </BloqueRecalculable>
       </section>
 
       {/* 05 Lecturas del mes */}
       <section>
         <SecHead num="05" title="Lecturas del mes" sub="Observaciones cualitativas del período." />
+        <BloqueRecalculable>
         <div className="mt-4">
           {r.esAdmin ? (
             <NotaMesEditor anio={anio} mes={mes} texto={r.nota} />
@@ -191,8 +213,10 @@ export default async function RentabilidadPage({
             <p className="text-sm text-dc-muted">Todavía no hay notas para este mes.</p>
           )}
         </div>
+        </BloqueRecalculable>
       </section>
     </div>
+    </RecalculoProvider>
   );
 }
 

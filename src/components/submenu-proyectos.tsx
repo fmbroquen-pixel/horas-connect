@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ListaProyectos, type OpcionFiltro } from "@/components/lista-proyectos";
 import { SubmenuMenu, useMenuAcciones } from "@/components/ui/menu-acciones";
 import { urlFiltroMes } from "@/lib/url-filtro";
+import { IconoProyecto } from "@/components/ui/icono-proyecto";
 
 // "Proyectos →" dentro del menú de la pantalla.
 //
@@ -75,13 +76,5 @@ export function SubmenuProyectos({
         </button>
       )}
     </SubmenuMenu>
-  );
-}
-
-function IconoProyecto() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 7h6l2 2h10v10H3z" />
-    </svg>
   );
 }

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { BTN_SECONDARY_SM } from "@/lib/ui";
 import { MESES_LARGOS, esFuturo, mesAnterior, mesSiguiente } from "@/lib/mes";
@@ -18,12 +20,25 @@ export function SelectorMes({
   // Lo que haya que conservar al cambiar de mes (el filtro de proyecto, por
   // ejemplo). Sin esto, moverse un mes borraría el resto del filtro.
   extra,
+  navegar,
 }: {
   anio: number;
   mes: number;
   basePath: string;
   extra?: Record<string, string | undefined>;
+  // Cómo navegar. Sin esto son enlaces comunes. Con esto el clic pasa por el
+  // recálculo de la pantalla, que es lo que enciende los spinners; el href se
+  // conserva igual, así ctrl+clic y "abrir en pestaña nueva" siguen andando.
+  navegar?: (url: string) => void;
 }) {
+  const alClic = (e: React.MouseEvent, url: string) => {
+    if (!navegar) return;
+    // Un clic con modificador abre en otra pestaña: ahí no hay nada que
+    // recalcular en esta.
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    e.preventDefault();
+    navegar(url);
+  };
   const href = (m: { anio: number; mes: number }) => {
     const params = new URLSearchParams();
     params.set("anio", String(m.anio));
@@ -42,7 +57,11 @@ export function SelectorMes({
 
   return (
     <div className="flex items-center gap-3">
-      <Link href={href(prev)} className={BTN_SECONDARY_SM}>
+      <Link
+        href={href(prev)}
+        onClick={(e) => alClic(e, href(prev))}
+        className={BTN_SECONDARY_SM}
+      >
         ← Anterior
       </Link>
       <span className="min-w-40 text-center font-display text-sm uppercase text-white">
@@ -57,7 +76,11 @@ export function SelectorMes({
           Siguiente →
         </span>
       ) : (
-        <Link href={href(next)} className={BTN_SECONDARY_SM}>
+        <Link
+          href={href(next)}
+          onClick={(e) => alClic(e, href(next))}
+          className={BTN_SECONDARY_SM}
+        >
           Siguiente →
         </Link>
       )}

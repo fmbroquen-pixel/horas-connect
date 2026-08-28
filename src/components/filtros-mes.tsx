@@ -7,6 +7,7 @@ import { dentroDeUnPopover } from "@/components/ui/popover-flotante";
 import { MESES_LARGOS, esFuturo, mesAnterior, mesSiguiente } from "@/lib/mes";
 import { urlFiltroMes } from "@/lib/url-filtro";
 import { ListaProyectos, type OpcionFiltro } from "@/components/lista-proyectos";
+import { IconoProyecto } from "@/components/ui/icono-proyecto";
 
 export type { OpcionFiltro };
 
@@ -135,7 +136,7 @@ export function FiltrosMes({
           title={`${seleccionados.length} de ${opciones.length}`}
           className="flex items-center gap-1 rounded-full bg-dc-peri/15 px-2 py-1 text-xs tabular-nums text-dc-peri"
         >
-          <IconoProyecto />
+          <IconoProyecto size={13} strokeWidth={2} />
           {seleccionados.length}
         </span>
       )}
@@ -181,12 +182,3 @@ export function FiltrosMes({
     </div>
   );
 }
-
-function IconoProyecto() {
-  return (
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 7h6l2 2h10v10H3z" />
-    </svg>
-  );
-}
-
