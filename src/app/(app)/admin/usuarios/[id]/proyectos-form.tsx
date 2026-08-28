@@ -8,7 +8,8 @@ import {
   type RolAsignacion,
 } from "../constantes";
 import { ToastOk } from "@/components/ui/toast-ok";
-import { BTN_SECONDARY } from "@/lib/ui";
+import { Modal } from "@/components/ui/modal";
+import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
 
 const SOLAPAS: { rol: RolAsignacion; label: string }[] = [
   { rol: "owner", label: "Mentor Owner" },
@@ -40,6 +41,12 @@ export function ProyectosForm({
       ),
   );
   const [toast, setToast] = useState(false);
+  // Proyectos que el admin confirmó quitarle a su Owner actual. Viajan al
+  // servidor: sin esta lista, un formulario viejo podría desplazar a alguien
+  // que se convirtió en Owner después de que se abrió la pantalla.
+  const [desplazar, setDesplazar] = useState<Set<string>>(new Set());
+  // El proyecto que está esperando confirmación, o null.
+  const [aConfirmar, setAConfirmar] = useState<ProyectoAsignable | null>(null);
 
   const [state, formAction, pending] = useActionState(
     async (prev: { error?: string; ok?: boolean } | undefined, fd: FormData) => {
@@ -52,16 +59,48 @@ export function ProyectosForm({
 
   // Marcar en una solapa desmarca la otra: un usuario tiene un solo rol por
   // proyecto, así que la exclusión es automática y no un error a mostrar.
-  const alternar = (id: string, rol: RolAsignacion) =>
+  const alternar = (id: string, rol: RolAsignacion) => {
     setRoles((m) => {
       const n = new Map(m);
       if (n.get(id) === rol) n.delete(id);
       else n.set(id, rol);
       return n;
     });
+    // Soltar el proyecto cancela el desplazamiento: si no queda marcado como
+    // Owner, no hay a quién reemplazar.
+    setDesplazar((d) => {
+      if (!d.has(id)) return d;
+      const n = new Set(d);
+      n.delete(id);
+      return n;
+    });
+  };
 
-  // Motivo por el que un proyecto no puede tomarse en este rol, o null.
-  const bloqueo = (p: ProyectoAsignable, rol: RolAsignacion): string | null => {
+  // Un clic en la solapa Owner sobre un proyecto que ya tiene otro Owner no se
+  // bloquea: se pregunta. Antes el checkbox estaba deshabilitado, y como un
+  // mismo admin figuraba como Owner de todos los proyectos, la solapa se veía
+  // entera en gris sin ninguna pista de que la salida era ir a la ficha del
+  // otro usuario a soltarlos uno por uno.
+  const alClickear = (p: ProyectoAsignable) => {
+    const yaMarcado = roles.get(p.id) === solapa;
+    if (solapa === "owner" && p.ownerAjeno && !yaMarcado) {
+      setAConfirmar(p);
+      return;
+    }
+    alternar(p.id, solapa);
+  };
+
+  const confirmarCambio = () => {
+    if (!aConfirmar) return;
+    alternar(aConfirmar.id, "owner");
+    setDesplazar((d) => new Set(d).add(aConfirmar.id));
+    setAConfirmar(null);
+  };
+
+  // Quién ocupa hoy el rol, para mostrarlo debajo del nombre. En Owner es
+  // informativo —se puede reemplazar— y en Backup es además el motivo por el
+  // que el proyecto no se puede tomar: ahí el cupo es un tope, no un titular.
+  const ocupacion = (p: ProyectoAsignable, rol: RolAsignacion): string | null => {
     if (rol === "owner") {
       return p.ownerAjeno ? `Owner: ${p.ownerAjeno}` : null;
     }
@@ -81,6 +120,18 @@ export function ProyectosForm({
       {[...roles.entries()].map(([clienteId, rol]) => (
         <input key={clienteId} type="hidden" name={rol} value={clienteId} />
       ))}
+      {/* Los reemplazos confirmados van aparte del rol: el servidor solo saca
+          a un Owner de un proyecto que aparezca acá. */}
+      {[...desplazar]
+        .filter((id) => roles.get(id) === "owner")
+        .map((clienteId) => (
+          <input
+            key={`d-${clienteId}`}
+            type="hidden"
+            name="desplazarOwner"
+            value={clienteId}
+          />
+        ))}
 
       <div className="mb-4 inline-flex items-center gap-1 rounded-lg border border-dc-line bg-dc-deeper p-1">
         {SOLAPAS.map((s) => {
@@ -115,8 +166,10 @@ export function ProyectosForm({
         {proyectos.map((p) => {
           const propio = roles.get(p.id);
           const marcado = propio === solapa;
-          const motivo = bloqueo(p, solapa);
-          const deshabilitado = motivo !== null && !marcado;
+          const motivo = ocupacion(p, solapa);
+          // Solo Backup bloquea: en Owner el titular actual se reemplaza.
+          const deshabilitado = solapa === "backup" && motivo !== null && !marcado;
+          const reemplaza = desplazar.has(p.id) && marcado;
 
           return (
             <label
@@ -132,7 +185,9 @@ export function ProyectosForm({
                 type="checkbox"
                 checked={marcado}
                 disabled={deshabilitado}
-                onChange={() => alternar(p.id, solapa)}
+                // onChange y no onClick: el clic en el <label> llega igual, y
+                // así también entra por teclado con la barra espaciadora.
+                onChange={() => alClickear(p)}
                 className="mt-0.5 h-4 w-4 shrink-0 accent-dc-purple"
               />
               <span className="min-w-0">
@@ -142,10 +197,16 @@ export function ProyectosForm({
                     Asignado como {propio === "owner" ? "Owner" : "Backup"}
                   </span>
                 )}
-                {motivo && (
-                  <span className="block truncate text-[11px] text-dc-muted">
-                    {motivo}
+                {reemplaza ? (
+                  <span className="block truncate text-[11px] text-dc-pink">
+                    Reemplaza a {p.ownerAjeno}
                   </span>
+                ) : (
+                  motivo && (
+                    <span className="block truncate text-[11px] text-dc-muted">
+                      {motivo}
+                    </span>
+                  )
                 )}
                 {p.sinRol && !propio && (
                   <span className="block text-[11px] text-dc-muted">
@@ -175,6 +236,49 @@ export function ProyectosForm({
       <ToastOk show={toast} onHide={() => setToast(false)}>
         Asignaciones guardadas
       </ToastOk>
+
+      {/* El reemplazo se avisa antes de tocar nada, y nombra a quien lo
+          pierde: es la única acción de esta pantalla que le saca un proyecto a
+          otra persona. Nada se escribe hasta Guardar, así que Cancelar acá
+          simplemente no marca el proyecto. */}
+      <Modal
+        open={aConfirmar !== null}
+        onClose={() => setAConfirmar(null)}
+        labelledBy="titulo-cambio-owner"
+      >
+        <div className="w-full max-w-md rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+          <h2
+            id="titulo-cambio-owner"
+            className="font-display text-sm uppercase text-white"
+          >
+            Cambiar Mentor Owner
+          </h2>
+          <p className="mt-3 text-sm text-dc-text">
+            Este proyecto ya tiene como Mentor Owner a{" "}
+            <strong className="text-white">{aConfirmar?.ownerAjeno}</strong>. Si
+            continuás, esa persona dejará de ser Owner y perderá el acceso
+            asociado a esa asignación.
+          </p>
+          <p className="mt-2 text-xs text-dc-muted">
+            Proyecto: {aConfirmar?.nombre}
+          </p>
+
+          <div className="mt-5 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setAConfirmar(null)}
+              className={BTN_SECONDARY}
+            >
+              Cancelar
+            </button>
+            {/* type="button": dentro del form, un submit acá guardaría todo en
+                vez de solo marcar el proyecto. */}
+            <button type="button" onClick={confirmarCambio} className={BTN_PRIMARY}>
+              Confirmar cambio
+            </button>
+          </div>
+        </div>
+      </Modal>
     </form>
   );
 }

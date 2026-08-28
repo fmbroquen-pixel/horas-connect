@@ -316,6 +316,13 @@ export async function guardarProyectosAsignados(
 
   const owners = [...new Set(formData.getAll("owner").map(String))];
   const backups = [...new Set(formData.getAll("backup").map(String))];
+  // Proyectos donde el admin confirmó quitarle el rol al Owner actual. Se
+  // exige la confirmación explícita en vez de desplazar siempre: un formulario
+  // abierto hace rato podría sacar a alguien que pasó a ser Owner mientras
+  // tanto, y eso sí tiene que frenar.
+  const desplazar = new Set(
+    formData.getAll("desplazarOwner").map(String).filter((id) => owners.includes(id)),
+  );
 
   const enAmbos = owners.filter((id) => backups.includes(id));
   if (enAmbos.length > 0) {
@@ -341,13 +348,18 @@ export async function guardarProyectosAsignados(
     include: { cliente: { select: { nombre: true } }, usuario: { select: { nombre: true } } },
   });
 
+  // A quiénes hay que sacar del proyecto para que entre este usuario. Sin
+  // confirmación, el choque sigue siendo un error.
+  const desplazados = new Set<string>();
   for (const clienteId of owners) {
     const ocupado = ajenas.find((a) => a.clienteId === clienteId && a.rol === "owner");
-    if (ocupado) {
+    if (!ocupado) continue;
+    if (!desplazar.has(clienteId)) {
       return {
-        error: `"${ocupado.cliente.nombre}" ya tiene a ${ocupado.usuario.nombre} como Mentor Owner. Sacáselo antes de reasignarlo.`,
+        error: `"${ocupado.cliente.nombre}" ya tiene a ${ocupado.usuario.nombre} como Mentor Owner. Actualizá la pantalla para poder reemplazarlo.`,
       };
     }
+    desplazados.add(ocupado.usuarioId);
   }
 
   for (const clienteId of backups) {
@@ -379,6 +391,21 @@ export async function guardarProyectosAsignados(
       await tx.proyectoAsignado.deleteMany({
         where: { usuarioId, rol: { not: null } },
       });
+
+      // El Owner saliente sale del proyecto entero, no solo del rol: se le
+      // borra la asignación. Va DENTRO de la transacción y antes del upsert
+      // porque el índice único parcial de owner por cliente no admite ni un
+      // instante con dos, y va con `rol: "owner"` para no tocar a los backups
+      // ni a quien tenga una asignación sin rol.
+      if (desplazar.size > 0) {
+        await tx.proyectoAsignado.deleteMany({
+          where: {
+            clienteId: { in: [...desplazar] },
+            rol: "owner",
+            usuarioId: { not: usuarioId },
+          },
+        });
+      }
 
       for (const clienteId of backups) {
         const ocupados = await tx.proyectoAsignado.count({
@@ -421,8 +448,15 @@ export async function guardarProyectosAsignados(
   }
 
   revalidatePath(`/admin/usuarios/${usuarioId}`);
+  // También la ficha de quien perdió el proyecto, o al abrirla seguiría
+  // mostrándose como Owner de algo que ya no tiene.
+  for (const id of desplazados) revalidatePath(`/admin/usuarios/${id}`);
+  revalidatePath("/admin/usuarios");
   revalidatePath("/mi-perfil");
+  // El layout de proyectos cubre la ficha del proyecto y su Equipo.
   revalidatePath("/proyectos", "layout");
   revalidatePath("/dashboard");
+  // Quién ve qué proyecto cambió, y el informe se arma sobre eso.
+  revalidatePath("/rentabilidad");
   return { ok: true };
 }
