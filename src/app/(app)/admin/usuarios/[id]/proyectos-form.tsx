@@ -254,11 +254,14 @@ export function ProyectosForm({
             Cambiar Mentor Owner
           </h2>
           <p className="mt-3 text-sm text-dc-text">
-            Este proyecto ya tiene como Mentor Owner a{" "}
-            <strong className="text-white">{aConfirmar?.ownerAjeno}</strong>. Si
-            continuás, esa persona dejará de ser Owner y perderá el acceso
-            asociado a esa asignación.
+            Si continuás,{" "}
+            <strong className="text-white">{aConfirmar?.ownerAjeno}</strong>{" "}
+            dejará de ser Owner y perderá acceso al proyecto. ¿Deseás
+            continuar?
           </p>
+          {/* El overlay tapa la fila desde la que se abrió, así que el nombre
+              del proyecto va acá: es lo que evita confirmar sobre el que no
+              era. */}
           <p className="mt-2 text-xs text-dc-muted">
             Proyecto: {aConfirmar?.nombre}
           </p>
