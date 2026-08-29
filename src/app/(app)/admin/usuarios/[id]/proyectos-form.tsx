@@ -236,7 +236,7 @@ export function ProyectosForm({
           return (
             <label
               key={p.id}
-              title={motivo ?? undefined}
+              data-tooltip={motivo ?? undefined}
               className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm transition ${
                 deshabilitado
                   ? "cursor-not-allowed border-dc-line/60 text-dc-muted opacity-60"

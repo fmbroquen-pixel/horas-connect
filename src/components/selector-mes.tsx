@@ -70,7 +70,7 @@ export function SelectorMes({
       {hayFuturo ? (
         <span
           aria-disabled
-          title="No hay meses posteriores al actual"
+          data-tooltip="No hay meses posteriores al actual"
           className={`${BTN_SECONDARY_SM} cursor-not-allowed opacity-40`}
         >
           Siguiente →

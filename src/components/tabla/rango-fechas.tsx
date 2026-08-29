@@ -230,7 +230,7 @@ export function RangoFechas({
         {error && columna === "inicio" && (
           <span
             role="alert"
-            title={error}
+            data-tooltip={error}
             className="mt-0.5 block truncate text-[11px] leading-tight text-dc-pink"
           >
             {error}

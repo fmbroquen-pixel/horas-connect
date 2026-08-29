@@ -160,7 +160,7 @@ function Aviso({ aviso }: { aviso: Aviso }) {
         <button
           type="button"
           onClick={cerrar}
-          title="Cerrar"
+          data-tooltip="Cerrar"
           aria-label="Cerrar aviso"
           className="-mr-1 ml-1 shrink-0 rounded-md p-1 text-dc-muted transition hover:bg-dc-line/50 hover:text-dc-text"
         >

@@ -198,7 +198,7 @@ export default async function ViaticosPage({
             <span>Monto</span>
             <span
               className="flex justify-center"
-              title="Comprobante"
+              data-tooltip="Comprobante"
               aria-label="Comprobante"
             >
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

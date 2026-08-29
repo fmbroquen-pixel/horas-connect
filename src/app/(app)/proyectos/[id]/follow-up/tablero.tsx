@@ -199,7 +199,7 @@ function Tablero({
                   inputMode="decimal"
                   autoComplete="off"
                   aria-label="Horas estimadas"
-                  title="Cargá un número (1,5) o el formato 1:30"
+                  data-tooltip="Cargá un número (1,5) o el formato 1:30"
                   className={INPUT}
                 />
               )}

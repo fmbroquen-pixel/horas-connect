@@ -6,6 +6,7 @@ import { SidebarDesktop, SidebarMobile, type ItemSidebar } from "./sidebar";
 import { PageTransition } from "./page-transition";
 import { Marca } from "@/components/marca";
 import { Avisos } from "@/components/ui/avisos";
+import { Tooltips } from "@/components/ui/tooltips";
 import { PerfilBoton } from "./perfil/perfil-boton";
 import { urlAvatar } from "@/lib/supabase/admin";
 import { MODULOS } from "@/lib/modulos";
@@ -121,7 +122,7 @@ export default async function AppLayout({
       <form action={logout} className="shrink-0">
         <button
           type="submit"
-          title="Cerrar sesión"
+          data-tooltip="Cerrar sesión"
           aria-label="Cerrar sesión"
           className="flex items-center rounded-lg p-2 text-dc-muted transition-colors duration-150 hover:bg-dc-pink/10 hover:text-dc-pink focus-visible:bg-dc-pink/10 focus-visible:text-dc-pink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-pink/40 active:bg-dc-pink/15"
         >
@@ -193,6 +194,9 @@ export default async function AppLayout({
       </div>
 
       <Avisos />
+      {/* Capa única de tooltips: cualquier elemento con data-tooltip queda
+          cubierto, incluidos los que se agreguen despues. */}
+      <Tooltips />
     </div>
   );
 }

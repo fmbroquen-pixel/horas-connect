@@ -125,7 +125,7 @@ function FormEdicion({
           {diasEditado && (
             <button
               type="button"
-              title="Recalcular automáticamente"
+              data-tooltip="Recalcular automáticamente"
               aria-label="Recalcular automáticamente"
               onClick={() => {
                 setDiasEditado(false);

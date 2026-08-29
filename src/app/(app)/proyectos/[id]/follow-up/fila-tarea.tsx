@@ -196,7 +196,7 @@ export function FilaTareaRoadmap({
             un clic, porque el navegador no emite click si hubo arrastre. */}
         <span
           {...agarre}
-          title={agarre ? "Arrastrá para reordenar la tarea" : undefined}
+          data-tooltip={agarre ? "Arrastrá para reordenar la tarea" : undefined}
           className={`flex items-center ${agarre ? "cursor-grab active:cursor-grabbing" : ""}`}
         >
           <input

@@ -115,7 +115,7 @@ export function PerfilBoton({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        title="Perfil"
+        data-tooltip="Perfil"
         aria-label="Perfil"
         className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dc-line text-dc-muted transition hover:border-dc-peri hover:text-dc-text"
       >

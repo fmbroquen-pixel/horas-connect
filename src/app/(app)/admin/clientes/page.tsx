@@ -73,7 +73,7 @@ export default async function ClientesPage({
                   ) : (
                     <span
                       className="text-dc-muted"
-                      title="Sin cargar: se completa al guardar los datos del cliente"
+                      data-tooltip="Sin cargar: se completa al guardar los datos del cliente"
                     >
                       —
                     </span>

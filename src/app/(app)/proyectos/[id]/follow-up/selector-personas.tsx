@@ -25,7 +25,7 @@ export function SelectorPersonas({
           await actualizarCampoTarea(tareaId, "personas", dos ? "1" : "2");
         })
       }
-      title={`Personas involucradas: ${personas}`}
+      data-tooltip={`Personas involucradas: ${personas}`}
       aria-label={`Personas involucradas: ${personas}. Cambiar a ${dos ? 1 : 2}.`}
       className={`flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs tabular-nums transition hover:bg-dc-peri/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 disabled:opacity-50 ${
         dos ? "text-dc-peri" : "text-dc-muted"

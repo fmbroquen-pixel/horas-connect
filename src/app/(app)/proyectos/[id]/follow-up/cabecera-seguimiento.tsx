@@ -70,7 +70,7 @@ export function CabeceraSeguimiento({
           seguido y que además es un color, no un texto. */}
       <div
         className="rounded-2xl border border-dc-line bg-dc-card px-4 py-3"
-        title={detalleUltimoCambio}
+        data-tooltip={detalleUltimoCambio}
       >
         <span className="mb-2 block text-[11px] uppercase tracking-wide text-dc-muted">
           Semáforo
@@ -85,7 +85,7 @@ export function CabeceraSeguimiento({
                 onClick={() => elegirSemaforo(o.value)}
                 disabled={pendiente}
                 aria-pressed={activo}
-                title={`${o.label} — ${detalleUltimoCambio}`}
+                data-tooltip={`${o.label} — ${detalleUltimoCambio}`}
                 className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition disabled:opacity-60 ${
                   activo
                     ? "border-transparent text-dc-text"
@@ -140,7 +140,7 @@ export function CabeceraSeguimiento({
               href={urlGuardada}
               target="_blank"
               rel="noreferrer"
-              title="Abrir tablero"
+              data-tooltip="Abrir tablero"
               aria-label="Abrir tablero"
               className="shrink-0 rounded-lg p-1.5 text-dc-muted transition hover:text-dc-peri"
             >

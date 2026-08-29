@@ -83,7 +83,7 @@ export function MenuAcciones({
       <button
         type="button"
         onClick={() => (abierto ? cerrar() : setAbierto(true))}
-        title={etiqueta}
+        data-tooltip={etiqueta}
         aria-label={etiqueta}
         aria-haspopup="menu"
         aria-expanded={abierto}

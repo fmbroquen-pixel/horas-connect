@@ -67,7 +67,7 @@ export function ListaProyectos({
               type="button"
               onClick={() => alternar(o.id)}
               aria-pressed={activo}
-              title={o.nombre}
+              data-tooltip={o.nombre}
               className={`flex w-full items-center gap-2 rounded-lg border px-2 py-1.5 text-left text-sm transition ${
                 activo
                   ? "border-dc-peri/60 bg-dc-peri/15 text-dc-text"

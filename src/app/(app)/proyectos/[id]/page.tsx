@@ -215,7 +215,7 @@ function Kpi({
         className={`mt-1 flex h-8 items-center text-white ${
           texto ? "text-sm font-medium" : "font-display text-lg tabular-nums"
         }`}
-        title={valor}
+        data-tooltip={valor}
       >
         <span className="truncate">{valor}</span>
       </p>

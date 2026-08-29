@@ -100,7 +100,7 @@ function Celda({
       {error && (
         <span
           role="alert"
-          title={error}
+          data-tooltip={error}
           className="mt-0.5 block truncate text-[11px] leading-tight text-dc-pink"
         >
           {error}
@@ -127,7 +127,7 @@ function Lectura({
     <button
       type="button"
       onClick={onEditar}
-      title={titulo}
+      data-tooltip={titulo}
       // Marca para que la fila pueda encontrar su primera celda editable. El
       // botón de editar de la fila la usa para entrar en edición desde ahí:
       // en una tabla que se edita celda por celda, ese botón no abre ningún
@@ -154,7 +154,7 @@ export function CeldaSoloLectura({
 }) {
   return (
     <span
-      title={titulo}
+      data-tooltip={titulo}
       className={`block truncate px-1.5 py-1 text-sm ${tenue ? "text-dc-muted" : "text-dc-text"} ${
         alinear === "centro" ? "text-center" : "text-left"
       }`}

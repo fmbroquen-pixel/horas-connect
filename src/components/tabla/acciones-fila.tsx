@@ -69,7 +69,7 @@ export function BotonEditarIcono({
   label?: string;
 }) {
   return (
-    <button type="button" onClick={onClick} className={BTN_ICON_SM} title={label} aria-label={label}>
+    <button type="button" onClick={onClick} className={BTN_ICON_SM} data-tooltip={label} aria-label={label}>
       <IconoLapiz />
     </button>
   );
@@ -107,7 +107,7 @@ export function BotonEliminarIcono({
         type="button"
         onClick={() => setConfirmando(true)}
         className={BTN_ICON_DANGER_SM}
-        title={label}
+        data-tooltip={label}
         aria-label={label}
       >
         <IconoTacho />
@@ -130,7 +130,7 @@ export function BotonEliminarIcono({
         })
       }
       className={BTN_ICON_CONFIRM_SM}
-      title="Confirmar eliminación"
+      data-tooltip="Confirmar eliminación"
       aria-label="Confirmar eliminación"
     >
       <IconoCheck />
@@ -184,7 +184,7 @@ export function BotonGuardarIcono({
       form={form}
       disabled={pending || disabled}
       className={`${BTN_ICON_OK_SM} ${celebrando ? "dc-guardado" : ""}`}
-      title={label}
+      data-tooltip={label}
       aria-label={label}
     >
       {pending ? <Spinner /> : <IconoCheck />}
@@ -195,7 +195,7 @@ export function BotonGuardarIcono({
 // Cancelar la edición inline (✕).
 export function BotonCancelarIcono({ onClick }: { onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className={BTN_ICON_SM} title="Cancelar" aria-label="Cancelar">
+    <button type="button" onClick={onClick} className={BTN_ICON_SM} data-tooltip="Cancelar" aria-label="Cancelar">
       <IconoX />
     </button>
   );

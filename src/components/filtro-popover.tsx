@@ -94,7 +94,7 @@ export function FiltroPopover({
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          title="Filtrar"
+          data-tooltip="Filtrar"
           aria-label="Filtrar"
           className="flex items-center rounded-lg border border-dc-line p-1.5 text-dc-muted transition hover:border-dc-peri hover:bg-dc-peri/10 hover:text-dc-text"
         >

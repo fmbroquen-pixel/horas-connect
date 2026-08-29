@@ -108,7 +108,7 @@ export function FiltrosMes({
           type="button"
           onClick={() => navegar(url(prev, sel))}
           disabled={pendiente}
-          title="Mes anterior"
+          data-tooltip="Mes anterior"
           aria-label="Mes anterior"
           className={`${BTN_SECONDARY_SM} disabled:opacity-50`}
         >
@@ -121,7 +121,7 @@ export function FiltrosMes({
           type="button"
           onClick={() => navegar(url(next, sel))}
           disabled={pendiente || hayFuturo}
-          title={hayFuturo ? "No hay meses posteriores al actual" : "Mes siguiente"}
+          data-tooltip={hayFuturo ? "No hay meses posteriores al actual" : "Mes siguiente"}
           aria-label="Mes siguiente"
           className={`${BTN_SECONDARY_SM} disabled:cursor-not-allowed disabled:opacity-40`}
         >
@@ -133,7 +133,7 @@ export function FiltrosMes({
           parcial no se dibuja, y esa ausencia es la que dice "todos". */}
       {filtrando && (
         <span
-          title={`${seleccionados.length} de ${opciones.length}`}
+          data-tooltip={`${seleccionados.length} de ${opciones.length}`}
           className="flex items-center gap-1 rounded-full bg-dc-peri/15 px-2 py-1 text-xs tabular-nums text-dc-peri"
         >
           <IconoProyecto size={13} strokeWidth={2} />
@@ -156,7 +156,7 @@ export function FiltrosMes({
               setAbierto(true);
             }
           }}
-          title="Más filtros"
+          data-tooltip="Más filtros"
           aria-label="Más filtros"
           aria-expanded={abierto}
           className={BTN_ICON_SM}

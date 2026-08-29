@@ -234,7 +234,7 @@ export function BarraCaptura({
             autoCorrect="off"
             spellCheck={false}
             placeholder="1,5"
-            title="Cargá un número (1,5 o 1.5); se muestra como 1:30"
+            data-tooltip="Cargá un número (1,5 o 1.5); se muestra como 1:30"
             value={valores.horas}
             onChange={(e) => set("horas", e.target.value)}
             onBlur={reformatearHoras}

@@ -101,7 +101,7 @@ export function ListaRoadmapCard({
           // el gesto se cancela sí: no plegar mientras haya algo en el aire.
           if (!arrastrandoAlgo) setAbierta((v) => !v);
         }}
-        title={agarre ? "Arrastrá para reordenar la lista" : undefined}
+        data-tooltip={agarre ? "Arrastrá para reordenar la lista" : undefined}
         className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-2 border-b border-dc-line px-4 py-3 transition hover:bg-dc-card/60"
       >
         {renombrando ? (
@@ -140,7 +140,7 @@ export function ListaRoadmapCard({
             {/* Cantidad de tareas: número + ícono, sin la palabra. */}
             <span
               className="flex items-center gap-1 text-xs leading-none text-dc-muted"
-              title="Cantidad de tareas"
+              data-tooltip="Cantidad de tareas"
             >
               {lista.tareas.length}
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -171,7 +171,7 @@ export function ListaRoadmapCard({
 
           <span
             className="flex items-center gap-2"
-            title={`${avance.cerradas} de ${avance.total} tarea(s) cerradas (finalizadas o no ejecutadas)`}
+            data-tooltip={`${avance.cerradas} de ${avance.total} tarea(s) cerradas (finalizadas o no ejecutadas)`}
           >
             <span
               role="progressbar"
@@ -363,7 +363,7 @@ function BotonIcono({
       type="button"
       onClick={onClick}
       className={BTN_ICON_SM}
-      title={label}
+      data-tooltip={label}
       aria-label={label}
     >
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

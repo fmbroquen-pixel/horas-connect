@@ -35,7 +35,7 @@ export function PapeleraMenu({ tipo }: { tipo: TipoEliminado }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        title="Más acciones"
+        data-tooltip="Más acciones"
         aria-label="Más acciones"
         aria-haspopup="menu"
         aria-expanded={open}

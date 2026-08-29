@@ -66,7 +66,7 @@ export function BotonEstado({
       type="button"
       onClick={alClic}
       disabled={pendiente}
-      title={accion}
+      data-tooltip={accion}
       aria-label={`${accion} ${entidad.toLowerCase()}`}
       aria-pressed={optimista}
       className={`${optimista ? BTN_PILL_ON : BTN_PILL_OFF} disabled:opacity-60`}

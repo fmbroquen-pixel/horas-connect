@@ -125,7 +125,7 @@ export function FilaViatico({
               href={viatico.archivoUrl}
               target="_blank"
               rel="noreferrer"
-              title="Ver comprobante"
+              data-tooltip="Ver comprobante"
               aria-label="Ver comprobante"
               className="inline-flex text-dc-peri transition hover:text-dc-pink"
             >
@@ -136,7 +136,7 @@ export function FilaViatico({
             type="button"
             onClick={() => archivoRef.current?.click()}
             disabled={subiendo}
-            title={viatico.archivoUrl ? "Reemplazar comprobante" : "Adjuntar comprobante"}
+            data-tooltip={viatico.archivoUrl ? "Reemplazar comprobante" : "Adjuntar comprobante"}
             aria-label={viatico.archivoUrl ? "Reemplazar comprobante" : "Adjuntar comprobante"}
             className="inline-flex rounded-md p-1 text-dc-muted transition hover:bg-dc-peri/10 hover:text-dc-text disabled:opacity-50"
           >

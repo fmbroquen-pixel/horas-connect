@@ -10,7 +10,7 @@ export function MarcaEdicion({ detalle }: { detalle: string | null }) {
   if (!detalle) return null;
   return (
     <span
-      title={detalle}
+      data-tooltip={detalle}
       aria-label={detalle}
       className="inline-flex shrink-0 text-dc-muted/70"
     >

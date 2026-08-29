@@ -23,7 +23,7 @@ export function BotonAgregar({
     <button
       type="button"
       onClick={onClick}
-      title={etiqueta}
+      data-tooltip={etiqueta}
       className={BTN_AGREGAR}
     >
       <svg

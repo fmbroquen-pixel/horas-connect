@@ -107,7 +107,7 @@ export function EtapasProximas({
               onClick={() => setFiltro(f.value)}
               disabled={!activa}
               aria-pressed={filtro === f.value}
-              title={activa ? f.label : "Disponible en el mes actual"}
+              data-tooltip={activa ? f.label : "Disponible en el mes actual"}
               aria-label={f.label}
               className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs tabular-nums transition disabled:cursor-not-allowed ${
                 filtro === f.value
@@ -158,7 +158,7 @@ export function EtapasProximas({
                       <span className="flex shrink-0 items-center gap-2 text-xs">
                         <span
                           className="inline-flex items-center gap-1 text-dc-muted"
-                          title={`Personas involucradas: ${e.personas}`}
+                          data-tooltip={`Personas involucradas: ${e.personas}`}
                         >
                           <IconoPersonas dos={e.personas === 2} />
                           {e.personas}
