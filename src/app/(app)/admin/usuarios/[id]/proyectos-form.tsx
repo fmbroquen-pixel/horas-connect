@@ -234,43 +234,60 @@ export function ProyectosForm({
           const deshabilitado = solapa === "backup" && motivo !== null && !marcado;
 
           return (
-            <label
+            // Card entera clickeable, sin checkbox. El área que se puede tocar
+            // pasa de un cuadrito de 16px a toda la tarjeta, y el check de
+            // arriba a la derecha es feedback: no es un control, no se puede
+            // tocar por separado ni recibe foco propio.
+            //
+            // <button> y no <label>: sin checkbox adentro no hay nada que
+            // etiquetar, y un botón ya trae el foco, el Enter y la barra
+            // espaciadora sin que haya que agregarlos.
+            <button
               key={p.id}
+              type="button"
+              onClick={() => alClickear(p)}
+              disabled={deshabilitado}
+              aria-pressed={marcado}
               data-tooltip={motivo ?? undefined}
-              className={`flex items-start gap-2 rounded-lg border px-3 py-2 text-sm transition ${
+              className={`relative w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
                 deshabilitado
-                  ? "cursor-not-allowed border-dc-line/60 text-dc-muted opacity-60"
-                  : "cursor-pointer border-dc-line text-dc-text hover:border-dc-peri"
+                  ? "cursor-not-allowed border-dc-line/60 text-dc-muted opacity-50"
+                  : marcado
+                    ? "border-dc-peri bg-dc-peri/12 text-dc-text shadow-[0_0_0_1px_rgba(139,140,255,0.35),0_0_14px_rgba(139,140,255,0.18)]"
+                    : "border-dc-line text-dc-text hover:border-dc-peri/60 hover:bg-dc-line/25"
               }`}
             >
-              <input
-                type="checkbox"
-                checked={marcado}
-                disabled={deshabilitado}
-                // onChange y no onClick: el clic en el <label> llega igual, y
-                // así también entra por teclado con la barra espaciadora.
-                onChange={() => alClickear(p)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-dc-purple"
-              />
-              <span className="min-w-0">
-                <span className="block truncate">{p.nombre}</span>
-                {propio && propio !== solapa && (
-                  <span className="block text-[11px] text-dc-peri">
-                    Asignado como {propio === "owner" ? "Owner" : "Backup"}
-                  </span>
-                )}
-                {motivo && (
-                  <span className="block truncate text-[11px] text-dc-muted">
-                    {motivo}
-                  </span>
-                )}
-                {p.sinRol && !propio && (
-                  <span className="block text-[11px] text-dc-muted">
-                    Asignado sin rol
-                  </span>
-                )}
+              {marcado && (
+                <span
+                  aria-hidden
+                  className="absolute right-2 top-2 text-dc-peri"
+                >
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                </span>
+              )}
+              {/* pr-5 solo cuando está marcado: es el lugar que ocupa el check
+                  y sin eso un nombre largo se le mete abajo. */}
+              <span className={`block truncate ${marcado ? "pr-5" : ""}`}>
+                {p.nombre}
               </span>
-            </label>
+              {propio && propio !== solapa && (
+                <span className="mt-0.5 block text-[11px] text-dc-peri">
+                  Asignado como {propio === "owner" ? "Owner" : "Backup"}
+                </span>
+              )}
+              {motivo && (
+                <span className="mt-0.5 block truncate text-[11px] text-dc-muted">
+                  {motivo}
+                </span>
+              )}
+              {p.sinRol && !propio && (
+                <span className="mt-0.5 block text-[11px] text-dc-muted">
+                  Asignado sin rol
+                </span>
+              )}
+            </button>
           );
         })}
 

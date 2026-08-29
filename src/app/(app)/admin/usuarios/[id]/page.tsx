@@ -86,7 +86,7 @@ export default async function UsuarioDetallePage({
     // Las tres cards ceden su boton al del pie; el provider es lo que las junta,
     // y la guardia avisa si alguien se va con algo sin guardar.
     <GuardadoPaginaProvider>
-    <div className="space-y-8">
+    <div className="space-y-8 pb-4">
       <GuardiaCambios />
       <div>
         <Link
@@ -177,6 +177,9 @@ export default async function UsuarioDetallePage({
       <BotonGuardarPagina />
       </div>
 
+      {/* pb-4 al final de la sección: sin esto el historial queda pegado al
+          borde del área scrolleable y contra la barra de scroll. Es el cierre
+          visual de la pantalla, no espacio de más: son 16px, no un salto. */}
       {puedeTarifa && (
         <HistorialTarifas
           historial={historial.map((t) => ({
