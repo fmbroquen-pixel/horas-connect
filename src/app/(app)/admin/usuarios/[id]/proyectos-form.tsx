@@ -260,33 +260,23 @@ export function ProyectosForm({
               {marcado && (
                 <span
                   aria-hidden
-                  className="absolute right-2 top-2 text-dc-peri"
+                  className="absolute right-2 top-2 text-dc-green [filter:drop-shadow(0_0_5px_rgba(52,211,153,0.55))]"
                 >
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 6L9 17l-5-5" />
                   </svg>
                 </span>
               )}
-              {/* pr-5 solo cuando está marcado: es el lugar que ocupa el check
-                  y sin eso un nombre largo se le mete abajo. */}
-              <span className={`block truncate ${marcado ? "pr-5" : ""}`}>
-                {p.nombre}
+              {/* pr-6 siempre y no solo cuando está marcado: si el hueco del
+                  check apareciera al seleccionar, el nombre se reacomodaría en
+                  el mismo gesto que lo elige. */}
+              <span className="block truncate pr-6">{p.nombre}</span>
+              {/* La segunda línea se dibuja siempre, con o sin contenido: es lo
+                  que hace que todas las cards midan igual sin depender de si el
+                  proyecto tiene owner. El &nbsp; reserva el alto de la línea. */}
+              <span className="mt-0.5 block truncate text-[11px] text-dc-peri">
+                {p.ownerAjeno ? `Owner: ${p.ownerAjeno}` : " "}
               </span>
-              {propio && propio !== solapa && (
-                <span className="mt-0.5 block text-[11px] text-dc-peri">
-                  Asignado como {propio === "owner" ? "Owner" : "Backup"}
-                </span>
-              )}
-              {motivo && (
-                <span className="mt-0.5 block truncate text-[11px] text-dc-muted">
-                  {motivo}
-                </span>
-              )}
-              {p.sinRol && !propio && (
-                <span className="mt-0.5 block text-[11px] text-dc-muted">
-                  Asignado sin rol
-                </span>
-              )}
             </button>
           );
         })}
