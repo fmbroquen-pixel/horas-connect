@@ -8,6 +8,7 @@ import { ToastOk } from "@/components/ui/toast-ok";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
+import { BotonAgregar } from "@/components/ui/boton-agregar";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -57,9 +58,7 @@ export function NuevoMiembroBoton({ clienteId }: { clienteId: string }) {
 
   return (
     <>
-      <button type="button" onClick={abrir} className={BTN_PRIMARY}>
-        + Agregar integrante
-      </button>
+      <BotonAgregar etiqueta="Agregar integrante" onClick={abrir} />
 
       <Modal open={open} onClose={() => setOpen(false)} labelledBy="titulo-nuevo-miembro">
         <div className="dc-menu dc-pop-in w-full max-w-md rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
