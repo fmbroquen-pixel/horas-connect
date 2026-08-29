@@ -20,6 +20,7 @@ export default async function MiPerfilPage() {
     prisma.tarifa.findMany({
       where: { usuarioId: usuario.id },
       orderBy: { vigenteDesde: "desc" },
+      include: { creadoPor: { select: { nombre: true } } },
     }),
     prisma.proyectoAsignado.findMany({
       where: { usuarioId: usuario.id },
@@ -42,6 +43,7 @@ export default async function MiPerfilPage() {
       valorUsd: Number(t.valorUsd),
       vigenteDesde: t.vigenteDesde,
       vigenteHasta: t.vigenteHasta,
+      creadoPor: t.creadoPor?.nombre ?? null,
     }));
   const clientesAsignados = asignados
     .filter((a) => a.cliente.activo)

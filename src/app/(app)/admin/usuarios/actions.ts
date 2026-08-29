@@ -124,7 +124,7 @@ export async function guardarTarifa(
   _prevState: unknown,
   formData: FormData,
 ) {
-  await requireAdmin();
+  const admin = await requireAdmin();
 
   const tipoTarifa = formData.get("tipoTarifa");
 
@@ -148,6 +148,7 @@ export async function guardarTarifa(
         combo.ownership,
         parsed.data.valorUsd,
         desde,
+        admin.id,
       );
     }
   } else if (tipoTarifa === "variable") {
@@ -174,6 +175,7 @@ export async function guardarTarifa(
       "owner",
       parsed.data.presencialOwner,
       desde,
+      admin.id,
     );
     await upsertTarifaVigente(
       usuarioId,
@@ -181,6 +183,7 @@ export async function guardarTarifa(
       "backup",
       parsed.data.presencialBackup,
       desde,
+      admin.id,
     );
     await upsertTarifaVigente(
       usuarioId,
@@ -188,6 +191,7 @@ export async function guardarTarifa(
       "owner",
       parsed.data.virtualOwner,
       desde,
+      admin.id,
     );
     await upsertTarifaVigente(
       usuarioId,
@@ -195,6 +199,7 @@ export async function guardarTarifa(
       "backup",
       parsed.data.virtualBackup,
       desde,
+      admin.id,
     );
   } else {
     return { error: "Elegí un tipo de tarifa." };
@@ -223,6 +228,9 @@ async function upsertTarifaVigente(
   ownership: Ownership,
   valorUsd: number,
   vigenteDesde: Date,
+  // Quién la está declarando. Va al historial: una tarifa es plata, y saber
+  // quién la puso importa tanto como el número.
+  creadoPorId: string,
 ) {
   const desde = diaUtc(vigenteDesde);
 
@@ -237,11 +245,18 @@ async function upsertTarifaVigente(
   if (mismoDia) {
     await prisma.tarifa.update({
       where: { id: mismoDia.id },
-      data: { valorUsd },
+      data: { valorUsd, creadoPorId },
     });
   } else {
     await prisma.tarifa.create({
-      data: { usuarioId, modalidad, ownership, valorUsd, vigenteDesde: desde },
+      data: {
+        usuarioId,
+        modalidad,
+        ownership,
+        valorUsd,
+        vigenteDesde: desde,
+        creadoPorId,
+      },
     });
   }
 

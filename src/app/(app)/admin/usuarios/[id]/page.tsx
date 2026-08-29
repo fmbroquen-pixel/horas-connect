@@ -38,6 +38,7 @@ export default async function UsuarioDetallePage({
       ? prisma.tarifa.findMany({
           where: { usuarioId: id },
           orderBy: { vigenteDesde: "desc" },
+          include: { creadoPor: { select: { nombre: true } } },
         })
       : Promise.resolve([]),
     asignaProyectos
@@ -189,6 +190,7 @@ export default async function UsuarioDetallePage({
             valorUsd: Number(t.valorUsd),
             vigenteDesde: t.vigenteDesde,
             vigenteHasta: t.vigenteHasta,
+            creadoPor: t.creadoPor?.nombre ?? null,
           }))}
         />
       )}
