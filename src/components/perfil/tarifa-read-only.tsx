@@ -72,7 +72,7 @@ export function TarifaReadOnly({
           <p className="mb-2 text-xs text-dc-muted">
             Tipo de tarifa:{" "}
             <span className="text-dc-text">
-              {tipo === "fija" ? "Fija" : "Variable (por modalidad y ownership)"}
+              {tipo === "fija" ? "Fija" : "Variable"}
             </span>
           </p>
           {tipo === "fija" ? (

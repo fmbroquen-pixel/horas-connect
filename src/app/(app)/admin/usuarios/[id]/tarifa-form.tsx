@@ -148,7 +148,7 @@ export function TarifaForm({
               onChange={() => setTipo("variable")}
               className="mr-2"
             />
-            Variable (por modalidad y ownership)
+            Variable
           </label>
         </div>
       </div>
