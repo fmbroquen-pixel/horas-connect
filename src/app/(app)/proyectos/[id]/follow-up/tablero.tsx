@@ -7,7 +7,6 @@ import { ListaRoadmapCard } from "./lista-roadmap";
 import { NuevaListaBoton } from "./nueva-lista-boton";
 import { Dropdown } from "@/components/dropdown";
 import { useReordenable } from "@/components/tabla/reordenable";
-import { ToastOk } from "@/components/ui/toast-ok";
 import { avisarOk } from "@/components/ui/avisos";
 import { ResaltadoProvider, useResaltado } from "./resaltado";
 import { reformatEntradaHoras } from "@/lib/horas";
@@ -55,13 +54,14 @@ function Tablero({
   const [valor, setValor] = useState("sin_iniciar");
   const [pending, start] = useTransition();
   const { marcarReprogramacion } = useResaltado();
-  // Último aviso de reprogramación. Lleva un contador además de la cantidad
-  // porque dos movimientos seguidos pueden reprogramar la MISMA cantidad de
-  // tareas: sin el contador el estado no cambiaría y el toast no volvería a
-  // salir.
-  const [aviso, setAviso] = useState<{ n: number; seq: number } | null>(null);
-  const avisar = (n: number) =>
-    setAviso((a) => (n > 0 ? { n, seq: (a?.seq ?? 0) + 1 } : a));
+  // Aviso de reprogramación. Ya no hace falta llevar un contador para que dos
+  // movimientos seguidos vuelvan a mostrarlo: cada llamada al emisor global es
+  // un aviso nuevo, aunque diga exactamente lo mismo.
+  const avisar = (n: number) => {
+    if (n > 0) {
+      avisarOk(`Fechas actualizadas en ${n} tarea${n === 1 ? "" : "s"}`);
+    }
+  };
 
   // Reordenar listas: se arrastra desde el header y el orden se guarda solo
   // al soltar. Mover una lista mueve todo su bloque de tareas dentro de la
@@ -310,9 +310,6 @@ function Tablero({
         </div>
       </div>
 
-      <ToastOk key={aviso?.seq} show={aviso !== null} onHide={() => setAviso(null)}>
-        Fechas actualizadas en {aviso?.n} tarea{aviso?.n === 1 ? "" : "s"}
-      </ToastOk>
     </div>
   );
 }

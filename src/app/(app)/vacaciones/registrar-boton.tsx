@@ -5,8 +5,7 @@ import { crearVacacion } from "./actions";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
 import { hoyISO } from "@/lib/formato";
 import { Modal } from "@/components/ui/modal";
-import { ToastOk } from "@/components/ui/toast-ok";
-import { ToastAviso } from "@/components/ui/toast-aviso";
+import { avisarAtencion, avisarError, avisarOk } from "@/components/ui/avisos";
 import { DatePicker } from "@/components/date-picker";
 import { diasHabilesEntre } from "./tipos";
 
@@ -17,8 +16,6 @@ const LABEL = "mb-1 block text-xs text-dc-muted";
 // CTA "+ Nueva solicitud" + modal con el mismo formulario de carga.
 export function RegistrarVacacionesBoton() {
   const [open, setOpen] = useState(false);
-  const [toast, setToast] = useState(false);
-  const [aviso, setAviso] = useState<string | null>(null);
   const [inicio, setInicio] = useState("");
   const [fin, setFin] = useState("");
   const [dias, setDias] = useState("");
@@ -58,7 +55,7 @@ export function RegistrarVacacionesBoton() {
           : null;
     if (faltante) {
       setCampoError(faltante.campo);
-      setAviso(`Completá el campo "${faltante.label}" para guardar la solicitud.`);
+      avisarAtencion(`Completá el campo "${faltante.label}" para guardar la solicitud.`);
       enfocar(faltante.campo);
       return;
     }
@@ -67,9 +64,9 @@ export function RegistrarVacacionesBoton() {
       const result = await crearVacacion(undefined, fd);
       if (!result.error) {
         setOpen(false);
-        setToast(true);
+        avisarOk("Solicitud registrada");
       } else {
-        setAviso(result.error);
+        avisarError(result.error);
       }
     });
   };
@@ -202,10 +199,6 @@ export function RegistrarVacacionesBoton() {
         </div>
       </Modal>
 
-      <ToastAviso mensaje={aviso} onClose={() => setAviso(null)} />
-      <ToastOk show={toast} onHide={() => setToast(false)}>
-        Vacaciones registradas
-      </ToastOk>
     </>
   );
 }

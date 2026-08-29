@@ -9,7 +9,7 @@ import {
 } from "../constantes";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
-import { ToastOk } from "@/components/ui/toast-ok";
+import { avisarOk } from "@/components/ui/avisos";
 import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
 import { useSeccionGuardable } from "@/components/guardado-pagina";
 
@@ -36,7 +36,6 @@ export function DatosClienteForm({
   const [producto, setProducto] = useState(inicial.producto);
   const [fechaInicio, setFechaInicio] = useState(inicial.fechaInicio);
   const [cuota, setCuota] = useState(inicial.valorCuotaUsd);
-  const [toast, setToast] = useState(false);
   // Contador y no booleano: dos guardados seguidos tienen que pulsar dos veces.
   const [exito, setExito] = useState(0);
 
@@ -48,7 +47,7 @@ export function DatosClienteForm({
     ) => {
       const r = await accion(prev, formData);
       if (!r.error) {
-        setToast(true);
+        avisarOk("Datos del cliente guardados");
         setExito((n) => n + 1);
       }
       return r;
@@ -68,7 +67,7 @@ export function DatosClienteForm({
       if (r?.error) return { error: r.error };
       setSucio(false);
       setExito((n) => n + 1);
-      setToast(true);
+      avisarOk("Datos del cliente guardados");
     },
   );
 
@@ -183,9 +182,6 @@ export function DatosClienteForm({
         )}
       </div>
 
-      <ToastOk show={toast} onHide={() => setToast(false)}>
-        Datos guardados
-      </ToastOk>
     </form>
   );
 }

@@ -8,7 +8,7 @@ import { parseHorasHsMin, reformatEntradaHoras } from "@/lib/horas";
 import { formatMonto, hoyISO } from "@/lib/formato";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
-import { ToastAviso } from "@/components/ui/toast-aviso";
+import { avisarAtencion, avisarError } from "@/components/ui/avisos";
 import type { MapaTarifas, OpcionConcepto, OpcionSelect } from "./tipos";
 import { tarifaVigenteA } from "@/lib/tarifas";
 import { fechaDesdeISO } from "@/lib/dias-habiles";
@@ -52,7 +52,6 @@ export function BarraCaptura({
 }) {
   const [valores, setValores] = useState(VALORES_INICIALES);
   const [estado, setEstado] = useState<{ error?: string; campo?: CampoRegistro }>();
-  const [aviso, setAviso] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [abierto, setAbierto] = useState(false);
 
@@ -81,7 +80,7 @@ export function BarraCaptura({
     const faltante = OBLIGATORIOS.find(({ campo }) => !valores[campo].trim());
     if (faltante) {
       setEstado({ campo: faltante.campo });
-      setAviso(`Completá el campo "${faltante.label}" para guardar el registro.`);
+      avisarAtencion(`Completá el campo "${faltante.label}" para guardar el registro.`);
       enfocar(faltante.campo);
       return;
     }
@@ -100,7 +99,7 @@ export function BarraCaptura({
         avisarOk("Hora registrada");
       } else {
         setEstado(r);
-        if (r.error) setAviso(r.error);
+        if (r.error) avisarError(r.error);
         if (r.campo) enfocar(r.campo);
       }
     });
@@ -278,7 +277,6 @@ export function BarraCaptura({
         </span>
       </div>
 
-      <ToastAviso mensaje={aviso} onClose={() => setAviso(null)} />
     </form>
   );
 }

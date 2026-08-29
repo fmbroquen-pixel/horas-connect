@@ -424,3 +424,41 @@ input[type="number"]::-webkit-inner-spin-button {
 *::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+/* Avisos (toasts). Entrada y salida como ANIMACIONES y no como transiciones
+   encadenadas con requestAnimationFrame, que es lo que había antes: en una
+   pestaña en segundo plano no se emiten frames, el rAF no dispara y el toast
+   se quedaba montado sin aparecer nunca —o sin irse—. Una animación arranca
+   sola cuando el elemento entra al DOM. */
+@keyframes dc-aviso-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes dc-aviso-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.dc-aviso-in {
+  animation: dc-aviso-in 0.24s ease-out both;
+}
+.dc-aviso-out {
+  animation: dc-aviso-out 0.24s ease-in both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dc-aviso-in,
+  .dc-aviso-out {
+    animation: none;
+  }
+}

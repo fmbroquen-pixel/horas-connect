@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { crearMiembro } from "../../actions";
 import { OPCIONES_ROL_EQUIPO } from "../../constantes";
 import { Modal } from "@/components/ui/modal";
-import { ToastOk } from "@/components/ui/toast-ok";
+import { avisarOk } from "@/components/ui/avisos";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
@@ -19,7 +19,6 @@ const LABEL = "mb-1 block text-xs text-dc-muted";
 // completar, Esc/clic afuera para cerrar, toast al crear).
 export function NuevoMiembroBoton({ clienteId }: { clienteId: string }) {
   const [open, setOpen] = useState(false);
-  const [toast, setToast] = useState(false);
   const [nombre, setNombre] = useState("");
   const [apellido, setApellido] = useState("");
   const [rol, setRol] = useState("");
@@ -32,7 +31,7 @@ export function NuevoMiembroBoton({ clienteId }: { clienteId: string }) {
       const r = await accion(prev, formData);
       if (!r.error) {
         setOpen(false);
-        setToast(true);
+        avisarOk("Integrante agregado");
       }
       return r;
     },
@@ -140,9 +139,6 @@ export function NuevoMiembroBoton({ clienteId }: { clienteId: string }) {
         </div>
       </Modal>
 
-      <ToastOk show={toast} onHide={() => setToast(false)}>
-        Integrante agregado
-      </ToastOk>
     </>
   );
 }

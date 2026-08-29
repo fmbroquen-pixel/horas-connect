@@ -7,7 +7,7 @@ import { avisarOk } from "@/components/ui/avisos";
 import { hoyISO } from "@/lib/formato";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
-import { ToastAviso } from "@/components/ui/toast-aviso";
+import { avisarAtencion, avisarError } from "@/components/ui/avisos";
 import { ETIQUETA_CONCEPTO, type OpcionSelect } from "./tipos";
 
 const INPUT =
@@ -53,7 +53,6 @@ export function BarraCapturaViatico({
 }) {
   const [valores, setValores] = useState(VALORES_INICIALES);
   const [estado, setEstado] = useState<{ error?: string; campo?: CampoViatico }>();
-  const [aviso, setAviso] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [abierto, setAbierto] = useState(false);
 
@@ -83,7 +82,7 @@ export function BarraCapturaViatico({
     const faltante = OBLIGATORIOS.find(({ campo }) => !valores[campo].trim());
     if (faltante) {
       setEstado({ campo: faltante.campo });
-      setAviso(`Completá el campo "${faltante.label}" para guardar el viático.`);
+      avisarAtencion(`Completá el campo "${faltante.label}" para guardar el viático.`);
       enfocar(faltante.campo);
       return;
     }
@@ -103,7 +102,7 @@ export function BarraCapturaViatico({
         avisarOk("Viático registrado");
       } else {
         setEstado(r);
-        if (r.error) setAviso(r.error);
+        if (r.error) avisarError(r.error);
         if (r.campo) enfocar(r.campo);
       }
     });
@@ -244,7 +243,6 @@ export function BarraCapturaViatico({
         </span>
       </div>
 
-      <ToastAviso mensaje={aviso} onClose={() => setAviso(null)} />
     </form>
   );
 }

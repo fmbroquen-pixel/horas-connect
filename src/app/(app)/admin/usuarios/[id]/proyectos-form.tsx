@@ -7,7 +7,7 @@ import {
   type ProyectoAsignable,
   type RolAsignacion,
 } from "../constantes";
-import { ToastOk } from "@/components/ui/toast-ok";
+import { avisarOk } from "@/components/ui/avisos";
 import { Modal } from "@/components/ui/modal";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
 import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
@@ -42,7 +42,6 @@ export function ProyectosForm({
           .map((p) => [p.id, p.rolPropio as RolAsignacion]),
       ),
   );
-  const [toast, setToast] = useState(false);
   // Contador y no booleano: dos guardados seguidos tienen que pulsar dos veces.
   const [exito, setExito] = useState(0);
   // Proyectos que el admin confirmó quitarle a su Owner actual. Viajan al
@@ -56,7 +55,7 @@ export function ProyectosForm({
     async (prev: { error?: string; ok?: boolean } | undefined, fd: FormData) => {
       const r = await guardarProyectosAsignados(usuarioId, prev, fd);
       if (r.ok) {
-        setToast(true);
+        avisarOk("Asignaciones guardadas");
         setExito((n) => n + 1);
         // El reemplazo ya se aplicó; volver a mandarlo en el próximo guardado
         // desplazaría a quien haya quedado como Owner desde entonces.
@@ -144,7 +143,7 @@ export function ProyectosForm({
       if (r.error) return { error: r.error };
       setDesplazar(new Set());
       setExito((n) => n + 1);
-      setToast(true);
+      avisarOk("Asignaciones guardadas");
     },
   );
 
@@ -296,9 +295,6 @@ export function ProyectosForm({
         </div>
       )}
 
-      <ToastOk show={toast} onHide={() => setToast(false)}>
-        Asignaciones guardadas
-      </ToastOk>
 
       {/* El reemplazo se avisa antes de tocar nada, y nombra a quien lo
           pierde: es la única acción de esta pantalla que le saca un proyecto a

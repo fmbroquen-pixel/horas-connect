@@ -7,6 +7,7 @@ import {
   BotonCancelarIcono,
   BotonGuardarIcono,
 } from "@/components/tabla/acciones-fila";
+import { avisarOk } from "@/components/ui/avisos";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -42,7 +43,6 @@ export function AgregarModal({
   const [open, setOpen] = useState(false);
   const [valores, setValores] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string>();
-  const [toast, setToast] = useState(false);
   const primerRef = useRef<HTMLInputElement>(null);
 
   const [, formAction, pending] = useActionState(
@@ -54,7 +54,7 @@ export function AgregarModal({
       }
       setOpen(false);
       setValores({});
-      setToast(true);
+      avisarOk(toastMsg);
       return r;
     },
     undefined,
@@ -73,11 +73,6 @@ export function AgregarModal({
     return () => clearTimeout(t);
   }, [open]);
 
-  useEffect(() => {
-    if (!toast) return;
-    const t = setTimeout(() => setToast(false), 3000);
-    return () => clearTimeout(t);
-  }, [toast]);
 
   const valido = campos.every((c) => (valores[c.name] ?? "").trim().length > 0);
 
@@ -134,18 +129,6 @@ export function AgregarModal({
         </div>
       </Modal>
 
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="dc-menu dc-pop-in fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-xl border border-dc-line bg-dc-deep px-4 py-3 text-sm text-dc-text shadow-[0_12px_32px_rgba(0,0,0,0.45)]"
-        >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-dc-peri" aria-hidden="true">
-            <path d="M20 6L9 17l-5-5" />
-          </svg>
-          {toastMsg}
-        </div>
-      )}
     </>
   );
 }

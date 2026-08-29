@@ -146,7 +146,10 @@ export default async function AppLayout({
         perfil={perfil}
       />
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
+      {/* relative: es el ancla de los avisos. Van centrados sobre esta columna
+          -el area de contenido- y no sobre el viewport, para no quedar debajo
+          de la sidebar. */}
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col gap-3">
         {/* Barra mínima solo para mobile (la sidebar está oculta): abre el
             drawer, que trae navegación, perfil y logout. */}
         <div className="flex shrink-0 items-center gap-3 lg:hidden">
@@ -182,12 +185,13 @@ export default async function AppLayout({
             </div>
           </div>
         </main>
+
+        {/* Donde se dibujan los avisos. Está acá, y no en el host, para que el
+            componente no tenga que saber nada del layout: se ancla a esto y
+            queda centrado sobre el contenido. */}
+        <div id="zona-avisos" aria-live="polite" />
       </div>
 
-      {/* Host único de los avisos. Va acá y no en cada pantalla porque quien
-          avisa suele desaparecer justo después —la fila borrada, el formulario
-          de alta al plegarse— y se llevaría su propio toast antes de que se
-          alcance a leer. */}
       <Avisos />
     </div>
   );
