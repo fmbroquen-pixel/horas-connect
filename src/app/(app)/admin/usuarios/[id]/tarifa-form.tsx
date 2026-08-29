@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
 import { useSeccionGuardable } from "@/components/guardado-pagina";
 import { DatePicker } from "@/components/date-picker";
+import { InfoButton } from "@/components/info-button";
 import { hoyISO } from "@/lib/formato";
 
 type ValoresActuales = {
@@ -77,6 +78,10 @@ export function TarifaForm({
       onChange={() => setSucio(true)}
       className="space-y-4"
     >
+      {/* Tipo a la izquierda y vigencia a la derecha, en la misma fila. Con
+          flex-wrap, en pantalla angosta la vigencia baja sola debajo del tipo
+          sin necesidad de un breakpoint propio. */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
       <div>
         <p className="mb-2 text-xs text-dc-muted">Tipo de tarifa</p>
         <div className="flex gap-2">
@@ -115,6 +120,35 @@ export function TarifaForm({
             Variable (por modalidad y ownership)
           </label>
         </div>
+      </div>
+
+      {/* Vigente desde: es metadata de configuración, no un valor de tarifa.
+          Por eso sube acá arriba y en chico, para que los montos se queden con
+          el peso visual del bloque. */}
+      <div className="sm:text-right">
+        <p className="mb-2 flex items-center gap-1.5 text-xs text-dc-muted sm:justify-end">
+          Vigente desde
+          {vigenteDesdeActual && (
+            <span className="text-dc-muted/70">· actual {vigenteDesdeActual}</span>
+          )}
+          <InfoButton>
+            La tarifa se aplica desde esta fecha. Las horas se valúan con la
+            tarifa vigente en la fecha del registro. Las horas con valor cero
+            siempre valen USD 0.
+          </InfoButton>
+        </p>
+        <div className="w-40 sm:ml-auto">
+          <DatePicker
+            name="vigenteDesde"
+            value={desde}
+            onChange={(v) => {
+              setDesde(v);
+              setSucio(true);
+            }}
+            ariaLabel="Vigente desde"
+          />
+        </div>
+      </div>
       </div>
 
       {tipo === "fija" ? (
@@ -192,33 +226,6 @@ export function TarifaForm({
           </div>
         </div>
       )}
-
-      <div>
-        <label className="mb-1 block text-xs text-dc-muted">Vigente desde</label>
-        <div className="w-40">
-          <DatePicker
-            name="vigenteDesde"
-            value={desde}
-            onChange={(v) => {
-              setDesde(v);
-              setSucio(true);
-            }}
-            ariaLabel="Vigente desde"
-          />
-        </div>
-        <p className="mt-1.5 text-xs text-dc-muted">
-          {vigenteDesdeActual
-            ? `Lo cargado hoy rige desde el ${vigenteDesdeActual}. `
-            : ""}
-          Las horas se valúan con la tarifa que regía en la fecha del registro,
-          así que esta fecha decide qué horas quedan a cada valor.
-        </p>
-      </div>
-
-      <p className="text-xs text-dc-muted">
-        Las horas cargadas como &quot;Valor cero&quot; siempre valen USD 0,
-        no hace falta configurarlas.
-      </p>
 
       {state?.error && <p className="text-xs text-dc-pink">{state.error}</p>}
 
