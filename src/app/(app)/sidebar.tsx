@@ -19,10 +19,6 @@ export type ItemSidebar = {
     href: string;
     label: string;
     icono?: string;
-    // Para "Inactivos": el mismo dibujo que Activos, en version secundaria. Se
-    // distinguen por peso y no por forma, que es lo que dice que son dos vistas
-    // de la misma cosa.
-    tenue?: boolean;
   }[];
 };
 
@@ -166,10 +162,7 @@ function CategoriaNav({
                     />
                   )}
                   {c.icono && (
-                    <TabIcono
-                      id={c.icono}
-                      className={`mr-2 ${c.tenue ? "opacity-45" : ""}`}
-                    />
+                    <TabIcono id={c.icono} className="mr-2" />
                   )}
                   {c.label}
                 </Link>

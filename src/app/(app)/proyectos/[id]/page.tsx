@@ -186,27 +186,38 @@ function Kpi({
   // Los KPIs de horas explican su criterio acá en vez de dejar que se deduzca
   // comparando números. Mismo componente que en el Home de CORE.
   info?: string;
-  // Un nombre no es una cifra: va más chico, sin tabular-nums y en hasta dos
-  // líneas. Con el tamaño de las cifras, "María Fernanda Rodríguez" entraba
-  // recortada a la cuarta letra; en dos líneas entra casi siempre entera y,
-  // cuando no, el título sigue mostrando el nombre completo.
+  // Un nombre no es una cifra: va más chico y sin tabular-nums. Antes iba
+  // además en dos líneas, y eso era lo que descolocaba la fila: la card del
+  // mentor crecía y su valor quedaba a otra altura que las de horas. Ahora es
+  // una sola línea con ellipsis, y el nombre completo sigue estando en el
+  // title.
   texto?: boolean;
 }) {
   return (
-    <div className={CARD}>
-      <p className="flex items-start gap-1.5 text-[11px] uppercase leading-tight tracking-wide text-dc-muted">
+    // Alturas fijas en el título y en el valor, no alturas derivadas del
+    // contenido. Los títulos no miden lo mismo —"Hs estimadas de proyecto"
+    // envuelve a dos líneas donde "Mentor Owner" usa una— y con el valor
+    // pegado abajo, cada card lo arrancaba a una altura distinta. Reservando
+    // las dos líneas siempre, el valor empieza en la misma linea horizontal en
+    // las cinco.
+    <div className={`${CARD} flex flex-col`}>
+      <p className="flex h-8 items-start gap-1.5 text-[11px] uppercase leading-tight tracking-wide text-dc-muted">
         {titulo}
         {info && <InfoButton>{info}</InfoButton>}
       </p>
+      {/* Centrado en una caja de alto fijo, y no alineado por línea base.
+          Las cifras van en font-display -una tipografía de píxeles- y los
+          nombres en la de texto: sus métricas no tienen nada que ver, así que
+          apoyarlos en la misma base deja los nombres flotando visiblemente más
+          arriba. Centrando cada uno en la misma caja, los centros ópticos
+          coinciden y la fila se lee pareja, que es lo que se estaba pidiendo. */}
       <p
-        className={
-          texto
-            ? "mt-1 line-clamp-2 text-sm font-medium leading-snug text-white"
-            : "mt-1 truncate font-display text-lg tabular-nums text-white"
-        }
+        className={`mt-1 flex h-8 items-center text-white ${
+          texto ? "text-sm font-medium" : "font-display text-lg tabular-nums"
+        }`}
         title={valor}
       >
-        {valor}
+        <span className="truncate">{valor}</span>
       </p>
     </div>
   );

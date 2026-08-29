@@ -77,8 +77,18 @@ export const ICONOS: Record<string, React.ReactNode> = {
     </>
   ),
 
-  // Submenús. Activos e Inactivos comparten la carpeta del padre —son dos
-  // vistas de lo mismo— y se distinguen por la opacidad, no por el dibujo.
+  // Submenús.
+  // Inactivos: caja de archivo. Antes era la misma carpeta que Activos en
+  // version tenue, y dos items que solo se diferencian por opacidad se
+  // distinguen recien cuando estan uno al lado del otro. Una caja cerrada dice
+  // "guardado" por si sola.
+  archivado: (
+    <>
+      <rect x="3" y="4" width="18" height="4.5" rx="1" />
+      <path d="M5 8.5V19a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8.5" />
+      <path d="M10 12h4" />
+    </>
+  ),
   usuarios: (
     <>
       <circle cx="12" cy="8" r="3.5" />
@@ -93,11 +103,13 @@ export const ICONOS: Record<string, React.ReactNode> = {
       <path d="M7 9h.01M7 13h.01M7 17h.01M15 13h.01M15 17h.01" />
     </>
   ),
-  // Conceptos: etiqueta.
+  // Conceptos: checklist. La etiqueta que habia sugeria "etiquetar algo", y lo
+  // que hay detras es un catalogo: una lista de items que se administran.
   conceptos: (
     <>
-      <path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9z" />
-      <circle cx="7.5" cy="7.5" r="1.2" />
+      <path d="M3.5 6.2l1.3 1.3L7.4 4.9" />
+      <path d="M4 12h.01M4 17.8h.01" />
+      <path d="M10 6h10M10 12h10M10 18h10" />
     </>
   ),
 };

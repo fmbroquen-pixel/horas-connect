@@ -26,7 +26,7 @@ const ITEM_PROYECTOS: ItemSidebar = {
   icono: "proyectos",
   children: [
     { href: "/proyectos", label: "Activos", icono: "proyectos" },
-    { href: "/proyectos/inactivos", label: "Inactivos", icono: "proyectos", tenue: true },
+    { href: "/proyectos/inactivos", label: "Inactivos", icono: "archivado" },
   ],
 };
 
