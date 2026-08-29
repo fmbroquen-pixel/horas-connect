@@ -91,7 +91,10 @@ export function GuardiaCambios() {
       onClose={() => setDestino(null)}
       labelledBy="titulo-cambios-sin-guardar"
     >
-      <div className="w-full max-w-md rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+      {/* max-w-lg y no md: con tres acciones, "Cancelar · Salir sin guardar ·
+          Guardar y salir" no entraba en 448px y la principal caía sola a un
+          segundo renglón. */}
+      <div className="w-full max-w-lg rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
         <h2
           id="titulo-cambios-sin-guardar"
           className="font-display text-sm uppercase text-white"
@@ -102,7 +105,13 @@ export function GuardiaCambios() {
           Tenés cambios sin guardar. ¿Querés guardarlos antes de salir?
         </p>
 
-        <div className="mt-5 flex flex-wrap justify-end gap-2">
+        {/* En pantalla angosta van en columna y ocupando todo el ancho, nunca
+            apretados ni partidos a la mitad. El col-reverse es para que, en esa
+            columna, la acción principal quede arriba: en fila va a la derecha
+            —el lugar donde se la busca al final— y al apilarse, arriba. El
+            orden del DOM es uno solo y sigue siendo el del foco: Cancelar
+            primero. */}
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={() => setDestino(null)}

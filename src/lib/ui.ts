@@ -4,8 +4,13 @@
 const BASE = "inline-flex items-center justify-center font-medium disabled:opacity-60";
 
 // Acción principal (Agregar, Guardar, Ingresar, Filtrar).
-export const BTN_PRIMARY = `${BASE} rounded-xl bg-dc-purple px-4 py-2 text-sm text-white hover:brightness-110`;
-export const BTN_PRIMARY_SM = `${BASE} rounded-lg bg-dc-purple px-3 py-1.5 text-xs text-white hover:brightness-110`;
+//
+// El borde transparente no se ve: está para que el primario mida lo mismo que
+// el secundario, que sí tiene borde. Sin él quedaba 2px más bajo. En una fila no
+// se notaba —el stretch del flex los iguala— pero apilados en columna, como en
+// el aviso de cambios sin guardar, la diferencia saltaba.
+export const BTN_PRIMARY = `${BASE} rounded-xl border border-transparent bg-dc-purple px-4 py-2 text-sm text-white hover:brightness-110`;
+export const BTN_PRIMARY_SM = `${BASE} rounded-lg border border-transparent bg-dc-purple px-3 py-1.5 text-xs text-white hover:brightness-110`;
 
 // Crear una entidad nueva: violeta sólido, "+" blanco y el nombre de lo que se
 // crea. Es la acción principal de su pantalla, así que toma la forma del botón
@@ -13,7 +18,7 @@ export const BTN_PRIMARY_SM = `${BASE} rounded-lg bg-dc-purple px-3 py-1.5 text-
 //
 // El gap-1.5 separa el "+" del texto sin que parezcan dos cosas; el resto es
 // BTN_PRIMARY tal cual, para que crear y guardar hablen el mismo idioma.
-export const BTN_AGREGAR = `${BASE} gap-1.5 rounded-xl bg-dc-purple px-4 py-2 text-sm text-white hover:brightness-110`;
+export const BTN_AGREGAR = `${BASE} gap-1.5 rounded-xl border border-transparent bg-dc-purple px-4 py-2 text-sm text-white hover:brightness-110`;
 
 // Acción secundaria (Salir, Editar, Cancelar).
 export const BTN_SECONDARY = `${BASE} rounded-xl border border-dc-line px-4 py-2 text-sm text-dc-muted hover:border-dc-peri hover:bg-dc-peri/10 hover:text-dc-text`;
