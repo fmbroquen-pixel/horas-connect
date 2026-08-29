@@ -14,7 +14,14 @@ import { reformatEntradaHoras } from "@/lib/horas";
 // Las celdas se montan recién al editarlas: una tabla de 500 filas no puede
 // tener un input por columna montado todo el tiempo.
 
-export type GuardarCampo = (valor: string) => Promise<{ error?: string }>;
+export type GuardarCampo = (
+  valor: string,
+) => Promise<{
+  error?: string;
+  // El cambio no se aplicó y la celda tiene que volver al valor anterior, pero
+  // sin mostrar un error: quien llamó ya se encarga de explicarlo.
+  revertir?: boolean;
+}>;
 
 const BASE_LECTURA =
   "flex w-full items-center rounded-md px-1.5 py-1 text-sm transition hover:bg-dc-peri/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40";
@@ -60,6 +67,12 @@ function useCelda(valor: string, onGuardar: GuardarCampo) {
     if (r?.error) {
       setError(r.error);
       setLocal(servidor); // rechazado: vuelve al último valor bueno
+    } else if (r?.revertir) {
+      // El cambio no se aplicó, pero quien llamó se encarga de explicar por
+      // qué —un popup, por ejemplo—. La celda vuelve atrás sin poner un error
+      // en rojo que duplicaría el mensaje.
+      setError(undefined);
+      setLocal(servidor);
     } else {
       setError(undefined);
     }

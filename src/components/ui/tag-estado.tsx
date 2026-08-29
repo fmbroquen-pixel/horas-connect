@@ -20,7 +20,13 @@ export function TagEstado({
   const color = COLOR_ESTADO[estado] ?? COLOR_ESTADO.sin_iniciar;
   return (
     <span
-      className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs leading-none ${className}`}
+      // Ancho fijo y no ajustado al texto: apiladas en una columna, cuatro
+      // pastillas de anchos distintos se leen como un borde dentado y obligan a
+      // medir cada una para compararlas. Con el mismo ancho, lo único que
+      // cambia entre filas es el color, que es la información.
+      //
+      // w-32 lo fija la más larga, "No ejecutada"; el resto queda centrado.
+      className={`inline-flex w-32 items-center justify-center gap-1.5 rounded-full border px-2 py-1 text-xs font-semibold leading-none ${className}`}
       style={{
         // 12% de fondo y 45% de borde: alcanza para separar la pastilla del
         // fondo oscuro sin que el color compita con el texto que lleva adentro.

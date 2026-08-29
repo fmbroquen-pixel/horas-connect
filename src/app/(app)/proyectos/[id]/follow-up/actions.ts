@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { enCursoQueEstorba, esCierreValido } from "@/lib/secuencia-tareas";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
 import { parseHorasHsMin } from "@/lib/horas";
 import {
@@ -27,6 +28,12 @@ import { ETIQUETA_ESTADO } from "./constantes";
 import type { EstadoTareaRoadmap } from "@/generated/prisma/client";
 
 type Resultado = { error?: string };
+
+// El intento de poner una tarea "En curso" cuando ya hay otra. No es un error:
+// es una decisión que le falta al usuario, así que en vez de rechazar se le
+// devuelve quién estorba para que resuelva las dos cosas juntas.
+export type ConflictoEnCurso = { id: string; nombre: string };
+type ResultadoEstado = Resultado & { conflicto?: ConflictoEnCurso };
 
 // Toda escritura que mueva la secuencia va en una transacción junto con el
 // reencadenado de fechas: son un solo hecho. Si el resecuenciado fallara
@@ -365,7 +372,10 @@ export async function actualizarCampoTarea(
   tareaId: string,
   campo: CampoTarea,
   valor: string,
-): Promise<Resultado> {
+  // Solo para el estado: con qué cerrar la tarea que venía en curso. Sin esto,
+  // un choque devuelve el conflicto en lugar de escribir.
+  cierreDeLaAnterior?: string,
+): Promise<ResultadoEstado> {
   const tarea = await tareaConAcceso(tareaId);
   if (!tarea) return { error: "Tarea inexistente." };
 
@@ -382,6 +392,40 @@ export async function actualizarCampoTarea(
 
   if (campo === "estado") {
     if (!(valor in ETIQUETA_ESTADO)) return { error: "Estado inválido." };
+
+    // Una sola en curso por lista. La regla se valida acá y no solo en la UI:
+    // el popup se puede saltear, y dos tareas en curso dejan a la lista
+    // describiendo un avance que no existe.
+    if (valor === "en_curso") {
+      const hermanas = await prisma.tareaRoadmap.findMany({
+        where: { ...SOLO_TAREAS_VIVAS, listaId: tarea.listaId },
+        select: { id: true, nombre: true, estado: true },
+      });
+      const estorba = enCursoQueEstorba(hermanas, tareaId);
+
+      if (estorba) {
+        if (!cierreDeLaAnterior) return { conflicto: estorba };
+        if (!esCierreValido(cierreDeLaAnterior)) {
+          return { error: "Estado inválido para la tarea anterior." };
+        }
+        // Las dos escrituras en una transacción: si la segunda fallara, la
+        // lista quedaría sin ninguna en curso o con dos, que son justo los dos
+        // estados que esto viene a evitar.
+        await prisma.$transaction([
+          prisma.tareaRoadmap.update({
+            where: { id: estorba.id },
+            data: { estado: cierreDeLaAnterior as EstadoTareaRoadmap },
+          }),
+          prisma.tareaRoadmap.update({
+            where: { id: tareaId },
+            data: { estado: "en_curso" },
+          }),
+        ]);
+        revalidar();
+        return {};
+      }
+    }
+
     await prisma.tareaRoadmap.update({
       where: { id: tareaId },
       data: { estado: valor as EstadoTareaRoadmap },
@@ -664,6 +708,35 @@ export async function editarTareas(
 
   if (campo === "estado") {
     if (!(valor in ETIQUETA_ESTADO)) return { error: "Estado inválido." };
+
+    // En masa no se ofrece resolver el conflicto: marcar varias como "En
+    // curso" no tiene una respuesta obvia -cuál de todas queda- y en la misma
+    // lista es directamente imposible. Se frena con un mensaje y se hace de a
+    // una, que es donde el popup sí puede preguntar.
+    if (valor === "en_curso") {
+      const porLista = new Map<string, number>();
+      for (const t of tareas) {
+        porLista.set(t.listaId, (porLista.get(t.listaId) ?? 0) + 1);
+      }
+      if ([...porLista.values()].some((n) => n > 1)) {
+        return {
+          error: "Solo puede haber una tarea En curso por lista: marcalas de a una.",
+        };
+      }
+      for (const t of tareas) {
+        const hermanas = await prisma.tareaRoadmap.findMany({
+          where: { ...SOLO_TAREAS_VIVAS, listaId: t.listaId },
+          select: { id: true, nombre: true, estado: true },
+        });
+        const estorba = enCursoQueEstorba(hermanas, t.id);
+        if (estorba) {
+          return {
+            error: `"${estorba.nombre}" ya está En curso en esa lista. Cambiala primero o marcá de a una.`,
+          };
+        }
+      }
+    }
+
     await prisma.tareaRoadmap.updateMany({
       where: { id: { in: tareas.map((t) => t.id) } },
       data: { estado: valor as EstadoTareaRoadmap },

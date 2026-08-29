@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { actualizarCampoTarea, actualizarRangoTarea, eliminarTarea } from "./actions";
+import {
+  actualizarCampoTarea,
+  actualizarRangoTarea,
+  eliminarTarea,
+  type ConflictoEnCurso,
+} from "./actions";
+import { CIERRES_EN_CURSO } from "@/lib/secuencia-tareas";
+import { ETIQUETA_ESTADO as ETIQUETAS } from "./constantes";
+import { Modal } from "@/components/ui/modal";
+import { avisarError } from "@/components/ui/avisos";
+import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
 import {
   GRID_ROADMAP,
   ETIQUETA_ESTADO,
@@ -124,6 +134,32 @@ export function FilaTareaRoadmap({
   const guardar = (campo: Parameters<typeof actualizarCampoTarea>[1]) =>
     async (valor: string) => actualizarCampoTarea(tarea.id, campo, valor);
 
+  // Poner una tarea En curso cuando ya hay otra no se rechaza: se pregunta.
+  // El servidor devuelve cuál estorba y acá se ofrece con qué cerrarla, para
+  // que las dos cosas se decidan juntas y se guarden en una sola operación.
+  const [conflicto, setConflicto] = useState<ConflictoEnCurso | null>(null);
+  const [cierre, setCierre] = useState<string>(CIERRES_EN_CURSO[0]);
+  const [resolviendo, setResolviendo] = useState(false);
+
+  const guardarEstado = async (valor: string) => {
+    const r = await actualizarCampoTarea(tarea.id, "estado", valor);
+    if (r.conflicto) {
+      setCierre(CIERRES_EN_CURSO[0]);
+      setConflicto(r.conflicto);
+      // No es un error: la celda vuelve atrás y el popup explica.
+      return { revertir: true };
+    }
+    return r;
+  };
+
+  const resolverConflicto = async () => {
+    setResolviendo(true);
+    const r = await actualizarCampoTarea(tarea.id, "estado", "en_curso", cierre);
+    setResolviendo(false);
+    setConflicto(null);
+    if (r.error) avisarError(r.error);
+  };
+
   // Editar las fechas a mano es una reprogramación igual que arrastrar la
   // tarea: corre la cadena de todo lo que viene después. Así que se avisa
   // igual —esta tarea con el realce fuerte por ser la causa, las arrastradas
@@ -208,7 +244,7 @@ export function FilaTareaRoadmap({
           <CeldaOpciones
             valor={tarea.estado}
             opciones={OPCIONES_ESTADO}
-            onGuardar={guardar("estado")}
+            onGuardar={guardarEstado}
             ariaLabel="Estado"
             etiqueta={ETIQUETA_ESTADO[tarea.estado]}
             renderLectura={(estado) => <TagEstado estado={estado} />}
@@ -223,6 +259,72 @@ export function FilaTareaRoadmap({
           />
         </span>
       </div>
+
+      {/* Las tareas de una lista son secuenciales: solo una puede estar En
+          curso. En vez de rechazar el cambio, se pregunta con qué cerrar la
+          anterior y las dos cosas se guardan juntas. Cancelar no toca nada:
+          hasta acá no se escribió. */}
+      <Modal
+        open={conflicto !== null}
+        onClose={() => setConflicto(null)}
+        labelledBy="titulo-conflicto-en-curso"
+      >
+        <div className="w-full max-w-lg rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+          <h2
+            id="titulo-conflicto-en-curso"
+            className="font-display text-sm uppercase text-white"
+          >
+            Ya hay una tarea en curso
+          </h2>
+          <p className="mt-3 text-sm text-dc-text">
+            <strong className="text-white">{conflicto?.nombre}</strong> está En
+            curso en esta lista. Para pasar{" "}
+            <strong className="text-white">{tarea.nombre}</strong> a En curso,
+            elegí con qué estado queda la anterior.
+          </p>
+
+          {/* Grilla de tres y no flex-wrap: con wrap quedaban dos arriba y una
+              abajo, y una opción sola en un renglón se lee como distinta de las
+              otras dos cuando son tres alternativas del mismo rango. */}
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {CIERRES_EN_CURSO.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCierre(c)}
+                aria-pressed={cierre === c}
+                className={`flex justify-center rounded-xl border px-2 py-2 transition ${
+                  cierre === c
+                    ? "border-dc-peri bg-dc-peri/15 text-dc-text"
+                    : "border-dc-line text-dc-muted hover:border-dc-peri/60 hover:text-dc-text"
+                }`}
+              >
+                <TagEstado estado={c} />
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setConflicto(null)}
+              className={BTN_SECONDARY}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={() => void resolverConflicto()}
+              disabled={resolviendo}
+              className={BTN_PRIMARY}
+            >
+              {resolviendo
+                ? "Guardando…"
+                : `Marcar anterior como ${ETIQUETAS[cierre]}`}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
