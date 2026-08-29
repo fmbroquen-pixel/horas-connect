@@ -146,6 +146,10 @@ export default async function UsuarioDetallePage({
         </div>
       )}
 
+      {/* La última sección editable y el Guardar van juntos, con poco aire
+          entre ellos: son un grupo, no dos bloques sueltos. El space-y-8 de
+          afuera sigue separando ese grupo del historial. */}
+      <div className="space-y-3">
       {asignaProyectos && (
         <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
           <h2 className="font-display text-sm uppercase text-white">
@@ -165,6 +169,14 @@ export default async function UsuarioDetallePage({
         </div>
       )}
 
+      {/* Guardar cierra el formulario, así que va acá y no al final de la
+          página: abajo está el historial de tarifas, que es solo lectura, y con
+          una tabla entera en el medio el botón se leía como una acción suelta
+          al fondo en vez del cierre de lo que se estaba editando. Queda fuera
+          de las cards y alineado con su borde derecho. */}
+      <BotonGuardarPagina />
+      </div>
+
       {puedeTarifa && (
         <HistorialTarifas
           historial={historial.map((t) => ({
@@ -177,9 +189,6 @@ export default async function UsuarioDetallePage({
           }))}
         />
       )}
-
-      {/* Un solo Guardar para toda la pantalla, fuera de las cards. */}
-      <BotonGuardarPagina />
     </div>
     </GuardadoPaginaProvider>
   );
