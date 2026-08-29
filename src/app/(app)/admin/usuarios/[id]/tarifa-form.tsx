@@ -10,6 +10,12 @@ import { mostrarFechaISO } from "../../clientes/constantes";
 import { Modal } from "@/components/ui/modal";
 import { BTN_ICON_SM, BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
 
+// La etiqueta de cualquier campo del formulario. El alto fijo no es cosmetico:
+// la de "Vigente desde" lleva un info button de 20px y las otras solo texto de
+// 16px, asi que sin fijarlo esa columna arrancaba 4px mas abajo que la de al
+// lado.
+const LABEL = "mb-1 flex h-5 items-center gap-1.5 text-xs text-dc-muted";
+
 type ValoresActuales = {
   presencialOwner?: number;
   presencialBackup?: number;
@@ -102,12 +108,13 @@ export function TarifaForm({
       onChange={() => setSucio(true)}
       className="space-y-4"
     >
-      {/* Tipo a la izquierda y vigencia a la derecha, en la misma fila. Con
-          flex-wrap, en pantalla angosta la vigencia baja sola debajo del tipo
-          sin necesidad de un breakpoint propio. */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      {/* La misma grilla que los campos de tarifa -grid-cols-2 gap-4- y no un
+          flex con justify-between: asi la columna derecha empieza exactamente
+          donde empiezan "Presencial · Backup" y "Virtual · Backup", en vez de
+          quedar empujada contra el borde del card. */}
+      <div className="grid grid-cols-2 gap-4">
       <div>
-        <p className="mb-2 text-xs text-dc-muted">Tipo de tarifa</p>
+        <p className={LABEL}>Tipo de tarifa</p>
         <div className="flex gap-2">
           <label
             className={`cursor-pointer rounded-lg border px-3 py-1.5 text-sm ${
@@ -149,8 +156,8 @@ export function TarifaForm({
       {/* Vigente desde: es metadata de configuración, no un valor de tarifa.
           Por eso sube acá arriba y en chico, para que los montos se queden con
           el peso visual del bloque. */}
-      <div className="sm:text-right">
-        <p className="mb-2 flex items-center gap-1.5 text-xs text-dc-muted sm:justify-end">
+      <div>
+        <p className={LABEL}>
           Vigente desde
           <InfoButton>
             La tarifa se aplica desde esta fecha. Las horas se valúan con la
@@ -165,7 +172,7 @@ export function TarifaForm({
         <input type="hidden" name="vigenteDesde" value={desde} />
 
         {editandoFecha ? (
-          <div className="w-40 sm:ml-auto">
+          <div className="w-40">
             <DatePicker
               value={desde}
               onChange={(v) => {
@@ -179,7 +186,7 @@ export function TarifaForm({
             />
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 sm:justify-end">
+          <div className="flex h-[38px] items-center gap-1.5">
             <span className="tabular-nums text-sm text-dc-text">
               {mostrarFechaISO(desde)}
             </span>
@@ -202,7 +209,7 @@ export function TarifaForm({
 
       {tipo === "fija" ? (
         <div>
-          <label className="mb-1 block text-xs text-dc-muted">
+          <label className={LABEL}>
             Valor USD por hora (presencial y virtual)
           </label>
           <input
@@ -218,7 +225,7 @@ export function TarifaForm({
       ) : (
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-1 block text-xs text-dc-muted">
+            <label className={LABEL}>
               Presencial · Owner
             </label>
             <input
@@ -232,7 +239,7 @@ export function TarifaForm({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-dc-muted">
+            <label className={LABEL}>
               Presencial · Backup
             </label>
             <input
@@ -246,7 +253,7 @@ export function TarifaForm({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-dc-muted">
+            <label className={LABEL}>
               Virtual · Owner
             </label>
             <input
@@ -260,7 +267,7 @@ export function TarifaForm({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs text-dc-muted">
+            <label className={LABEL}>
               Virtual · Backup
             </label>
             <input
