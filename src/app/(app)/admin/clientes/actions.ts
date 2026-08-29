@@ -10,6 +10,7 @@ import { getAccesoProyecto } from "@/lib/proyecto-acceso";
 import { asegurarRoadmap } from "@/lib/roadmap";
 import { Prisma } from "@/generated/prisma/client";
 import { ETIQUETA_PRODUCTO, ETIQUETA_ROL_EQUIPO } from "./constantes";
+import type { ResultadoEstado } from "@/components/boton-estado";
 
 // El equipo del cliente se gestiona desde Settings (solo admin) y desde la
 // pestaña Equipo del proyecto (admin o mentor con ese cliente asignado).
@@ -146,13 +147,21 @@ export async function crearCliente(
   redirect(`/admin/clientes/${cliente.id}`);
 }
 
-export async function alternarActivoCliente(id: string, activo: boolean) {
+// Devuelve un resultado en vez de no devolver nada: quien la llama necesita
+// saber si salio bien para avisarlo, y un fallo tiene que llegar como mensaje y
+// no como una pantalla rota.
+export async function alternarActivoCliente(
+  id: string,
+  activo: boolean,
+): Promise<ResultadoEstado> {
   await requireAdmin();
   await prisma.cliente.update({ where: { id }, data: { activo } });
   revalidatePath("/admin/clientes");
+  revalidatePath(`/admin/clientes/${id}`);
   // Proyectos (Activos/Inactivos) y el widget de Home filtran clientes por activo.
   revalidatePath("/proyectos", "layout");
   revalidatePath("/dashboard");
+  return { ok: true };
 }
 
 // Datos del servicio del cliente (pestaña Datos del detalle). La fecha de

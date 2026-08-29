@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import type { ResultadoEstado } from "@/components/boton-estado";
 import { diaUtc, reconstruirVigencias } from "@/lib/vigencias";
 import { fechaDesdeISO } from "@/lib/dias-habiles";
 import { requireAdmin } from "@/lib/require-admin";
@@ -42,7 +43,11 @@ export async function actualizarUsuario(id: string, formData: FormData) {
   if (!parsed.success) return;
 
   if (parsed.data.rol !== "admin") {
-    await bloquearSiEsUltimoAdmin(id, admin.id);
+    // Acá sigue siendo un throw: este formulario no tiene por dónde mostrar un
+    // mensaje, y degradar al último admin dejaría la app sin nadie que pueda
+    // volver a habilitar usuarios. Frenar feo es mejor que no frenar.
+    const impedimento = await motivoParaNoDesactivar(id, admin.id);
+    if (impedimento) throw new Error(impedimento);
   }
 
   await prisma.usuario.update({ where: { id }, data: parsed.data });
@@ -50,31 +55,40 @@ export async function actualizarUsuario(id: string, formData: FormData) {
   revalidatePath(`/admin/usuarios/${id}`);
 }
 
-export async function alternarActivoUsuario(id: string, activo: boolean) {
+// Devuelve un resultado en vez de tirar: desactivar al ultimo admin es un caso
+// esperable, y hasta ahora se manifestaba como un error sin manejar en vez de
+// como una explicacion.
+export async function alternarActivoUsuario(
+  id: string,
+  activo: boolean,
+): Promise<ResultadoEstado> {
   const admin = await requireAdmin();
   if (!activo) {
-    await bloquearSiEsUltimoAdmin(id, admin.id);
+    const impedimento = await motivoParaNoDesactivar(id, admin.id);
+    if (impedimento) return { error: impedimento };
   }
   await prisma.usuario.update({ where: { id }, data: { activo } });
   revalidatePath("/admin/usuarios");
+  revalidatePath(`/admin/usuarios/${id}`);
+  return { ok: true };
 }
 
 // Evita que se desactive o degrade al ultimo administrador activo, lo que
 // dejaria la app sin nadie que pueda volver a habilitar usuarios.
-async function bloquearSiEsUltimoAdmin(usuarioId: string, adminActualId: string) {
+async function motivoParaNoDesactivar(
+  usuarioId: string,
+  adminActualId: string,
+): Promise<string | null> {
   const objetivo = await prisma.usuario.findUnique({ where: { id: usuarioId } });
-  if (!objetivo || objetivo.rol !== "admin" || !objetivo.activo) return;
+  if (!objetivo || objetivo.rol !== "admin" || !objetivo.activo) return null;
 
   const otrosAdmins = await prisma.usuario.count({
     where: { rol: "admin", activo: true, id: { not: usuarioId } },
   });
-  if (otrosAdmins === 0) {
-    throw new Error(
-      usuarioId === adminActualId
-        ? "No podés quitarte el rol de administrador siendo el único activo."
-        : "No se puede desactivar al único administrador activo.",
-    );
-  }
+  if (otrosAdmins > 0) return null;
+  return usuarioId === adminActualId
+    ? "No podés quitarte el rol de administrador siendo el único activo."
+    : "No se puede desactivar al único administrador activo.";
 }
 
 const COMBOS_FACTURABLES: { modalidad: Modalidad; ownership: Ownership }[] = [

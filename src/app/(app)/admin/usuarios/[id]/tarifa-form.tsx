@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { BTN_PRIMARY } from "@/lib/ui";
+import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
 import { DatePicker } from "@/components/date-picker";
 import { hoyISO } from "@/lib/formato";
 
@@ -34,7 +34,16 @@ export function TarifaForm({
   // Arranca en hoy: el caso normal es "de acá en adelante vale esto". Se
   // cambia para cargar una tarifa que ya venía rigiendo desde antes.
   const [desde, setDesde] = useState(hoyISO());
-  const [state, formAction, pending] = useActionState(action, undefined);
+  // Contador y no booleano: dos guardados seguidos tienen que pulsar dos veces.
+  const [exito, setExito] = useState(0);
+  const [state, formAction, pending] = useActionState(
+    async (prev: { error?: string } | undefined, fd: FormData) => {
+      const r = await action(prev, fd);
+      if (!r?.error) setExito((n) => n + 1);
+      return r;
+    },
+    undefined,
+  );
 
   const valorFijaInicial =
     valores.presencialOwner ??
@@ -187,13 +196,9 @@ export function TarifaForm({
 
       {state?.error && <p className="text-xs text-dc-pink">{state.error}</p>}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className={BTN_PRIMARY}
-      >
-        {pending ? "Guardando…" : "Guardar tarifa"}
-      </button>
+      <div className="flex justify-end">
+        <BotonGuardarIcono pending={pending} label="Guardar tarifa" exito={exito} />
+      </div>
     </form>
   );
 }

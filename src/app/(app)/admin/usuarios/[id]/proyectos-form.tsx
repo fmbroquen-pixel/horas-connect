@@ -10,6 +10,7 @@ import {
 import { ToastOk } from "@/components/ui/toast-ok";
 import { Modal } from "@/components/ui/modal";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
+import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
 
 const SOLAPAS: { rol: RolAsignacion; label: string }[] = [
   { rol: "owner", label: "Mentor Owner" },
@@ -41,6 +42,8 @@ export function ProyectosForm({
       ),
   );
   const [toast, setToast] = useState(false);
+  // Contador y no booleano: dos guardados seguidos tienen que pulsar dos veces.
+  const [exito, setExito] = useState(0);
   // Proyectos que el admin confirmó quitarle a su Owner actual. Viajan al
   // servidor: sin esta lista, un formulario viejo podría desplazar a alguien
   // que se convirtió en Owner después de que se abrió la pantalla.
@@ -53,6 +56,7 @@ export function ProyectosForm({
       const r = await guardarProyectosAsignados(usuarioId, prev, fd);
       if (r.ok) {
         setToast(true);
+        setExito((n) => n + 1);
         // El reemplazo ya se aplicó; volver a mandarlo en el próximo guardado
         // desplazaría a quien haya quedado como Owner desde entonces.
         setDesplazar(new Set());
@@ -252,9 +256,13 @@ export function ProyectosForm({
         </p>
       )}
 
-      <button type="submit" disabled={pending} className={`${BTN_SECONDARY} mt-4`}>
-        {pending ? "Guardando…" : "Guardar clientes asignados"}
-      </button>
+      <div className="mt-4 flex justify-end">
+        <BotonGuardarIcono
+          pending={pending}
+          label="Guardar clientes asignados"
+          exito={exito}
+        />
+      </div>
 
       <ToastOk show={toast} onHide={() => setToast(false)}>
         Asignaciones guardadas

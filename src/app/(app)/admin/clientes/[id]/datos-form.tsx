@@ -10,7 +10,7 @@ import {
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import { ToastOk } from "@/components/ui/toast-ok";
-import { BTN_SECONDARY } from "@/lib/ui";
+import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -36,6 +36,8 @@ export function DatosClienteForm({
   const [fechaInicio, setFechaInicio] = useState(inicial.fechaInicio);
   const [cuota, setCuota] = useState(inicial.valorCuotaUsd);
   const [toast, setToast] = useState(false);
+  // Contador y no booleano: dos guardados seguidos tienen que pulsar dos veces.
+  const [exito, setExito] = useState(0);
 
   const accion = actualizarDatosCliente.bind(null, clienteId);
   const [state, formAction, pending] = useActionState(
@@ -44,7 +46,10 @@ export function DatosClienteForm({
       formData: FormData,
     ) => {
       const r = await accion(prev, formData);
-      if (!r.error) setToast(true);
+      if (!r.error) {
+        setToast(true);
+        setExito((n) => n + 1);
+      }
       return r;
     },
     undefined,
@@ -137,9 +142,12 @@ export function DatosClienteForm({
       </div>
 
       <div className="sm:col-span-2 lg:col-span-3">
-        <button type="submit" disabled={pending} className={BTN_SECONDARY}>
-          {pending ? "Guardando…" : "Guardar datos"}
-        </button>
+        {/* Mismo boton que el resto de Settings: el check, alineado a la
+            derecha. Antes era texto y quedaba a la izquierda, asi que Clientes
+            y Usuarios guardaban con dos botones distintos. */}
+        <div className="flex justify-end">
+          <BotonGuardarIcono pending={pending} label="Guardar datos" exito={exito} />
+        </div>
         {/* Errores sin campo asociado; los que sí lo tienen se muestran
             debajo de su input. */}
         {state?.error && !state.campo && (

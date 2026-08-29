@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { alternarActivoCliente } from "../actions";
-import { BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
+import { BotonEstado } from "@/components/boton-estado";
 import { TabsNav } from "../../../tabs-nav";
 
 // Cabecera común del detalle de cliente (Volver + nombre) con sub-solapas
@@ -41,11 +41,13 @@ export default async function ClienteDetalleLayout({
           </h1>
           {/* Único lugar donde se cambia el estado: en la tabla es solo tag
               informativo. */}
-          <form action={alternarActivoCliente.bind(null, id, !cliente.activo)}>
-            <button type="submit" className={cliente.activo ? BTN_PILL_ON : BTN_PILL_OFF}>
-              {cliente.activo ? "Activo" : "Inactivo"}
-            </button>
-          </form>
+          <BotonEstado
+            activo={cliente.activo}
+            entidad="Cliente"
+            etiquetaActivo="Activo"
+            etiquetaInactivo="Inactivo"
+            alternar={alternarActivoCliente.bind(null, id)}
+          />
         </div>
       </div>
 

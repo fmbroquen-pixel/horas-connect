@@ -3,12 +3,12 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { actualizarUsuario, guardarTarifa, alternarActivoUsuario } from "../actions";
+import { BotonEstado } from "@/components/boton-estado";
 import { TarifaForm } from "./tarifa-form";
 import { ProyectosForm } from "./proyectos-form";
 import type { ProyectoAsignable } from "../constantes";
 import { HistorialTarifas } from "@/components/perfil/historial-tarifas";
 import { SeccionDatosUsuario } from "@/components/perfil/seccion-datos";
-import { BTN_PILL_ON, BTN_PILL_OFF } from "@/lib/ui";
 
 export default async function UsuarioDetallePage({
   params,
@@ -95,11 +95,13 @@ export default async function UsuarioDetallePage({
           </h1>
           {/* Único lugar donde se cambia el estado: en la tabla es solo tag
               informativo. */}
-          <form action={alternarActivoUsuario.bind(null, usuario.id, !usuario.activo)}>
-            <button type="submit" className={usuario.activo ? BTN_PILL_ON : BTN_PILL_OFF}>
-              {usuario.activo ? "Activo" : "Bloqueado"}
-            </button>
-          </form>
+          <BotonEstado
+            activo={usuario.activo}
+            entidad="Usuario"
+            etiquetaActivo="Activo"
+            etiquetaInactivo="Bloqueado"
+            alternar={alternarActivoUsuario.bind(null, usuario.id)}
+          />
         </div>
       </div>
 
