@@ -105,18 +105,18 @@ export function FilaProyectoEstado({
           </svg>
         </Link>
       </div>
-      {/* Columna 2/3: semáforo centrado con ancho de tag acotado. */}
+      {/* Columna 2/3: el semáforo es solo el punto. Ya no necesita el ancho de
+          una pastilla, así que se centra en la columna sin caja alrededor. */}
       <div className="flex min-w-0 flex-1 justify-center">
-        <div className="w-full max-w-[10rem]">
-          <TagPopover
-            valor={semaforo}
-            opciones={OPCIONES_SEMAFORO_TAG}
-            placeholder="Sin registrar"
-            onElegir={elegirSemaforo}
-            ariaLabel={`Semáforo de ${nombre}`}
-            anchoMenu="w-44"
-          />
-        </div>
+        <TagPopover
+          valor={semaforo}
+          opciones={OPCIONES_SEMAFORO_TAG}
+          placeholder="Sin registrar"
+          onElegir={elegirSemaforo}
+          ariaLabel={`Semáforo de ${nombre}`}
+          anchoMenu="w-44"
+          soloPunto
+        />
       </div>
       {/* Columna 3/3: etapa centrada con ancho de tag acotado. */}
       <div className="flex min-w-0 flex-1 justify-center">

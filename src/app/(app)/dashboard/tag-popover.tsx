@@ -24,6 +24,7 @@ export function TagPopover({
   onElegir,
   ariaLabel,
   anchoMenu = "w-48",
+  soloPunto = false,
 }: {
   valor: string;
   opciones: OpcionTag[];
@@ -31,6 +32,11 @@ export function TagPopover({
   onElegir: (v: string) => void;
   ariaLabel: string;
   anchoMenu?: string;
+  // Solo el punto de color, sin la etiqueta. Lo usa el semáforo: son tres
+  // estados que ya se distinguen por color, y repetir "Verde" al lado de un
+  // punto verde es ruido en una columna que se escanea de arriba abajo. El
+  // nombre sigue estando en el tooltip y en el aria-label.
+  soloPunto?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -59,34 +65,63 @@ export function TagPopover({
   }, [open]);
 
   const seleccionada = opciones.find((o) => o.value === valor);
+  const etiqueta = seleccionada?.label ?? placeholder;
 
   return (
-    <div className="inline-block w-full">
+    <div className={soloPunto ? "inline-block" : "inline-block w-full"}>
       <button
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={ariaLabel}
-        className={`inline-flex w-full items-center justify-center gap-1.5 truncate rounded-full px-2.5 py-1 text-xs outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
-          seleccionada
-            ? "bg-dc-peri/15 text-dc-peri hover:bg-dc-peri/25"
-            : "bg-dc-line text-dc-muted hover:bg-dc-line/70"
-        }`}
+        // El estado entra en el nombre accesible: sin la etiqueta a la vista,
+        // es lo único que lo dice para quien no ve el color.
+        aria-label={`${ariaLabel}: ${etiqueta}`}
+        data-tooltip={soloPunto ? etiqueta : undefined}
+        className={
+          soloPunto
+            ? "inline-flex h-7 w-7 items-center justify-center rounded-full outline-none transition hover:bg-dc-line/60 focus-visible:ring-2 focus-visible:ring-dc-peri"
+            : `inline-flex w-full items-center justify-center gap-1.5 truncate rounded-full px-2.5 py-1 text-xs outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
+                seleccionada
+                  ? "bg-dc-peri/15 text-dc-peri hover:bg-dc-peri/25"
+                  : "bg-dc-line text-dc-muted hover:bg-dc-line/70"
+              }`
+        }
       >
-        {seleccionada?.dot && (
+        {soloPunto ? (
+          // Sin estado cargado queda un aro vacío: tiene que seguir habiendo
+          // algo que se vea y se pueda tocar.
           <span
             aria-hidden
-            className="h-2 w-2 shrink-0 rounded-full"
-            style={{
-              backgroundColor: seleccionada.dot,
-              // Glow suave del color del estado, sin llegar a neón.
-              boxShadow: `0 0 6px ${seleccionada.dot}`,
-            }}
+            className={`block h-3.5 w-3.5 rounded-full ${
+              seleccionada?.dot ? "" : "border-2 border-dc-muted/50"
+            }`}
+            style={
+              seleccionada?.dot
+                ? {
+                    backgroundColor: seleccionada.dot,
+                    boxShadow: `0 0 8px ${seleccionada.dot}`,
+                  }
+                : undefined
+            }
           />
+        ) : (
+          <>
+            {seleccionada?.dot && (
+              <span
+                aria-hidden
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{
+                  backgroundColor: seleccionada.dot,
+                  // Glow suave del color del estado, sin llegar a neón.
+                  boxShadow: `0 0 6px ${seleccionada.dot}`,
+                }}
+              />
+            )}
+            <span className="truncate">{etiqueta}</span>
+          </>
         )}
-        <span className="truncate">{seleccionada?.label ?? placeholder}</span>
       </button>
 
       {open &&
