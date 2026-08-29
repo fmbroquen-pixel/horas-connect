@@ -74,7 +74,9 @@ export default async function UsuarioDetallePage({
   });
 
   // Desde cuándo rige la tarifa que está cargada. Las cuatro combinaciones se
-  // guardan juntas, así que alcanza con mirar la primera vigente.
+  // guardan juntas, así que alcanza con mirar la primera vigente. Va al
+  // formulario en ISO: ahí además de mostrarse se compara, para saber si el
+  // cambio de vigencia es hacia atrás o hacia adelante.
   const vigenteDesdeActual =
     vigentes.find((v) => v.modalidad !== "valor_cero")?.vigenteDesde ?? null;
 
@@ -138,7 +140,7 @@ export default async function UsuarioDetallePage({
               }}
               vigenteDesdeActual={
                 vigenteDesdeActual
-                  ? vigenteDesdeActual.toLocaleDateString("es-AR", { timeZone: "UTC" })
+                  ? vigenteDesdeActual.toISOString().slice(0, 10)
                   : null
               }
               action={guardarTarifa.bind(null, usuario.id)}
