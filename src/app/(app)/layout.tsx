@@ -25,8 +25,8 @@ const ITEM_PROYECTOS: ItemSidebar = {
   label: "Proyectos",
   icono: "proyectos",
   children: [
-    { href: "/proyectos", label: "Activos" },
-    { href: "/proyectos/inactivos", label: "Inactivos" },
+    { href: "/proyectos", label: "Activos", icono: "proyectos" },
+    { href: "/proyectos/inactivos", label: "Inactivos", icono: "proyectos", tenue: true },
   ],
 };
 
@@ -67,9 +67,9 @@ function navParaRol(rol: string): {
         icono: "settings",
         match: "/admin",
         children: [
-          { href: "/admin/usuarios", label: "Usuarios" },
-          { href: "/admin/clientes", label: "Clientes" },
-          { href: "/admin/conceptos", label: "Conceptos" },
+          { href: "/admin/usuarios", label: "Usuarios", icono: "usuarios" },
+          { href: "/admin/clientes", label: "Clientes", icono: "clientes" },
+          { href: "/admin/conceptos", label: "Conceptos", icono: "conceptos" },
         ],
       },
     };

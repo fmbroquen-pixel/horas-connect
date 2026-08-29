@@ -10,7 +10,7 @@ import {
 import { Modal } from "@/components/ui/modal";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
-import { BTN_PRIMARY } from "@/lib/ui";
+import { BotonAgregar } from "@/components/ui/boton-agregar";
 import {
   BotonCancelarIcono,
   BotonGuardarIcono,
@@ -82,9 +82,7 @@ export function NuevoClienteBoton() {
 
   return (
     <>
-      <button type="button" onClick={abrir} className={BTN_PRIMARY}>
-        + Agregar cliente
-      </button>
+      <BotonAgregar etiqueta="Agregar cliente" onClick={abrir} />
 
       <Modal open={open} onClose={() => setOpen(false)} labelledBy="titulo-nuevo-cliente">
         <div className="dc-menu dc-pop-in w-full max-w-lg rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">

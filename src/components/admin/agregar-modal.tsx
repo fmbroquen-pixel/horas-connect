@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Modal } from "@/components/ui/modal";
-import { BTN_PRIMARY } from "@/lib/ui";
+import { BotonAgregar } from "@/components/ui/boton-agregar";
 import {
   BotonCancelarIcono,
   BotonGuardarIcono,
@@ -31,6 +31,7 @@ export function AgregarModal({
   toastMsg,
   submitLabel,
 }: {
+  // Va como tooltip del botón, ya sin el "+": el ícono lo dice.
   botonLabel: string;
   titulo: string;
   campos: CampoModal[];
@@ -82,9 +83,7 @@ export function AgregarModal({
 
   return (
     <>
-      <button type="button" onClick={abrir} className={BTN_PRIMARY}>
-        {botonLabel}
-      </button>
+      <BotonAgregar etiqueta={botonLabel} onClick={abrir} />
 
       <Modal open={open} onClose={cerrar} labelledBy="titulo-agregar-modal">
         <div className="dc-menu dc-pop-in w-full max-w-md rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">

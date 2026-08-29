@@ -15,7 +15,15 @@ export type ItemSidebar = {
   label: string;
   icono: string;
   match?: string;
-  children?: { href: string; label: string }[];
+  children?: {
+    href: string;
+    label: string;
+    icono?: string;
+    // Para "Inactivos": el mismo dibujo que Activos, en version secundaria. Se
+    // distinguen por peso y no por forma, que es lo que dice que son dos vistas
+    // de la misma cosa.
+    tenue?: boolean;
+  }[];
 };
 
 // Contenido de un ítem simple (sin categoría): el <Link> de navegación con
@@ -155,6 +163,12 @@ function CategoriaNav({
                     <span
                       aria-hidden
                       className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-dc-pink shadow-[0_0_10px_2px_rgba(255,145,255,0.7)]"
+                    />
+                  )}
+                  {c.icono && (
+                    <TabIcono
+                      id={c.icono}
+                      className={`mr-2 ${c.tenue ? "opacity-45" : ""}`}
                     />
                   )}
                   {c.label}

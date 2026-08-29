@@ -76,9 +76,39 @@ export const ICONOS: Record<string, React.ReactNode> = {
       <path d="M8 8l1.5 1.5L12 7" />
     </>
   ),
+
+  // Submenús. Activos e Inactivos comparten la carpeta del padre —son dos
+  // vistas de lo mismo— y se distinguen por la opacidad, no por el dibujo.
+  usuarios: (
+    <>
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1" />
+    </>
+  ),
+  // Clientes: edificio.
+  clientes: (
+    <>
+      <path d="M4 21V6l7-3v18" />
+      <path d="M11 9h9v12" />
+      <path d="M7 9h.01M7 13h.01M7 17h.01M15 13h.01M15 17h.01" />
+    </>
+  ),
+  // Conceptos: etiqueta.
+  conceptos: (
+    <>
+      <path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9z" />
+      <circle cx="7.5" cy="7.5" r="1.2" />
+    </>
+  ),
 };
 
-export function TabIcono({ id }: { id: string }) {
+export function TabIcono({
+  id,
+  className = "",
+}: {
+  id: string;
+  className?: string;
+}) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -90,7 +120,7 @@ export function TabIcono({ id }: { id: string }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
-      className="shrink-0"
+      className={`shrink-0 ${className}`}
     >
       {ICONOS[id]}
     </svg>

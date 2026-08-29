@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { crearUsuario } from "./actions";
 import { RolDropdown } from "./rol-dropdown";
 import { Modal } from "@/components/ui/modal";
-import { BTN_PRIMARY } from "@/lib/ui";
+import { BotonAgregar } from "@/components/ui/boton-agregar";
 import {
   BotonCancelarIcono,
   BotonGuardarIcono,
@@ -66,9 +66,7 @@ export function NuevoUsuarioBoton() {
 
   return (
     <>
-      <button type="button" onClick={abrir} className={BTN_PRIMARY}>
-        + Agregar usuario
-      </button>
+      <BotonAgregar etiqueta="Agregar usuario" onClick={abrir} />
 
       <Modal open={open} onClose={cerrar} labelledBy="titulo-nuevo-usuario">
         <div className="dc-menu dc-pop-in w-full max-w-md rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">

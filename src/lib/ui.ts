@@ -7,6 +7,16 @@ const BASE = "inline-flex items-center justify-center font-medium disabled:opaci
 export const BTN_PRIMARY = `${BASE} rounded-xl bg-dc-purple px-4 py-2 text-sm text-white hover:brightness-110`;
 export const BTN_PRIMARY_SM = `${BASE} rounded-lg bg-dc-purple px-3 py-1.5 text-xs text-white hover:brightness-110`;
 
+// Crear una entidad nueva, en versión compacta de solo ícono. Violeta sólido y
+// un "+" blanco: es la regla que hace reconocible el alta en Usuarios,
+// Clientes y Conceptos sin leer nada. Mismo radio que BTN_PRIMARY, y cuadrado
+// como el resto de los botones de ícono.
+//
+// Reemplaza a los "+ Agregar usuario" / "+ Agregar cliente" en texto, que decían
+// lo mismo con tres anchos distintos según el largo de la palabra y desalineaban
+// el header de cada pantalla.
+export const BTN_ICON_PRIMARY = `${BASE} rounded-xl bg-dc-purple p-2 text-white hover:brightness-110`;
+
 // Acción secundaria (Salir, Editar, Cancelar).
 export const BTN_SECONDARY = `${BASE} rounded-xl border border-dc-line px-4 py-2 text-sm text-dc-muted hover:border-dc-peri hover:bg-dc-peri/10 hover:text-dc-text`;
 export const BTN_SECONDARY_SM = `${BASE} rounded-lg border border-dc-line px-2 py-1 text-xs text-dc-muted hover:border-dc-peri hover:bg-dc-peri/10 hover:text-dc-text`;

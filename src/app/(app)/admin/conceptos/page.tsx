@@ -38,7 +38,7 @@ export default async function ConceptosPage({
           </InfoButton>
         </div>
         <AgregarModal
-          botonLabel="+ Agregar concepto"
+          botonLabel="Agregar concepto"
           titulo="Nuevo concepto"
           campos={[
             { name: "nombre", label: "Nombre", placeholder: "Ej: Office Hours" },
