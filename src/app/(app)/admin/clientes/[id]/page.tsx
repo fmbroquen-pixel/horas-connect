@@ -2,6 +2,11 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { DatosClienteForm } from "./datos-form";
+import {
+  GuardadoPaginaProvider,
+  BotonGuardarPagina,
+} from "@/components/guardado-pagina";
+import { GuardiaCambios } from "@/components/guardia-cambios";
 
 // Pestaña "Datos" del detalle de cliente.
 export default async function ClienteDatosPage({
@@ -15,7 +20,10 @@ export default async function ClienteDatosPage({
   if (!cliente) notFound();
 
   return (
-    <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
+    <GuardadoPaginaProvider>
+    <div className="space-y-4">
+      <GuardiaCambios />
+      <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
       <h2 className="font-display text-sm uppercase text-white">
         Datos del cliente
       </h2>
@@ -41,6 +49,11 @@ export default async function ClienteDatosPage({
           }}
         />
       </div>
+      </div>
+
+      {/* Fuera de la card, al final de la seccion. */}
+      <BotonGuardarPagina />
     </div>
+    </GuardadoPaginaProvider>
   );
 }

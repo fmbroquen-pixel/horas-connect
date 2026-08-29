@@ -1,5 +1,9 @@
+"use client";
+
+import { useRef, useState } from "react";
 import { RolDropdown } from "@/app/(app)/admin/usuarios/rol-dropdown";
 import { IconoCandado, SoloLecturaBadge } from "@/components/ui/solo-lectura-badge";
+import { useSeccionGuardable } from "@/components/guardado-pagina";
 import { BTN_SECONDARY } from "@/lib/ui";
 
 const ETIQUETA_ROL: Record<string, string> = {
@@ -16,7 +20,11 @@ const LABEL = "mb-1 block text-xs text-dc-muted";
 
 // Sección "Mis datos" / "Datos del usuario". Misma estructura para admin y
 // guest; solo varían el título (contextual), los permisos de edición y los
-// indicadores de solo lectura. Pensada para escalar a futuras secciones.
+// indicadores de solo lectura.
+//
+// Cuando la pantalla tiene un Guardar único al pie —el detalle de Usuarios— la
+// sección cede su botón y se registra para que ese lo guarde. Si no lo hay
+// —"Mi perfil"— dibuja el suyo y sigue andando sola.
 export function SeccionDatosUsuario({
   titulo,
   soloLectura,
@@ -28,6 +36,20 @@ export function SeccionDatosUsuario({
   usuario: { nombre: string; email: string; rol: string };
   action?: (formData: FormData) => void | Promise<void>;
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const [sucio, setSucio] = useState(false);
+
+  const coordinado = useSeccionGuardable(
+    "datos",
+    "Datos del usuario",
+    sucio && !soloLectura,
+    async () => {
+      if (!action || !formRef.current) return;
+      await action(new FormData(formRef.current));
+      setSucio(false);
+    },
+  );
+
   return (
     <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
       <div className="flex flex-wrap items-center gap-2">
@@ -61,7 +83,12 @@ export function SeccionDatosUsuario({
           </div>
         </>
       ) : (
-        <form action={action} className="mt-4 grid gap-4 sm:grid-cols-3">
+        <form
+          ref={formRef}
+          action={action}
+          onChange={() => setSucio(true)}
+          className="mt-4 grid gap-4 sm:grid-cols-3"
+        >
           <label className="block">
             <span className={LABEL}>Nombre</span>
             <input name="nombre" defaultValue={usuario.nombre} className={INPUT} />
@@ -79,11 +106,13 @@ export function SeccionDatosUsuario({
             <span className={LABEL}>Tipo de usuario</span>
             <RolDropdown defaultValue={usuario.rol} className="w-full" />
           </div>
-          <div className="sm:col-span-3">
-            <button type="submit" className={BTN_SECONDARY}>
-              Guardar datos
-            </button>
-          </div>
+          {!coordinado && (
+            <div className="sm:col-span-3">
+              <button type="submit" className={BTN_SECONDARY}>
+                Guardar datos
+              </button>
+            </div>
+          )}
         </form>
       )}
     </div>

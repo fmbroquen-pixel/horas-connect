@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
+import { useSeccionGuardable } from "@/components/guardado-pagina";
 import { DatePicker } from "@/components/date-picker";
 import { hoyISO } from "@/lib/formato";
 
@@ -52,8 +53,30 @@ export function TarifaForm({
     valores.virtualBackup ??
     "";
 
+  // El DatePicker no emite un change nativo -escribe en un input hidden desde
+  // su estado-, asi que la fecha se marca aparte.
+  const [sucio, setSucio] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const coordinado = useSeccionGuardable(
+    "tarifa",
+    "Convenio de tarifa",
+    sucio,
+    async () => {
+      if (!formRef.current) return;
+      const r = await action(undefined, new FormData(formRef.current));
+      if (r?.error) return { error: r.error };
+      setSucio(false);
+      setExito((n) => n + 1);
+    },
+  );
+
   return (
-    <form action={formAction} className="space-y-4">
+    <form
+      ref={formRef}
+      action={formAction}
+      onChange={() => setSucio(true)}
+      className="space-y-4"
+    >
       <div>
         <p className="mb-2 text-xs text-dc-muted">Tipo de tarifa</p>
         <div className="flex gap-2">
@@ -176,7 +199,10 @@ export function TarifaForm({
           <DatePicker
             name="vigenteDesde"
             value={desde}
-            onChange={setDesde}
+            onChange={(v) => {
+              setDesde(v);
+              setSucio(true);
+            }}
             ariaLabel="Vigente desde"
           />
         </div>
@@ -196,9 +222,11 @@ export function TarifaForm({
 
       {state?.error && <p className="text-xs text-dc-pink">{state.error}</p>}
 
-      <div className="flex justify-end">
-        <BotonGuardarIcono pending={pending} label="Guardar tarifa" exito={exito} />
-      </div>
+      {!coordinado && (
+        <div className="flex justify-end">
+          <BotonGuardarIcono pending={pending} label="Guardar tarifa" exito={exito} />
+        </div>
+      )}
     </form>
   );
 }

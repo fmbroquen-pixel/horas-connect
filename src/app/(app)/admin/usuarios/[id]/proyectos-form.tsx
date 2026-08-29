@@ -11,6 +11,7 @@ import { ToastOk } from "@/components/ui/toast-ok";
 import { Modal } from "@/components/ui/modal";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
 import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
+import { useSeccionGuardable } from "@/components/guardado-pagina";
 
 const SOLAPAS: { rol: RolAsignacion; label: string }[] = [
   { rol: "owner", label: "Mentor Owner" },
@@ -111,6 +112,42 @@ export function ProyectosForm({
   // Se guarda TODO lo pendiente, no solo el proyecto confirmado: es un único
   // formulario y partirlo en dos escrituras dejaría al usuario sin saber cuál
   // de sus marcas quedó.
+  // El FormData de esta seccion. Se arma a mano y no se lee del <form>: los
+  // hidden se renderizan recien en el proximo render, y tanto el guardado del
+  // pie como la confirmacion de reemplazo necesitan el estado que va a quedar.
+  const armarDatos = (
+    r: Map<string, RolAsignacion> = roles,
+    d: Set<string> = desplazar,
+  ) => {
+    const fd = new FormData();
+    for (const [clienteId, rol] of r) fd.append(rol, clienteId);
+    for (const clienteId of d) {
+      if (r.get(clienteId) === "owner") fd.append("desplazarOwner", clienteId);
+    }
+    return fd;
+  };
+
+  // Sucia si la asignacion difiere de la que vino del servidor.
+  const inicial = new Map(
+    proyectos.filter((p) => p.rolPropio !== "").map((p) => [p.id, p.rolPropio]),
+  );
+  const sucio =
+    roles.size !== inicial.size ||
+    [...roles].some(([id, rol]) => inicial.get(id) !== rol);
+
+  const coordinado = useSeccionGuardable(
+    "proyectos",
+    "Clientes asignados",
+    sucio,
+    async () => {
+      const r = await guardarProyectosAsignados(usuarioId, undefined, armarDatos());
+      if (r.error) return { error: r.error };
+      setDesplazar(new Set());
+      setExito((n) => n + 1);
+      setToast(true);
+    },
+  );
+
   const confirmarCambio = () => {
     if (!aConfirmar) return;
     const id = aConfirmar.id;
@@ -121,14 +158,7 @@ export function ProyectosForm({
     setDesplazar(nuevosDesplazar);
     setAConfirmar(null);
 
-    const fd = new FormData();
-    for (const [clienteId, rol] of nuevosRoles) fd.append(rol, clienteId);
-    for (const clienteId of nuevosDesplazar) {
-      if (nuevosRoles.get(clienteId) === "owner") {
-        fd.append("desplazarOwner", clienteId);
-      }
-    }
-    formAction(fd);
+    formAction(armarDatos(nuevosRoles, nuevosDesplazar));
   };
 
   // Quién ocupa hoy el rol, para mostrarlo debajo del nombre. En Owner es
@@ -256,13 +286,15 @@ export function ProyectosForm({
         </p>
       )}
 
-      <div className="mt-4 flex justify-end">
-        <BotonGuardarIcono
-          pending={pending}
-          label="Guardar clientes asignados"
-          exito={exito}
-        />
-      </div>
+      {!coordinado && (
+        <div className="mt-4 flex justify-end">
+          <BotonGuardarIcono
+            pending={pending}
+            label="Guardar clientes asignados"
+            exito={exito}
+          />
+        </div>
+      )}
 
       <ToastOk show={toast} onHide={() => setToast(false)}>
         Asignaciones guardadas

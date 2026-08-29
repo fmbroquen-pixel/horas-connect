@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { actualizarDatosCliente, type CampoCliente } from "../actions";
 import {
   OPCIONES_PRODUCTO,
@@ -11,6 +11,7 @@ import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import { ToastOk } from "@/components/ui/toast-ok";
 import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
+import { useSeccionGuardable } from "@/components/guardado-pagina";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";
@@ -55,6 +56,22 @@ export function DatosClienteForm({
     undefined,
   );
 
+  const formRef = useRef<HTMLFormElement>(null);
+  const [sucio, setSucio] = useState(false);
+  const coordinado = useSeccionGuardable(
+    "datos-cliente",
+    "Datos del cliente",
+    sucio,
+    async () => {
+      if (!formRef.current) return;
+      const r = await accion(undefined, new FormData(formRef.current));
+      if (r?.error) return { error: r.error };
+      setSucio(false);
+      setExito((n) => n + 1);
+      setToast(true);
+    },
+  );
+
   // Fecha de finalización, siempre derivada (solo lectura).
   const meses = Number(duracion);
   const fechaFin =
@@ -66,7 +83,12 @@ export function DatosClienteForm({
     state?.campo === campo ? state.error : undefined;
 
   return (
-    <form action={formAction} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <form
+      ref={formRef}
+      action={formAction}
+      onChange={() => setSucio(true)}
+      className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+    >
       <label className="block">
         <span className={LABEL}>Nombre del cliente</span>
         <input name="nombre" defaultValue={inicial.nombre} className={INPUT} />
@@ -127,7 +149,10 @@ export function DatosClienteForm({
         <DatePicker
           name="fechaInicio"
           value={fechaInicio}
-          onChange={setFechaInicio}
+          onChange={(v) => {
+            setFechaInicio(v);
+            setSucio(true);
+          }}
           className="w-full"
           ariaLabel="Fecha de inicio"
         />
@@ -142,12 +167,13 @@ export function DatosClienteForm({
       </div>
 
       <div className="sm:col-span-2 lg:col-span-3">
-        {/* Mismo boton que el resto de Settings: el check, alineado a la
-            derecha. Antes era texto y quedaba a la izquierda, asi que Clientes
-            y Usuarios guardaban con dos botones distintos. */}
-        <div className="flex justify-end">
-          <BotonGuardarIcono pending={pending} label="Guardar datos" exito={exito} />
-        </div>
+        {/* El check queda para confirmaciones puntuales; el guardado de la
+            pantalla es el boton violeta del pie, fuera de la card. */}
+        {!coordinado && (
+          <div className="flex justify-end">
+            <BotonGuardarIcono pending={pending} label="Guardar datos" exito={exito} />
+          </div>
+        )}
         {/* Errores sin campo asociado; los que sí lo tienen se muestran
             debajo de su input. */}
         {state?.error && !state.campo && (

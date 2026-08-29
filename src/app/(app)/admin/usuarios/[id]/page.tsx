@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { actualizarUsuario, guardarTarifa, alternarActivoUsuario } from "../actions";
 import { BotonEstado } from "@/components/boton-estado";
+import {
+  GuardadoPaginaProvider,
+  BotonGuardarPagina,
+} from "@/components/guardado-pagina";
+import { GuardiaCambios } from "@/components/guardia-cambios";
 import { TarifaForm } from "./tarifa-form";
 import { ProyectosForm } from "./proyectos-form";
 import type { ProyectoAsignable } from "../constantes";
@@ -78,7 +83,11 @@ export default async function UsuarioDetallePage({
   };
 
   return (
+    // Las tres cards ceden su boton al del pie; el provider es lo que las junta,
+    // y la guardia avisa si alguien se va con algo sin guardar.
+    <GuardadoPaginaProvider>
     <div className="space-y-8">
+      <GuardiaCambios />
       <div>
         <Link
           href="/admin/usuarios"
@@ -168,6 +177,10 @@ export default async function UsuarioDetallePage({
           }))}
         />
       )}
+
+      {/* Un solo Guardar para toda la pantalla, fuera de las cards. */}
+      <BotonGuardarPagina />
     </div>
+    </GuardadoPaginaProvider>
   );
 }
