@@ -309,6 +309,7 @@ export function CeldaOpciones({
   editable = true,
   placeholder = "—",
   etiqueta,
+  renderLectura,
 }: {
   valor: string;
   opciones: OpcionDropdown[];
@@ -320,6 +321,10 @@ export function CeldaOpciones({
   // Etiqueta a mostrar cuando el valor no está entre las opciones (por
   // ejemplo, un registro viejo que conserva su etapa anterior).
   etiqueta?: string;
+  // Cómo dibujar el valor cuando NO se está editando. Sin esto se muestra el
+  // texto pelado. Lo usa el estado de una tarea, que se lee como pastilla de
+  // color pero se sigue editando con el mismo dropdown.
+  renderLectura?: (valor: string) => React.ReactNode;
 }) {
   const c = useCelda(valor, onGuardar);
   const texto = opciones.find((o) => o.value === c.local)?.label ?? etiqueta ?? "";
@@ -351,7 +356,7 @@ export function CeldaOpciones({
           alinear={alinear}
           titulo={texto || ariaLabel}
         >
-          {texto || placeholder}
+          {renderLectura ? renderLectura(c.local) : texto || placeholder}
         </Lectura>
       )}
     </Celda>

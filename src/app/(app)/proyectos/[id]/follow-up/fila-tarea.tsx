@@ -5,7 +5,6 @@ import { actualizarCampoTarea, actualizarRangoTarea, eliminarTarea } from "./act
 import {
   GRID_ROADMAP,
   ETIQUETA_ESTADO,
-  COLOR_ESTADO,
   OPCIONES_ESTADO,
   type TareaRoadmapFila,
 } from "./constantes";
@@ -17,6 +16,7 @@ import {
 } from "@/components/tabla/celda-editable";
 import { RangoFechas } from "@/components/tabla/rango-fechas";
 import { claseResaltado, useResaltado } from "./resaltado";
+import { TagEstado } from "@/components/ui/tag-estado";
 import { BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 import { SelectorPersonas } from "./selector-personas";
 
@@ -201,21 +201,18 @@ export function FilaTareaRoadmap({
           ariaLabel="Horas estimadas"
         />
 
-        <span className="flex items-center gap-1.5">
-          <span
-            aria-hidden
-            className="ml-1 h-2 w-2 shrink-0 rounded-full"
-            style={{ backgroundColor: COLOR_ESTADO[tarea.estado] }}
+        {/* El punto suelto se fue: la pastilla ya lo trae, y tenerlo afuera
+            dejaba el color a un lado y la etiqueta al otro. Se sigue editando
+            con el mismo dropdown; lo único que cambia es cómo se lee. */}
+        <span className="min-w-0">
+          <CeldaOpciones
+            valor={tarea.estado}
+            opciones={OPCIONES_ESTADO}
+            onGuardar={guardar("estado")}
+            ariaLabel="Estado"
+            etiqueta={ETIQUETA_ESTADO[tarea.estado]}
+            renderLectura={(estado) => <TagEstado estado={estado} />}
           />
-          <span className="min-w-0 flex-1">
-            <CeldaOpciones
-              valor={tarea.estado}
-              opciones={OPCIONES_ESTADO}
-              onGuardar={guardar("estado")}
-              ariaLabel="Estado"
-              etiqueta={ETIQUETA_ESTADO[tarea.estado]}
-            />
-          </span>
         </span>
 
         <span className="flex justify-center">

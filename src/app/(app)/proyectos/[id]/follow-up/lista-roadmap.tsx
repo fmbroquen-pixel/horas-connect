@@ -4,12 +4,12 @@ import { useId, useRef, useState, useTransition } from "react";
 import { duplicarLista, eliminarLista, renombrarLista, reordenarTareas } from "./actions";
 import {
   COLOR_ESTADO,
-  ETIQUETA_ESTADO,
   GRID_ROADMAP,
   progresoLista,
   type ListaRoadmapVista,
 } from "./constantes";
 import { FilaTareaRoadmap } from "./fila-tarea";
+import { TagEstado } from "@/components/ui/tag-estado";
 import { NuevaTareaBoton } from "./nueva-tarea-boton";
 import { BTN_ICON_SM } from "@/lib/ui";
 import {
@@ -167,14 +167,7 @@ export function ListaRoadmapCard({
             leading-none), para que el punto, el texto, la barra y el
             porcentaje no queden escalonados. */}
         <span className="ml-auto flex items-center gap-3">
-          <span className="flex items-center gap-1.5 text-xs leading-none text-dc-muted">
-            <span
-              aria-hidden
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: COLOR_ESTADO[avance.estado] }}
-            />
-            {ETIQUETA_ESTADO[avance.estado]}
-          </span>
+          <TagEstado estado={avance.estado} />
 
           <span
             className="flex items-center gap-2"

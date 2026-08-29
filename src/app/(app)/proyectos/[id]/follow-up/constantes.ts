@@ -13,9 +13,15 @@ export const ETIQUETA_ESTADO: Record<string, string> = {
 
 // Fuera de la paleta dc-* (que no tiene verde/rojo puros), igual que el
 // semáforo de Seguimiento.
+//
+// "En curso" es naranja y no violeta: el violeta es el color de la marca y está
+// en los botones, los enlaces y el resaltado, así que un estado pintado de
+// violeta no se leía como estado. Naranja además ordena la escala como un
+// semáforo —rojo, naranja, verde— y deja el violeta neutro para "todavía no
+// pasó nada".
 export const COLOR_ESTADO: Record<string, string> = {
   sin_iniciar: "#a5a3d6",
-  en_curso: "#8b8cff",
+  en_curso: "#fb923c",
   no_ejecutada: "#f87171",
   finalizada: "#34d399",
 };
