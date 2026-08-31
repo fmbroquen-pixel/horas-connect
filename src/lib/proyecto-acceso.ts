@@ -62,21 +62,58 @@ export function getClientesProyectosInactivos(usuario: Usuario): Promise<Cliente
 
 // Proyectos donde el usuario tiene un rol declarado (Mentor Owner o Backup).
 // Es el alcance del Home de CORE.
-export async function getProyectosConRol(usuarioId: string): Promise<Cliente[]> {
-  return clientesDeUsuario(usuarioId, await rolDe(usuarioId), { soloConRol: true });
+export async function getProyectosConRol(
+  usuarioId: string,
+  // Con período, incluye los que operaban entonces: el Home muestra el mes
+  // elegido y sus KPIs tienen que cuadrar con lo que se trabajó ese mes.
+  desdeISO?: string,
+): Promise<Cliente[]> {
+  return clientesDeUsuario(usuarioId, await rolDe(usuarioId), {
+    soloConRol: true,
+    ...(desdeISO ? { historicoDesde: desdeISO } : {}),
+  });
 }
 
 // Proyectos en los que un usuario puede CARGAR horas. Recibe el id porque un
 // admin puede estar cargando en nombre de otro y ahí el alcance es el del
 // destino, no el suyo.
+//
+// Solo activos: es un selector de carga, y un cliente inactivo no acepta datos
+// nuevos. Para LEER lo que ya tiene está getProyectosDelPeriodo.
 export async function getProyectosPermitidos(usuarioId: string): Promise<Cliente[]> {
   return clientesDeUsuario(usuarioId, await rolDe(usuarioId));
 }
 
+// Proyectos que operaban en un período, para las pantallas que muestran
+// historia: el listado de Time Tracking y de Expenses, y sus filtros.
+//
+// Incluye los inactivados después de `desdeISO`. Un cliente apagado en agosto
+// sigue siendo parte de julio, y si el filtro no lo ofreciera sus horas de
+// julio quedarían fuera del total del mes.
+export async function getProyectosDelPeriodo(
+  usuarioId: string,
+  desdeISO: string,
+): Promise<Cliente[]> {
+  return clientesDeUsuario(usuarioId, await rolDe(usuarioId), {
+    historicoDesde: desdeISO,
+  });
+}
+
 // Proyectos visibles en los reportes de rentabilidad. El guest no usa esta
 // vista; el reader ve solo los que le asignaron.
-export function getProyectosVisibles(usuario: Usuario): Promise<Cliente[]> {
-  return clientesDeUsuario(usuario.id, usuario.rol);
+//
+// Con período: Analytics es un informe de un mes cerrado, así que tiene que
+// incluir a los clientes que operaron en ese mes aunque hoy estén apagados. Sin
+// esto, inactivar un cliente le borraba la facturación y el margen del pasado.
+export function getProyectosVisibles(
+  usuario: Usuario,
+  desdeISO?: string,
+): Promise<Cliente[]> {
+  return clientesDeUsuario(
+    usuario.id,
+    usuario.rol,
+    desdeISO ? { historicoDesde: desdeISO } : {},
+  );
 }
 
 // Acceso a un proyecto puntual (activo o inactivo). Devuelve null si el

@@ -31,7 +31,13 @@ export async function calcularReporte(
   const desde = new Date(Date.UTC(anio, mes - 1, 1));
   const hasta = new Date(Date.UTC(anio, mes, 1)); // exclusivo
 
-  const proyectos = await getProyectosVisibles(usuario);
+  // Con el inicio del mes: un cliente inactivado despues sigue siendo parte de
+  // este informe. Sin eso, apagarlo le borraba la facturacion y el margen de
+  // todos los meses en que si opero.
+  const proyectos = await getProyectosVisibles(
+    usuario,
+    desde.toISOString().slice(0, 10),
+  );
   const proyectoIds = proyectos.map((p) => p.id);
   const nombrePorProyecto = new Map(proyectos.map((p) => [p.id, p.nombre]));
 

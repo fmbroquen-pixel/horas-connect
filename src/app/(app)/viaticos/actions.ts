@@ -63,6 +63,19 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
 
   const permitidos = await getProyectosPermitidos(usuarioId);
   if (!permitidos.some((c) => c.id === parsed.data.clienteId)) {
+    // Un cliente inactivo tampoco esta en `permitidos`, pero por otro motivo:
+    // decirle "no lo tenes asignado" a alguien que lo tiene asignado y lo ve en
+    // la tabla del mes pasado manda a buscar el problema al lugar equivocado.
+    const inactivo = await prisma.cliente.findFirst({
+      where: { id: parsed.data.clienteId, activo: false },
+      select: { nombre: true },
+    });
+    if (inactivo) {
+      return {
+        error: `"${inactivo.nombre}" está inactivo: no admite registros nuevos.`,
+        campo: "clienteId" as const,
+      };
+    }
     return { error: "No tenés asignado ese cliente.", campo: "clienteId" as const };
   }
 

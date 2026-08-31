@@ -55,6 +55,15 @@ model Cliente {
   nombre    String   @unique
   activo    Boolean  @default(true)
 
+  // Desde cuándo dejó de operar. Inactivar no es borrar: el cliente deja de
+  // aceptar carga nueva a partir de esta fecha, pero todo lo anterior sigue
+  // existiendo y visible -horas, viáticos, rentabilidad, asignaciones-.
+  //
+  // Nullable: null es "nunca se inactivó". Los clientes ya inactivos al
+  // momento de agregar el campo también quedan en null, así que sus datos
+  // históricos siguen a la vista sin fecha de corte que los excluya.
+  inactivadoEn DateTime? @map("inactivado_en")
+
   // Datos del servicio contratado. Opcionales para que los clientes ya
   // cargados sigan siendo válidos; la fecha de finalización no se guarda:
   // se calcula siempre como fechaInicio + duracionMeses.

@@ -50,7 +50,9 @@ export default async function DashboardPage({
   // que se apaga y ni siquiera se consulta la base.
   const mesEnCurso = esMesActual({ anio, mes });
 
-  const proyectos = await getProyectosConRol(usuario.id);
+  // Con el inicio del mes: los KPIs del Home tienen que cuadrar con lo que se
+  // trabajo ese mes, incluidos los clientes que se apagaron despues.
+  const proyectos = await getProyectosConRol(usuario.id, desde);
   const idsAccesibles = proyectos.map((p) => p.id);
 
   // Sin parámetro se muestran todos los accesibles; con parámetro, solo los

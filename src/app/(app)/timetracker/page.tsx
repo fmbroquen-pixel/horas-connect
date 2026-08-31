@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
+import { getProyectosDelPeriodo } from "@/lib/proyectos";
 import {
   getUsuariosQueReportan,
   resolverUsuarioDestino,
@@ -53,7 +54,12 @@ export default async function TimetrackerPage({
   // Todo el contexto de la pantalla (clientes, tarifa e historial) es el del
   // usuario destino: si el admin carga para otro, ve exactamente lo que ese
   // mentor vería.
-  const proyectos = await getProyectosPermitidos(destino.id);
+  // Dos alcances distintos y a proposito. `proyectos` es historia: alimenta el
+  // filtro y la tabla del mes que se esta mirando, asi que incluye a los
+  // clientes que operaban entonces aunque hoy esten inactivos. `paraCargar` es
+  // el selector de la barra de captura, donde un inactivo no tiene que estar.
+  const proyectos = await getProyectosDelPeriodo(destino.id, desde);
+  const paraCargar = await getProyectosPermitidos(destino.id);
   // Sin parámetro se muestran todos los permitidos; con parámetro, solo los
   // pedidos que además lo sean (un id ajeno en la URL no abre nada).
   const idsPermitidos = proyectos.map((p) => p.id);
@@ -136,7 +142,10 @@ export default async function TimetrackerPage({
   const sinProyectos = proyectos.length === 0;
   const esOtroUsuario = destino.id !== actor.id;
 
+  // El filtro y la tabla muestran el periodo; la barra de captura, solo donde
+  // se puede cargar hoy.
   const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
+  const opcionesCarga = paraCargar.map((p) => ({ id: p.id, nombre: p.nombre }));
 
   return (
     // El provider envuelve a los dos lados: el selector de mes dispara la
@@ -209,7 +218,7 @@ export default async function TimetrackerPage({
               quedan cargados el cliente ni la etapa del anterior. */}
           <BarraCaptura
             key={destino.id}
-            proyectos={opcionesProyecto}
+            proyectos={opcionesCarga}
             conceptos={conceptos}
             tarifas={tarifas}
             usuarioId={esOtroUsuario ? destino.id : ""}

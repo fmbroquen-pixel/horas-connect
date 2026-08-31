@@ -9,7 +9,17 @@
 // Acá no hay ningún acceso a datos: entra lo que la base ya devolvió y sale la
 // decisión.
 
-export type ClienteVisible = { id: string; nombre: string; activo: boolean };
+import { apareceEnPeriodo } from "@/lib/vigencia-cliente";
+
+export type ClienteVisible = {
+  id: string;
+  nombre: string;
+  activo: boolean;
+  // Desde cuándo dejó de operar. Solo hace falta para las lecturas históricas,
+  // así que es opcional: las pantallas que no preguntan por un período no
+  // necesitan traerlo.
+  inactivadoEn?: Date | null;
+};
 
 export type Asignacion<C extends ClienteVisible> = {
   cliente: C;
@@ -25,6 +35,14 @@ export type AlcanceClientes = {
   // ahí la pregunta no es "dónde puedo cargar horas" sino "de qué proyectos
   // soy responsable".
   soloConRol?: boolean;
+  // Lectura histórica de un período que arranca en esta fecha (ISO). Cambia la
+  // pregunta: en vez de "quién está activo" es "quién operaba en ese período",
+  // así que además de los activos entran los inactivados después.
+  //
+  // Sin esto, apagar un cliente le borraba de la vista sus horas, sus viáticos
+  // y su rentabilidad de meses anteriores: los datos seguían en la base y
+  // ninguna pantalla los alcanzaba.
+  historicoDesde?: string;
 };
 
 // Qué clientes ve un usuario.
@@ -40,7 +58,7 @@ export function clientesVisibles<C extends ClienteVisible>(
   rol: string,
   todos: C[],
   asignaciones: Asignacion<C>[],
-  { activo = true, soloConRol = false }: AlcanceClientes = {},
+  { activo = true, soloConRol = false, historicoDesde }: AlcanceClientes = {},
 ): C[] {
   const propios =
     rol === "admin"
@@ -50,7 +68,14 @@ export function clientesVisibles<C extends ClienteVisible>(
           .map((a) => a.cliente);
 
   return propios
-    .filter((c) => c.activo === activo)
+    .filter((c) =>
+      historicoDesde
+        ? apareceEnPeriodo(
+            { activo: c.activo, inactivadoEn: c.inactivadoEn ?? null },
+            historicoDesde,
+          )
+        : c.activo === activo,
+    )
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 

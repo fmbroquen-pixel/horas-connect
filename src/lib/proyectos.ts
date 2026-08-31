@@ -1,3 +1,6 @@
 // El alcance de proyectos vive en un solo lado: lib/proyecto-acceso. Este
 // módulo queda como el nombre que usa Analytics para pedirlo.
-export { getProyectosVisibles } from "@/lib/proyecto-acceso";
+export {
+  getProyectosVisibles,
+  getProyectosDelPeriodo,
+} from "@/lib/proyecto-acceso";

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
+import { getProyectosDelPeriodo } from "@/lib/proyectos";
 import { getUsuariosQueReportan, resolverUsuarioDestino } from "@/lib/registrar-para";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { fechaDesdeISO } from "@/lib/dias-habiles";
@@ -56,7 +57,10 @@ export default async function ViaticosPage({
 
   // Todo el contexto de la pantalla es el del usuario destino: si el admin
   // carga para otro, ve exactamente lo que esa persona vería.
-  const proyectos = await getProyectosPermitidos(destino.id);
+  // Igual que Time Tracking: `proyectos` es el alcance historico -filtro y
+  // tabla del mes- y `paraCargar` el del selector de alta.
+  const proyectos = await getProyectosDelPeriodo(destino.id, desde);
+  const paraCargar = await getProyectosPermitidos(destino.id);
   // Sin parámetro se muestran todos los permitidos; con parámetro, solo los
   // pedidos que además lo sean (un id ajeno en la URL no abre nada).
   const idsPermitidos = proyectos.map((p) => p.id);
@@ -109,6 +113,7 @@ export default async function ViaticosPage({
   );
 
   const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
+  const opcionesCarga = paraCargar.map((p) => ({ id: p.id, nombre: p.nombre }));
   const esOtroUsuario = destino.id !== actor.id;
   // Sin proyectos asignados no hay nada contra qué cargar: se avisa y se
   // esconde la barra, en vez de dejar un desplegable de clientes vacío que
@@ -177,7 +182,7 @@ export default async function ViaticosPage({
               queda cargado el cliente del anterior. */}
           <BarraCapturaViatico
             key={destino.id}
-            proyectos={opcionesProyecto}
+            proyectos={opcionesCarga}
             usuarioId={esOtroUsuario ? destino.id : ""}
           />
         </div>

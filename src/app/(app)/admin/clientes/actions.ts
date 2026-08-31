@@ -155,7 +155,15 @@ export async function alternarActivoCliente(
   activo: boolean,
 ): Promise<ResultadoEstado> {
   await requireAdmin();
-  await prisma.cliente.update({ where: { id }, data: { activo } });
+  // Se guarda DESDE CUANDO dejo de operar, no solo que esta apagado. Es lo que
+  // permite despues distinguir "no aparece en el selector de carga" de "no
+  // existio nunca": las consultas de un periodo anterior lo siguen incluyendo.
+  //
+  // Al reactivar la fecha se limpia: vuelve a operar sin corte.
+  await prisma.cliente.update({
+    where: { id },
+    data: { activo, inactivadoEn: activo ? null : new Date() },
+  });
   revalidatePath("/admin/clientes");
   revalidatePath(`/admin/clientes/${id}`);
   // Proyectos (Activos/Inactivos) y el widget de Home filtran clientes por activo.
