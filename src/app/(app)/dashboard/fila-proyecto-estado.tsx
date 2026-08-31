@@ -23,12 +23,18 @@ export function FilaProyectoEstado({
   semaforo: semaforoInicial,
   etapaId: etapaIdInicial,
   etapas,
+  activo,
 }: {
   id: string;
   nombre: string;
   semaforo: string;
   etapaId: string;
   etapas: OpcionTag[];
+  // Un proyecto inactivo sigue apareciendo acá cuando se mira un mes en el que
+  // operaba —para eso se guarda la fecha de inactivación—, pero se mira, no se
+  // toca: cambiarle el semáforo o la etapa escribe una fila nueva sobre un
+  // cliente que dejó de operar.
+  activo: boolean;
 }) {
   const [guardando, start] = useTransition();
   const [semaforo, setSemaforo] = useState(semaforoInicial);
@@ -116,6 +122,8 @@ export function FilaProyectoEstado({
           ariaLabel={`Semáforo de ${nombre}`}
           anchoMenu="w-44"
           soloPunto
+          soloLectura={!activo}
+          motivoSoloLectura={`${nombre} está inactivo: no admite cambios`}
         />
       </div>
       {/* Columna 3/3: etapa centrada con ancho de tag acotado. */}
@@ -128,6 +136,8 @@ export function FilaProyectoEstado({
             onElegir={elegirEtapa}
             ariaLabel={`Etapa de ${nombre}`}
             anchoMenu="w-56"
+            soloLectura={!activo}
+            motivoSoloLectura={`${nombre} está inactivo: no admite cambios`}
           />
         </div>
       </div>

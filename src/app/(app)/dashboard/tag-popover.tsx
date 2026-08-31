@@ -25,6 +25,8 @@ export function TagPopover({
   ariaLabel,
   anchoMenu = "w-48",
   soloPunto = false,
+  soloLectura = false,
+  motivoSoloLectura,
 }: {
   valor: string;
   opciones: OpcionTag[];
@@ -37,6 +39,13 @@ export function TagPopover({
   // punto verde es ruido en una columna que se escanea de arriba abajo. El
   // nombre sigue estando en el tooltip y en el aria-label.
   soloPunto?: boolean;
+  // Se muestra pero no se puede cambiar. Lo usa el Home con los proyectos
+  // inactivos: siguen apareciendo en el mes en que operaban, pero elegir otro
+  // valor escribiria una fila nueva sobre un cliente que dejo de operar.
+  soloLectura?: boolean;
+  // Por que no se puede tocar. Sin esto, un control que no responde se lee
+  // como algo roto.
+  motivoSoloLectura?: string;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -72,20 +81,30 @@ export function TagPopover({
       <button
         ref={triggerRef}
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
+        onClick={() => {
+          if (soloLectura) return;
+          setOpen((o) => !o);
+        }}
+        disabled={soloLectura}
+        aria-haspopup={soloLectura ? undefined : "listbox"}
+        aria-expanded={soloLectura ? undefined : open}
         // El estado entra en el nombre accesible: sin la etiqueta a la vista,
         // es lo único que lo dice para quien no ve el color.
         aria-label={`${ariaLabel}: ${etiqueta}`}
-        data-tooltip={soloPunto ? etiqueta : undefined}
+        data-tooltip={
+          soloLectura ? motivoSoloLectura : soloPunto ? etiqueta : undefined
+        }
         className={
           soloPunto
-            ? "inline-flex h-7 w-7 items-center justify-center rounded-full outline-none transition hover:bg-dc-line/60 focus-visible:ring-2 focus-visible:ring-dc-peri"
+            ? `inline-flex h-7 w-7 items-center justify-center rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
+                soloLectura ? "cursor-not-allowed opacity-50" : "hover:bg-dc-line/60"
+              }`
             : `inline-flex w-full items-center justify-center gap-1.5 truncate rounded-full px-2.5 py-1 text-xs outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
-                seleccionada
-                  ? "bg-dc-peri/15 text-dc-peri hover:bg-dc-peri/25"
-                  : "bg-dc-line text-dc-muted hover:bg-dc-line/70"
+                soloLectura
+                  ? "cursor-not-allowed bg-dc-line/60 text-dc-muted opacity-60"
+                  : seleccionada
+                    ? "bg-dc-peri/15 text-dc-peri hover:bg-dc-peri/25"
+                    : "bg-dc-line text-dc-muted hover:bg-dc-line/70"
               }`
         }
       >

@@ -63,9 +63,22 @@ function revalidar() {
   revalidatePath("/dashboard");
 }
 
+// Un proyecto inactivo no acepta escrituras. El chequeo va acá y no en cada
+// accion porque TODO lo que se escribe de un proyecto pasa por esta puerta
+// -semaforo, etapa, tablero, listas, tareas-, y ponerlo en cada una seria
+// diez lugares donde olvidarse en la proxima.
+//
+// Un semaforo o una etapa no se sienten "carga de datos" como una hora, pero
+// son exactamente eso: filas nuevas, con fecha y autor, sobre un cliente que
+// dejo de operar.
 async function requireAcceso(clienteId: string) {
   const acceso = await getAccesoProyecto(clienteId);
   if (!acceso) throw new Error("No autorizado.");
+  if (!acceso.cliente.activo) {
+    throw new Error(
+      `"${acceso.cliente.nombre}" está inactivo: no admite cambios.`,
+    );
+  }
   return acceso;
 }
 

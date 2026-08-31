@@ -57,6 +57,7 @@ export async function EstadoProyectos({ clienteIds }: { clienteIds: string[] }) 
                 key={c.id}
                 id={c.id}
                 nombre={c.nombre}
+                activo={c.activo}
                 semaforo={semaforoPorCliente.get(c.id) ?? ""}
                 etapaId={etapas[c.id]?.actual?.id ?? ""}
                 etapas={(etapas[c.id]?.opciones ?? []).map((t) => ({
