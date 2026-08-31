@@ -310,6 +310,18 @@ export async function editarRegistros(
     for (const duenoId of duenos) {
       const permitidos = await getProyectosPermitidos(duenoId);
       if (!permitidos.some((c) => c.id === valor)) {
+        // Mismo motivo que en el alta: un inactivo tampoco esta en
+        // `permitidos`, y decir "no lo tenes asignado" manda a buscar el
+        // problema donde no esta.
+        const inactivo = await prisma.cliente.findFirst({
+          where: { id: valor, activo: false },
+          select: { nombre: true },
+        });
+        if (inactivo) {
+          return {
+            error: `"${inactivo.nombre}" está inactivo: no admite registros nuevos.`,
+          };
+        }
         return {
           error:
             duenoId === usuario.id

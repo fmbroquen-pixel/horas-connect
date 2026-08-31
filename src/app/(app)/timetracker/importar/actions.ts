@@ -139,6 +139,17 @@ async function procesar(usuarioId: string, archivo: File) {
   const idx = (col: string) => headersNorm.indexOf(col);
 
   const proyectos = await getProyectosPermitidos(usuarioId);
+  // Los inactivos, aparte: no se pueden importar, pero la fila tiene que decir
+  // por que. "Cliente inexistente o no asignado" manda a revisar la ortografia
+  // del nombre cuando el nombre estaba bien.
+  const inactivos = new Map(
+    (
+      await prisma.cliente.findMany({
+        where: { activo: false },
+        select: { nombre: true },
+      })
+    ).map((c) => [normalizar(c.nombre), c.nombre]),
+  );
   // Todas las tarifas, no solo las vigentes: una importación trae historia y
   // cada fila tiene que valuarse con la tarifa que regía EN SU FECHA. Con solo
   // las vigentes, importar seis meses aplicaba la tarifa de hoy a todo.
@@ -219,7 +230,14 @@ async function procesar(usuarioId: string, archivo: File) {
 
     const proy = proyPorNombre.get(normalizar(proyecto));
     if (!proyecto) errores.push("Falta el cliente");
-    else if (!proy) errores.push("Cliente inexistente o no asignado");
+    else if (!proy) {
+      const inactivo = inactivos.get(normalizar(proyecto));
+      errores.push(
+        inactivo
+          ? `"${inactivo}" está inactivo: no admite registros nuevos`
+          : "Cliente inexistente o no asignado",
+      );
+    }
 
     const conceptoId = conceptoPorNombre.get(normalizar(conceptoTexto));
     if (!conceptoTexto) errores.push("Falta el concepto");
