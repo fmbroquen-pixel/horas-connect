@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { TabIcono } from "./tabs-nav";
+import { prefijoDeProyectoInactivo } from "@/lib/nav-proyecto";
 
 // match: prefijo extra que también marca el ítem como activo (p. ej. Settings
 // del admin apunta a /admin/usuarios pero cubre todo /admin).
@@ -190,14 +191,42 @@ function CategoriaNav({
 // el resto, como link simple.
 function NavItems({
   items,
+  idsInactivos,
   onNavigate,
 }: {
   items: ItemSidebar[];
+  // Qué proyectos están apagados, para poder resolver bajo qué subpestaña cae
+  // el que se está mirando.
+  idsInactivos: string[];
   onNavigate?: () => void;
 }) {
+  // Se decide acá y no en el servidor porque el layout de la app NO se vuelve a
+  // renderizar al navegar entre rutas que lo comparten: ir de Home CORE a un
+  // proyecto reusa su salida, así que un cálculo hecho en el servidor se
+  // quedaba con el de la pantalla anterior hasta que alguien refrescara.
+  //
+  // La ruta sí cambia en el cliente, y con la lista de apagados alcanza para
+  // resolverlo en el acto. La lista viene del servidor y ya está acotada a lo
+  // que el usuario puede ver.
+  const pathname = usePathname();
+  const prefijo = prefijoDeProyectoInactivo(pathname, idsInactivos);
+
+  const conSeccion = prefijo
+    ? items.map((item) =>
+        item.children
+          ? {
+              ...item,
+              children: item.children.map((c) =>
+                c.href === "/proyectos/inactivos" ? { ...c, match: prefijo } : c,
+              ),
+            }
+          : item,
+      )
+    : items;
+
   return (
     <ul className="space-y-0.5">
-      {items.map((t) => (
+      {conSeccion.map((t) => (
         <li key={t.href}>
           {t.children?.length ? (
             <CategoriaNav item={t} onNavigate={onNavigate} />
@@ -216,11 +245,13 @@ function NavItems({
 // y Settings anclado al fondo, separado por aire y una línea sutil.
 export function SidebarDesktop({
   items,
+  idsInactivos,
   settingsItem,
   marca,
   perfil,
 }: {
   items: ItemSidebar[];
+  idsInactivos: string[];
   settingsItem?: ItemSidebar;
   marca: React.ReactNode;
   // Bloque de usuario (avatar, nombre, rol y Salir) anclado al pie.
@@ -234,7 +265,7 @@ export function SidebarDesktop({
         aria-label="Navegación principal"
         className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 pt-2"
       >
-        <NavItems items={items} />
+        <NavItems items={items} idsInactivos={idsInactivos} />
         {settingsItem && (
           <div className="mt-1">
             <CategoriaNav item={settingsItem} />
@@ -250,11 +281,13 @@ export function SidebarDesktop({
 // o tocando el fondo oscurecido.
 export function SidebarMobile({
   items,
+  idsInactivos,
   settingsItem,
   marca,
   perfil,
 }: {
   items: ItemSidebar[];
+  idsInactivos: string[];
   settingsItem?: ItemSidebar;
   marca: React.ReactNode;
   perfil: React.ReactNode;
@@ -326,7 +359,11 @@ export function SidebarMobile({
               </button>
             </div>
             <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
-              <NavItems items={items} onNavigate={() => setOpen(false)} />
+              <NavItems
+                items={items}
+                idsInactivos={idsInactivos}
+                onNavigate={() => setOpen(false)}
+              />
               {settingsItem && (
                 <div className="mt-1">
                   <CategoriaNav item={settingsItem} onNavigate={() => setOpen(false)} />

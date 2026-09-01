@@ -169,6 +169,11 @@ export async function alternarActivoCliente(
   // Proyectos (Activos/Inactivos) y el widget de Home filtran clientes por activo.
   revalidatePath("/proyectos", "layout");
   revalidatePath("/dashboard");
+  // Y el layout de la app, que es donde vive la sidebar: ahí se arma la lista
+  // de proyectos apagados con la que decide bajo qué subpestaña cae cada uno.
+  // Sin esto, apagar un proyecto y entrar a verlo en la misma sesión lo seguía
+  // mostrando bajo Activos hasta refrescar.
+  revalidatePath("/", "layout");
   return { ok: true };
 }
 
