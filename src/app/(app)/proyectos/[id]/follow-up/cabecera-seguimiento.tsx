@@ -90,9 +90,14 @@ export function CabeceraSeguimiento({
                 onClick={() => elegirSemaforo(o.value)}
                 disabled={pendiente || soloLectura}
                 aria-pressed={activo}
+                // Con el proyecto apagado, solo el motivo. El color adelante
+                // -"Verde · Proyecto inactivo"- se leia como si dijera algo del
+                // estado del semaforo, cuando lo unico que hay para decir es
+                // que no se puede cambiar. La etiqueta ya esta escrita en el
+                // boton, al lado del punto de color.
                 data-tooltip={
                   soloLectura
-                    ? `${o.label} · ${MOTIVO_INACTIVO}`
+                    ? MOTIVO_INACTIVO
                     : `${o.label} · ${detalleUltimoCambio}`
                 }
                 className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition ${
