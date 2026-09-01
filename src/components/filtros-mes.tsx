@@ -11,6 +11,10 @@ import { IconoProyecto } from "@/components/ui/icono-proyecto";
 
 export type { OpcionFiltro };
 
+// Cuánto tarda el indicador en irse. Corto a propósito: es el acuse de recibo
+// del clic, no una animación para mirar.
+const MS_SALIDA = 150;
+
 // El filtro de las tres pantallas de carga: Home CORE, Time Tracking y
 // Expenses.
 //
@@ -58,10 +62,24 @@ export function FiltrosMes({
 
   const [abierto, setAbierto] = useState(false);
   const [sel, setSel] = useState<Set<string>>(new Set(seleccionados));
-  // El indicador se desvanece apenas se lo toca, sin esperar a que vuelva el
-  // servidor. Desaparecer de golpe al llegar los datos nuevos se leía como un
-  // parpadeo; con el fade, el gesto y su efecto son una sola cosa.
+  // El indicador se va apenas se lo toca, sin esperar a que vuelva el servidor.
+  // Son dos etapas: `saliendo` lo desvanece y colapsa su ancho, y `oculto` lo
+  // desmonta cuando terminó. La segunda hace falta porque la primera no libera
+  // el lugar: con opacity el hueco quedaba abierto hasta que llegaban los datos
+  // nuevos, que es justo lo que se venía a sacar.
+  //
+  // El desmontaje va por setTimeout y no por transitionend ni por
+  // requestAnimationFrame: en una pestaña de fondo esos dos no corren, y el
+  // indicador quedaría invisible pero ocupando lugar hasta que alguien mire.
+  //
+  // El ancho no se anima. Se probaron las dos formas de hacerlo -una grilla de
+  // 1fr a 0fr y un max-width que se cierra- y ninguna colapsa: como el
+  // indicador es un item de un flex, su ancho lo sigue midiendo el contenido.
+  // Medido en el navegador, a los 60ms de tocarlo la barra seguía igual de
+  // ancha en las dos. El desmontaje sí libera el lugar, y con el fade delante
+  // el salto queda tapado.
   const [saliendo, setSaliendo] = useState(false);
+  const [oculto, setOculto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const url = (m: { anio: number; mes: number }, ids: Set<string>) =>
@@ -85,6 +103,10 @@ export function FiltrosMes({
   // filtro recién limpiado volviera solo.
   const limpiar = () => {
     setSaliendo(true);
+    setTimeout(() => setOculto(true), MS_SALIDA);
+    // La navegación sale en el mismo gesto, no después de la animación: el
+    // header se reacomoda mientras los datos viajan, y cada bloque muestra su
+    // propio spinner por su cuenta.
     setSel(new Set());
     aplicar(new Set());
   };
@@ -119,6 +141,7 @@ export function FiltrosMes({
   if (seleccionados.join() !== filtroPrevio) {
     setFiltroPrevio(seleccionados.join());
     setSaliendo(false);
+    setOculto(false);
   }
 
   const prev = mesAnterior({ anio, mes });
@@ -167,14 +190,14 @@ export function FiltrosMes({
           iconografía lo convertía en un botón de cerrar y le quitaba lo que
           venía a decir. La acción sí se anuncia por aria-label, que es donde un
           lector de pantalla la necesita. */}
-      {filtrando && (
+      {filtrando && !oculto && (
         <button
           type="button"
           onClick={limpiar}
           disabled={pendiente}
           data-tooltip={`${seleccionados.length} de ${opciones.length} proyectos`}
           aria-label={`Filtrando ${seleccionados.length} de ${opciones.length} proyectos. Quitar el filtro.`}
-          className={`flex items-center gap-1 rounded-full bg-dc-peri/15 px-2 py-1 text-xs tabular-nums text-dc-peri transition duration-150 hover:bg-dc-peri/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 ${
+          className={`flex items-center gap-1 whitespace-nowrap rounded-full bg-dc-peri/15 px-2 py-1 text-xs tabular-nums text-dc-peri transition duration-150 hover:bg-dc-peri/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 ${
             saliendo
               ? "pointer-events-none scale-90 opacity-0"
               : "opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
