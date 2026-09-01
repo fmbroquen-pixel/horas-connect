@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { POPOVER_FLOTANTE, usePopoverFlotante } from "@/components/ui/popover-flotante";
+import { hoyISO } from "@/lib/zona-horaria";
 import {
   DIAS_SEMANA,
   MESES,
@@ -58,7 +59,9 @@ export function RangoFechas({
   // el rango. Null = todavía no se tocó nada en esta apertura.
   const [parcial, setParcial] = useState<string | null>(null);
   const [hover, setHover] = useState<string | null>(null);
-  const [cursor, setCursor] = useState<Date>(() => fromISO(rango.inicio) ?? new Date());
+  const [cursor, setCursor] = useState<Date>(
+    () => fromISO(rango.inicio) ?? fromISO(hoyISO())!,
+  );
 
   const anclaInicio = useRef<HTMLSpanElement>(null);
   const anclaFin = useRef<HTMLSpanElement>(null);
@@ -83,7 +86,9 @@ export function RangoFechas({
     setDesdeColumna(columna);
     setParcial(null);
     setHover(null);
-    setCursor(fromISO(local[columna === "inicio" ? "inicio" : "fin"]) ?? new Date());
+    setCursor(
+      fromISO(local[columna === "inicio" ? "inicio" : "fin"]) ?? fromISO(hoyISO())!,
+    );
     setAbierto(true);
   };
 

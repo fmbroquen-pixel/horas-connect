@@ -1,15 +1,11 @@
-import { hoyISO } from "@/lib/formato";
+import { hoyISO, mesActual } from "@/lib/zona-horaria";
+
+export { mesActual };
 
 export const MESES_LARGOS = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
-
-// Mes en curso, según el reloj de quien mira.
-export function mesActual(): { anio: number; mes: number } {
-  const [a, m] = hoyISO().split("-").map(Number);
-  return { anio: a, mes: m };
-}
 
 // Valida lo que viene por la URL y cae al mes actual si no sirve. También
 // recorta el futuro: no hay datos por delante de hoy y ofrecerlos solo lleva a

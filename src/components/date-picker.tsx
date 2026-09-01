@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { hoyISO } from "@/lib/zona-horaria";
 import {
   ATRIBUTO_POPOVER,
   POPOVER_FLOTANTE,
@@ -66,7 +67,9 @@ export function DatePicker({
   // con scroll, en el flujo normal quedaría recortado por el overflow del
   // contenedor.
   const popRef = useRef<HTMLDivElement>(null);
-  const [cursor, setCursor] = useState<Date>(() => fromISO(value) ?? new Date());
+  const [cursor, setCursor] = useState<Date>(
+    () => fromISO(value) ?? fromISO(hoyISO())!,
+  );
   const ref = useRef<HTMLDivElement>(null);
 
   usePopoverFlotante(open, ref, popRef);
@@ -108,7 +111,7 @@ export function DatePicker({
     // cercano si hoy mismo cae fuera del rango habilitado.
     let inicial = fromISO(value);
     if (!inicial) {
-      inicial = new Date();
+      inicial = fromISO(hoyISO())!;
       if (maxDate && inicial > maxDate) inicial = maxDate;
       if (minDate && inicial < minDate) inicial = minDate;
     }

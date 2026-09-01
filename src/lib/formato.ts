@@ -1,3 +1,5 @@
+import { hoyISO } from "@/lib/zona-horaria";
+
 // Formato contable/monetario para mostrar montos (es-AR: 1.234,56).
 const formateadorUsd = new Intl.NumberFormat("es-AR", {
   minimumFractionDigits: 2,
@@ -15,13 +17,11 @@ export function formatFecha(fecha: Date): string {
   return fecha.toLocaleDateString("es-AR", { timeZone: "UTC" });
 }
 
-// Fecha local de hoy en formato YYYY-MM-DD (para inputs type="date" y
-// comparaciones de "no se pueden cargar horas futuras").
-export function hoyISO(): string {
-  const ahora = new Date();
-  const local = new Date(ahora.getTime() - ahora.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
+// Se reexporta para no romper los veinte lugares que ya la importan de acá,
+// pero el cálculo vive en lib/zona-horaria: usaba el reloj de quien ejecutaba
+// —el navegador en el cliente, UTC en el servidor de Vercel— y esas dos
+// respuestas no son la misma después de las 21:00 en Argentina.
+export { hoyISO };
 
 export function esISO(v?: string): boolean {
   return Boolean(v && /^\d{4}-\d{2}-\d{2}$/.test(v));
@@ -33,23 +33,21 @@ export function restarDiasISO(iso: string, dias: number): string {
   return fecha.toISOString().slice(0, 10);
 }
 
-// Los 7 días (Lunes a Domingo) de la semana actual, según la fecha local del
-// sistema. Mismo criterio Lunes=0…Domingo=6 que usa el DatePicker.
-export function semanaActualISO(): string[] {
-  const hoy = hoyISO();
+// Los 7 días (Lunes a Domingo) de la semana actual. Mismo criterio
+// Lunes=0…Domingo=6 que usa el DatePicker.
+//
+// La aritmética va entera en UTC: sobre fechas locales, el día de la semana lo
+// decidía el huso del proceso.
+export function semanaActualISO(hoy: string = hoyISO()): string[] {
   const [a, m, d] = hoy.split("-").map(Number);
-  const fecha = new Date(a, m - 1, d);
-  const offsetLunes = (fecha.getDay() + 6) % 7;
-  const lunes = new Date(fecha);
-  lunes.setDate(fecha.getDate() - offsetLunes);
+  const fecha = new Date(Date.UTC(a, m - 1, d));
+  const offsetLunes = (fecha.getUTCDay() + 6) % 7;
+  fecha.setUTCDate(fecha.getUTCDate() - offsetLunes);
 
   const dias: string[] = [];
   for (let i = 0; i < 7; i++) {
-    const d2 = new Date(lunes);
-    d2.setDate(lunes.getDate() + i);
-    const mm = String(d2.getMonth() + 1).padStart(2, "0");
-    const dd = String(d2.getDate()).padStart(2, "0");
-    dias.push(`${d2.getFullYear()}-${mm}-${dd}`);
+    dias.push(fecha.toISOString().slice(0, 10));
+    fecha.setUTCDate(fecha.getUTCDate() + 1);
   }
   return dias;
 }

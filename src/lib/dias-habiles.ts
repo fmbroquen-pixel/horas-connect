@@ -52,10 +52,7 @@ export function isoDesdeFecha(fecha: Date): string {
   return fecha.toISOString().slice(0, 10);
 }
 
-// Hoy a medianoche UTC, para comparar contra columnas @db.Date.
-export function hoyUTC(): Date {
-  const ahora = new Date();
-  return new Date(
-    Date.UTC(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()),
-  );
-}
+// Se reexporta por comodidad —quien hace cuentas de días hábiles suele
+// necesitar hoy— pero el cálculo está en lib/zona-horaria. Acá tomaba el día
+// del reloj del proceso, que en Vercel es UTC y adelantaba la fecha.
+export { hoyUTC } from "@/lib/zona-horaria";

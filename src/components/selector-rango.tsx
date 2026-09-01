@@ -8,6 +8,7 @@ import {
   usePopoverFlotante,
 } from "@/components/ui/popover-flotante";
 import { DIAS_SEMANA, MESES, fmtDisplay, fromISO, offsetLunes, toISO } from "@/lib/fecha-iso";
+import { hoyISO } from "@/lib/zona-horaria";
 
 // Un rango de fechas se elige en UN calendario, no en dos.
 //
@@ -49,7 +50,7 @@ export function SelectorRango({
   const [hover, setHover] = useState<string | null>(null);
   const [arrastrando, setArrastrando] = useState(false);
   const [cursor, setCursor] = useState<Date>(
-    () => fromISO(desde) ?? fromISO(hasta) ?? new Date(),
+    () => fromISO(desde) ?? fromISO(hasta) ?? fromISO(hoyISO())!,
   );
 
   const anclaRef = useRef<HTMLButtonElement>(null);
@@ -102,7 +103,7 @@ export function SelectorRango({
 
   const abrir = () => {
     // Al abrir se ve el rango aplicado y el mes de su inicio.
-    setCursor(fromISO(desde) ?? fromISO(hasta) ?? new Date());
+    setCursor(fromISO(desde) ?? fromISO(hasta) ?? fromISO(hoyISO())!);
     setParcial(null);
     setHover(null);
     setAbierto(true);
