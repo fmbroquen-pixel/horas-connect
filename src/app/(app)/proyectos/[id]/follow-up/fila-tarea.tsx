@@ -29,6 +29,7 @@ import { claseResaltado, useResaltado } from "./resaltado";
 import { TagEstado } from "@/components/ui/tag-estado";
 import { BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 import { SelectorPersonas } from "./selector-personas";
+import { useSoloLectura } from "./solo-lectura";
 
 // El contenedor con scroll más cercano hacia arriba. El plan vive dentro del
 // scroll del tablero, no del de la ventana.
@@ -104,6 +105,7 @@ export function FilaTareaRoadmap({
   // operando. Solo puede haber una marcada a la vez porque solo puede haber
   // un calendario abierto: abrir otro cierra el anterior.
   const [editandoFechas, setEditandoFechas] = useState(false);
+  const soloLectura = useSoloLectura();
 
   // Realce temporal cuando esta tarea acaba de ser reprogramada: fuerte si es
   // la que se movió, tenue si cambió por dependencia.
@@ -199,13 +201,15 @@ export function FilaTareaRoadmap({
           data-tooltip={agarre ? "Arrastrá para reordenar la tarea" : undefined}
           className={`flex items-center ${agarre ? "cursor-grab active:cursor-grabbing" : ""}`}
         >
-          <input
-            type="checkbox"
-            checked={seleccionada}
-            onChange={() => onToggle(tarea.id)}
-            className="h-4 w-4 accent-dc-purple"
-            aria-label={`Seleccionar ${tarea.nombre}`}
-          />
+          {!soloLectura && (
+            <input
+              type="checkbox"
+              checked={seleccionada}
+              onChange={() => onToggle(tarea.id)}
+              className="h-4 w-4 accent-dc-purple"
+              aria-label={`Seleccionar ${tarea.nombre}`}
+            />
+          )}
         </span>
 
         {/* Columna de texto largo: alineada a la izquierda, como el header.
@@ -218,9 +222,14 @@ export function FilaTareaRoadmap({
               onGuardar={guardar("nombre")}
               ariaLabel="Nombre de la tarea"
               alinear="izquierda"
+              editable={!soloLectura}
             />
           </span>
-          <SelectorPersonas tareaId={tarea.id} personas={tarea.personas} />
+          <SelectorPersonas
+            tareaId={tarea.id}
+            personas={tarea.personas}
+            soloLectura={soloLectura}
+          />
         </span>
 
         <RangoFechas
@@ -229,12 +238,14 @@ export function FilaTareaRoadmap({
           mostrar={mostrarFechaISO}
           onAbiertoChange={setEditandoFechas}
           resaltado={resaltado}
+          editable={!soloLectura}
         />
 
         <CeldaHoras
           valor={tarea.horasEstimadas}
           onGuardar={guardar("horasEstimadas")}
           ariaLabel="Horas estimadas"
+          editable={!soloLectura}
         />
 
         {/* El punto suelto se fue: la pastilla ya lo trae, y tenerlo afuera
@@ -248,15 +259,18 @@ export function FilaTareaRoadmap({
             ariaLabel="Estado"
             etiqueta={ETIQUETA_ESTADO[tarea.estado]}
             renderLectura={(estado) => <TagEstado estado={estado} />}
+            editable={!soloLectura}
           />
         </span>
 
         <span className="flex justify-center">
-          <BotonEliminarIcono
-            onConfirm={() => eliminarTarea(tarea.id)}
-            mensaje="Tarea enviada a papelera"
-            label="Eliminar tarea"
-          />
+          {!soloLectura && (
+            <BotonEliminarIcono
+              onConfirm={() => eliminarTarea(tarea.id)}
+              mensaje="Tarea enviada a papelera"
+              label="Eliminar tarea"
+            />
+          )}
         </span>
       </div>
 

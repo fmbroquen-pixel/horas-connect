@@ -34,6 +34,11 @@ export default async function ProyectoRoadmapPage({
   // proyecto y no se vuelven a tocar.
   await asegurarRoadmap(acceso.cliente);
 
+  // Un proyecto inactivo se mira entero: el semáforo, el tablero, las listas y
+  // las tareas quedan a la vista pero sin controles. La condición se resuelve
+  // una vez acá y baja a las dos mitades de la pantalla.
+  const soloLectura = !acceso.cliente.activo;
+
   // En paralelo: son independientes entre sí, y contra una base remota cada
   // ida y vuelta cuesta más que la consulta en sí. En serie, el semáforo
   // retrasaba las listas sin ningún motivo.
@@ -76,12 +81,12 @@ export default async function ProyectoRoadmapPage({
             Plan de trabajo
           </h2>
           <InfoButton>
-            Las tareas son estimativas y secuenciales. Una edición de fecha
-            modifica las tareas siguientes. Lo que se elimina va a la papelera:
-            deja de contar en el plan y en los KPIs, y se puede restaurar.
+            {soloLectura
+              ? "El proyecto está inactivo: el plan se conserva completo y se puede consultar, pero no admite cambios."
+              : "Las tareas son estimativas y secuenciales. Una edición de fecha modifica las tareas siguientes. Lo que se elimina va a la papelera: deja de contar en el plan y en los KPIs, y se puede restaurar."}
           </InfoButton>
         </div>
-        <PapeleraMenu tipo="roadmap" />
+        {!soloLectura && <PapeleraMenu tipo="roadmap" />}
       </div>
 
       <CabeceraSeguimiento
@@ -89,6 +94,7 @@ export default async function ProyectoRoadmapPage({
         semaforo={semaforo?.estado ?? ""}
         ultimoCambio={semaforo ? formatFecha(semaforo.createdAt) : ""}
         tableroUrl={acceso.cliente.tableroUrl ?? ""}
+        soloLectura={soloLectura}
       />
 
       <RoadmapTablero
@@ -96,6 +102,7 @@ export default async function ProyectoRoadmapPage({
         listas={vistas}
         listaDestino={listaDestino}
         tareaDestino={tareaDestino}
+        soloLectura={soloLectura}
       />
     </div>
   );

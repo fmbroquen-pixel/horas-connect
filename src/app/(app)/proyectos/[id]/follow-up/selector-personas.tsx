@@ -9,9 +9,13 @@ import { actualizarCampoTarea } from "./actions";
 export function SelectorPersonas({
   tareaId,
   personas,
+  soloLectura = false,
 }: {
   tareaId: string;
   personas: number;
+  // Proyecto inactivo. El dato se sigue viendo -cuántas personas lleva la
+  // tarea es parte de su historia-; lo que se apaga es el clic que lo alterna.
+  soloLectura?: boolean;
 }) {
   const [pending, start] = useTransition();
   const dos = personas === 2;
@@ -19,17 +23,23 @@ export function SelectorPersonas({
   return (
     <button
       type="button"
-      disabled={pending}
+      disabled={pending || soloLectura}
       onClick={() =>
         start(async () => {
           await actualizarCampoTarea(tareaId, "personas", dos ? "1" : "2");
         })
       }
       data-tooltip={`Personas involucradas: ${personas}`}
-      aria-label={`Personas involucradas: ${personas}. Cambiar a ${dos ? 1 : 2}.`}
-      className={`flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs tabular-nums transition hover:bg-dc-peri/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 disabled:opacity-50 ${
-        dos ? "text-dc-peri" : "text-dc-muted"
-      }`}
+      aria-label={
+        soloLectura
+          ? `Personas involucradas: ${personas}.`
+          : `Personas involucradas: ${personas}. Cambiar a ${dos ? 1 : 2}.`
+      }
+      // Sin `disabled:opacity-50` en solo lectura: ahí el botón no está
+      // "ocupado", es un dato. Deslavarlo escondería el número.
+      className={`flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 ${
+        soloLectura ? "cursor-default" : "hover:bg-dc-peri/10 disabled:opacity-50"
+      } ${dos ? "text-dc-peri" : "text-dc-muted"}`}
     >
       <svg
         viewBox="0 0 24 24"

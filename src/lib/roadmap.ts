@@ -258,9 +258,18 @@ async function inicioProyecto(clienteId: string, db: DB = prisma): Promise<Date>
 // sembrado no se vuelve a tocar, así borrar todas las listas es una decisión
 // que se respeta en lugar de deshacerse sola en la próxima visita.
 export async function asegurarRoadmap(
-  cliente: Pick<Cliente, "id" | "duracionMeses" | "fechaInicio" | "roadmapCreadoEn">,
+  cliente: Pick<
+    Cliente,
+    "id" | "activo" | "duracionMeses" | "fechaInicio" | "roadmapCreadoEn"
+  >,
 ): Promise<void> {
   if (cliente.roadmapCreadoEn) return;
+  // Un cliente inactivo no recibe carga de datos, y sembrar el plan sugerido es
+  // crear listas y tareas. Sin esto, abrir por primera vez el Follow Up de un
+  // proyecto apagado le escribía un roadmap entero solo por mirarlo. Queda un
+  // plan vacío, que es la respuesta correcta: no hay plan de trabajo para un
+  // proyecto que no opera.
+  if (!cliente.activo) return;
 
   const plantillas = listasPorDefecto(cliente.duracionMeses);
   const arranque = siguienteDiaHabil(cliente.fechaInicio ?? hoyUTC());

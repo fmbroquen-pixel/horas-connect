@@ -9,6 +9,7 @@ import { Dropdown } from "@/components/dropdown";
 import { useReordenable } from "@/components/tabla/reordenable";
 import { avisarOk } from "@/components/ui/avisos";
 import { ResaltadoProvider, useResaltado } from "./resaltado";
+import { SoloLecturaProvider, useSoloLectura } from "./solo-lectura";
 import { reformatEntradaHoras } from "@/lib/horas";
 import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 
@@ -19,18 +20,26 @@ const INPUT =
 
 // Dueño de la selección: vive por encima de las listas para que la barra de
 // acciones sea una sola aunque las tareas elegidas estén en listas distintas.
-export function RoadmapTablero(props: {
+export function RoadmapTablero({
+  soloLectura = false,
+  ...props
+}: {
   clienteId: string;
   listas: ListaRoadmapVista[];
   listaDestino?: string;
   tareaDestino?: string;
+  // Proyecto inactivo. Entra una sola vez acá y baja por contexto: los
+  // controles editables están repartidos en cuatro niveles.
+  soloLectura?: boolean;
 }) {
   // El provider envuelve TODO el tablero: las celdas que se resaltan están
   // tres niveles más abajo, y mover una lista reprograma tareas de otras.
   return (
-    <ResaltadoProvider>
-      <Tablero {...props} />
-    </ResaltadoProvider>
+    <SoloLecturaProvider valor={soloLectura}>
+      <ResaltadoProvider>
+        <Tablero {...props} />
+      </ResaltadoProvider>
+    </SoloLecturaProvider>
   );
 }
 
@@ -53,6 +62,7 @@ function Tablero({
   const [campo, setCampo] = useState<CampoMasivo>("estado");
   const [valor, setValor] = useState("sin_iniciar");
   const [pending, start] = useTransition();
+  const soloLectura = useSoloLectura();
   const { marcarReprogramacion } = useResaltado();
   // Aviso de reprogramación. Ya no hace falta llevar un contador para que dos
   // movimientos seguidos vuelvan a mostrarlo: cada llamada al emisor global es
@@ -283,7 +293,7 @@ function Tablero({
                     sel={sel}
                     onToggle={toggle}
                     onToggleLista={toggleLista}
-                    agarre={dnd.agarre(lista.id)}
+                    agarre={soloLectura ? undefined : dnd.agarre(lista.id)}
                     arrastrandoAlgo={dnd.activo}
                     onReprogramadas={avisar}
                     abrirPorDefecto={lista.id === listaDestino}
@@ -297,14 +307,15 @@ function Tablero({
 
             {listas.length === 0 && (
               <p className="px-4 py-6 text-center text-sm text-dc-muted">
-                Este proyecto no tiene listas en el Roadmap. Agregá una para
-                armar el plan de trabajo.
+                {soloLectura
+                  ? "Este proyecto no tiene listas en el Roadmap."
+                  : "Este proyecto no tiene listas en el Roadmap. Agregá una para armar el plan de trabajo."}
               </p>
             )}
 
             {/* Agregar va siempre al final del plan, después de la última
                 lista. */}
-            <NuevaListaBoton clienteId={clienteId} />
+            {!soloLectura && <NuevaListaBoton clienteId={clienteId} />}
             </div>
           </div>
         </div>

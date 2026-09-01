@@ -11,6 +11,7 @@ import {
 import { FilaTareaRoadmap } from "./fila-tarea";
 import { TagEstado } from "@/components/ui/tag-estado";
 import { NuevaTareaBoton } from "./nueva-tarea-boton";
+import { useSoloLectura } from "./solo-lectura";
 import { BTN_ICON_SM } from "@/lib/ui";
 import {
   BotonEditarIcono,
@@ -61,6 +62,7 @@ export function ListaRoadmapCard({
   const [abierta, setAbierta] = useState(abrirPorDefecto);
   const [renombrando, setRenombrando] = useState(false);
   const idContenido = useId();
+  const soloLectura = useSoloLectura();
 
   // Avance y estado se derivan de las tareas en cada render: cualquier cambio
   // (editar un estado, agregar o borrar una tarea) los actualiza solo.
@@ -95,13 +97,15 @@ export function ListaRoadmapCard({
           (renombrar, duplicar, eliminar) frenan la propagación para no
           arrastrar el desplegable con ellos. */}
       <header
-        {...agarre}
+        {...(soloLectura ? {} : agarre)}
         onClick={() => {
           // Al terminar un arrastre real el navegador no emite click, pero si
           // el gesto se cancela sí: no plegar mientras haya algo en el aire.
           if (!arrastrandoAlgo) setAbierta((v) => !v);
         }}
-        data-tooltip={agarre ? "Arrastrá para reordenar la lista" : undefined}
+        data-tooltip={
+          agarre && !soloLectura ? "Arrastrá para reordenar la lista" : undefined
+        }
         className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-2 border-b border-dc-line px-4 py-3 transition hover:bg-dc-card/60"
       >
         {renombrando ? (
@@ -154,12 +158,14 @@ export function ListaRoadmapCard({
                 <span className="ml-1">· {seleccionadas} seleccionada(s)</span>
               )}
             </span>
-            <span onClick={(e) => e.stopPropagation()}>
-              <BotonEditarIcono
-                onClick={() => setRenombrando(true)}
-                label="Renombrar lista"
-              />
-            </span>
+            {!soloLectura && (
+              <span onClick={(e) => e.stopPropagation()}>
+                <BotonEditarIcono
+                  onClick={() => setRenombrando(true)}
+                  label="Renombrar lista"
+                />
+              </span>
+            )}
           </>
         )}
 
@@ -195,21 +201,23 @@ export function ListaRoadmapCard({
           </span>
         </span>
 
-        <span
-          onClick={(e) => e.stopPropagation()}
-          className="flex items-center gap-1"
-        >
-          <BotonIcono
-            label="Duplicar lista"
-            onClick={() => duplicarLista(lista.id)}
-            path="M9 9h10v10H9zM5 15V5h10"
-          />
-          <BotonEliminarIcono
-            onConfirm={() => eliminarLista(lista.id)}
-            mensaje="Lista enviada a papelera"
-            label="Eliminar lista"
-          />
-        </span>
+        {!soloLectura && (
+          <span
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-1"
+          >
+            <BotonIcono
+              label="Duplicar lista"
+              onClick={() => duplicarLista(lista.id)}
+              path="M9 9h10v10H9zM5 15V5h10"
+            />
+            <BotonEliminarIcono
+              onConfirm={() => eliminarLista(lista.id)}
+              mensaje="Lista enviada a papelera"
+              label="Eliminar lista"
+            />
+          </span>
+        )}
       </header>
 
       {abierta && (
@@ -219,14 +227,18 @@ export function ListaRoadmapCard({
         // columnas entre listas al mover solo una.
         <div id={idContenido}>
           <div className={`dc-thead ${GRID_ROADMAP} border-b border-dc-line px-4`}>
-            <input
-              type="checkbox"
-              checked={todasSel}
-              onChange={() => onToggleLista(ids, !todasSel)}
-              disabled={ids.length === 0}
-              className="h-4 w-4 accent-dc-purple"
-              aria-label={`Seleccionar todas las tareas de ${lista.nombre}`}
-            />
+            {soloLectura ? (
+              <span />
+            ) : (
+              <input
+                type="checkbox"
+                checked={todasSel}
+                onChange={() => onToggleLista(ids, !todasSel)}
+                disabled={ids.length === 0}
+                className="h-4 w-4 accent-dc-purple"
+                aria-label={`Seleccionar todas las tareas de ${lista.nombre}`}
+              />
+            )}
             <span className="dc-col-izq">Tarea</span>
             <span>Inicio</span>
             <span>Fin</span>
@@ -262,7 +274,7 @@ export function ListaRoadmapCard({
                   tarea={t}
                   seleccionada={sel.has(t.id)}
                   onToggle={onToggle}
-                  agarre={dnd.agarre(t.id)}
+                  agarre={soloLectura ? undefined : dnd.agarre(t.id)}
                   esDestino={t.id === tareaDestino}
                   onReprogramadas={onReprogramadas}
                 />
@@ -277,7 +289,7 @@ export function ListaRoadmapCard({
           )}
 
           {/* Alta al pie de la lista, después de la última tarea. */}
-          <NuevaTareaBoton listaId={lista.id} />
+          {!soloLectura && <NuevaTareaBoton listaId={lista.id} />}
         </div>
       )}
     </section>

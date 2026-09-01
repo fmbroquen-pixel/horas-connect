@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { cambiarSemaforo, guardarTablero } from "../../actions";
+import { MOTIVO_INACTIVO } from "@/lib/inactivo";
 import { OPCIONES_SEMAFORO, COLOR_SEMAFORO, ETIQUETA_SEMAFORO } from "../../constantes";
 
 const INPUT =
@@ -19,11 +20,15 @@ export function CabeceraSeguimiento({
   semaforo: semaforoInicial,
   ultimoCambio,
   tableroUrl,
+  soloLectura = false,
 }: {
   clienteId: string;
   semaforo: string;
   ultimoCambio: string;
   tableroUrl: string;
+  // Proyecto inactivo: el semáforo y el tablero se leen, no se tocan. El
+  // servidor ya los rechaza; acá se deja de ofrecerlos.
+  soloLectura?: boolean;
 }) {
   const [semaforo, setSemaforo] = useState(semaforoInicial);
   const [url, setUrl] = useState(tableroUrl);
@@ -83,13 +88,23 @@ export function CabeceraSeguimiento({
                 key={o.value}
                 type="button"
                 onClick={() => elegirSemaforo(o.value)}
-                disabled={pendiente}
+                disabled={pendiente || soloLectura}
                 aria-pressed={activo}
-                data-tooltip={`${o.label} — ${detalleUltimoCambio}`}
-                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition disabled:opacity-60 ${
+                data-tooltip={
+                  soloLectura
+                    ? `${o.label} · ${MOTIVO_INACTIVO}`
+                    : `${o.label} · ${detalleUltimoCambio}`
+                }
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition ${
+                  soloLectura
+                    ? "cursor-not-allowed"
+                    : "disabled:opacity-60"
+                } ${
                   activo
                     ? "border-transparent text-dc-text"
-                    : "border-dc-line text-dc-muted hover:border-dc-peri hover:text-dc-text"
+                    : soloLectura
+                      ? "border-dc-line text-dc-muted/50"
+                      : "border-dc-line text-dc-muted hover:border-dc-peri hover:text-dc-text"
                 }`}
                 // El estado activo se marca con el propio color del semáforo,
                 // en fondo tenue y con glow: es la única señal que no depende
@@ -130,6 +145,13 @@ export function CabeceraSeguimiento({
               if (e.key === "Enter") e.currentTarget.blur();
             }}
             disabled={pendiente}
+            // readOnly y no disabled: el enlace se tiene que poder leer entero
+            // y copiar, que es "mirar". Un input deshabilitado no deja
+            // seleccionar el texto.
+            readOnly={soloLectura}
+            data-tooltip={
+              soloLectura ? MOTIVO_INACTIVO : undefined
+            }
             placeholder="https://…"
             autoComplete="off"
             aria-label="Enlace del tablero de trabajo"
