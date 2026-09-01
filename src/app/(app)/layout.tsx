@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { getAccesoProyecto } from "@/lib/proyecto-acceso";
 import { getSesionActual } from "@/lib/auth";
 import { logout } from "@/app/actions";
 import { SidebarDesktop, SidebarMobile, type ItemSidebar } from "./sidebar";
@@ -49,6 +51,39 @@ const ITEM_ANALYTICS: ItemSidebar = {
   icono: "analytics",
 };
 
+// Bajo qué sección de la sidebar cae el proyecto que se está mirando.
+//
+// El detalle de un proyecto vive en /proyectos/<id>, así que por prefijo de URL
+// la sidebar lo resolvía SIEMPRE como Activos: entrar a un proyecto apagado
+// desde Home CORE, desde Analytics o por un enlace directo lo mostraba dentro
+// de Proyectos › Activos. La sección no puede salir de la ruta ni de dónde se
+// hizo clic; sale de si el proyecto está activo, que es lo único cierto.
+//
+// La consulta no cuesta nada extra: getAccesoProyecto está memoizada por
+// request, y el layout del proyecto la vuelve a pedir un nivel más abajo.
+async function conSeccionDelProyecto(items: ItemSidebar[]): Promise<ItemSidebar[]> {
+  const ruta = (await headers()).get("x-pathname") ?? "";
+  const m = /^\/proyectos\/([^/]+)/.exec(ruta);
+  const id = m?.[1];
+  // "inactivos" es el listado, no un proyecto.
+  if (!id || id === "inactivos") return items;
+
+  const acceso = await getAccesoProyecto(id);
+  if (!acceso || acceso.cliente.activo) return items;
+
+  const base = `/proyectos/${id}`;
+  return items.map((item) =>
+    item.children
+      ? {
+          ...item,
+          children: item.children.map((c) =>
+            c.href === "/proyectos/inactivos" ? { ...c, match: base } : c,
+          ),
+        }
+      : item,
+  );
+}
+
 function navParaRol(rol: string): {
   items: ItemSidebar[];
   settings?: ItemSidebar;
@@ -96,6 +131,7 @@ export default async function AppLayout({
   const { usuario } = sesion;
   const avatarUrl = urlAvatar(usuario.avatarPath);
   const { items, settings } = navParaRol(usuario.rol);
+  const nav = await conSeccionDelProyecto(items);
 
   // Isotipo oficial (favicon) + CORE: único branding dentro de la app.
   const logo = (
@@ -141,7 +177,7 @@ export default async function AppLayout({
     // navegación) → workspace card ocupando toda la altura disponible.
     <div className="flex h-dvh gap-3 overflow-hidden bg-dc-deeper p-3">
       <SidebarDesktop
-        items={items}
+        items={nav}
         settingsItem={settings}
         marca={logo}
         perfil={perfil}
@@ -155,7 +191,7 @@ export default async function AppLayout({
             drawer, que trae navegación, perfil y logout. */}
         <div className="flex shrink-0 items-center gap-3 lg:hidden">
           <SidebarMobile
-            items={items}
+            items={nav}
             settingsItem={settings}
             marca={logo}
             perfil={perfil}

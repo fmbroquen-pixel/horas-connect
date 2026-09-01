@@ -19,6 +19,11 @@ export type ItemSidebar = {
     href: string;
     label: string;
     icono?: string;
+    // Prefijo extra que también marca este hijo como activo. Lo usa el detalle
+    // de un proyecto: vive en /proyectos/<id> y por URL caería siempre en
+    // Activos, así que cuál corresponde lo decide el layout leyendo el estado
+    // real del proyecto.
+    match?: string;
   }[];
 };
 
@@ -99,7 +104,12 @@ function CategoriaNav({
   // ambos resaltados: en /proyectos/inactivos gana Inactivos por ser más
   // largo.
   const hijoActivoHref = (item.children ?? [])
-    .filter((c) => pathname === c.href || pathname.startsWith(c.href + "/"))
+    .filter(
+      (c) =>
+        pathname === c.href ||
+        pathname.startsWith(c.href + "/") ||
+        (c.match ? pathname.startsWith(c.match) : false),
+    )
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   // Sin hijos: se comporta como un ítem simple.
