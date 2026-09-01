@@ -34,4 +34,15 @@ describe("urlFiltroMes", () => {
       "/timetracker?anio=2026&mes=8",
     );
   });
+
+  it("limpiar el filtro es mandar todas las opciones", () => {
+    // Es lo que hace el atajo del indicador: elegir todo produce la misma URL
+    // que no haber filtrado nunca, mes y extras incluidos. Si esto dejara el
+    // parámetro puesto, el contador seguiría ahí después de tocarlo.
+    const conFiltro = urlFiltroMes({ ...base, ids: ["a"] });
+    const limpia = urlFiltroMes({ ...base, ids: ["a", "b", "c"] });
+    expect(conFiltro).toContain("proyectos=a");
+    expect(limpia).not.toContain("proyectos");
+    expect(limpia).toBe("/timetracker?anio=2026&mes=8");
+  });
 });
