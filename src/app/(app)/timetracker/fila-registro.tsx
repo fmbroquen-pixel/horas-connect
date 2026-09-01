@@ -14,6 +14,11 @@ import type { OpcionConcepto, OpcionSelect, RegistroFila } from "./tipos";
 import { BotonEditarIcono, BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 import { MarcaEdicion } from "@/components/tabla/marca-edicion";
 import { CarrilAcciones } from "@/components/tabla/carril-acciones";
+import { IconoSoloLectura } from "@/components/tabla/icono-solo-lectura";
+// El mismo texto que en Home CORE y en la vista del proyecto: la celda, el
+// checkbox y el candado de esta fila dicen lo mismo que el semáforo de allá
+// porque es la misma condición, no tres bloqueos distintos.
+import { MOTIVO_INACTIVO } from "@/lib/inactivo";
 
 const OPCIONES_OWNERSHIP = [
   { value: "owner", label: "Owner" },
@@ -48,6 +53,12 @@ export function FilaRegistro({
 }) {
   const filaRef = useRef<HTMLDivElement>(null);
 
+  // La historia de un cliente inactivo se mira. El servidor ya lo rechaza; acá
+  // se deja de ofrecer, que es lo que evita el intento inutil: una celda que
+  // invita a escribir y despues avisa que no se podia es peor que una que no
+  // invita.
+  const editable = registro.clienteActivo;
+
   const guardar = (campo: Parameters<typeof actualizarCampoRegistro>[1]) =>
     async (valor: string) => actualizarCampoRegistro(registro.id, campo, valor);
 
@@ -66,8 +77,10 @@ export function FilaRegistro({
           type="checkbox"
           checked={seleccionado}
           onChange={() => onToggle(registro.id)}
-          className="h-4 w-4 accent-dc-purple"
+          disabled={!editable}
+          className="h-4 w-4 accent-dc-purple disabled:cursor-not-allowed disabled:opacity-30"
           aria-label="Seleccionar fila"
+          data-tooltip={editable ? undefined : MOTIVO_INACTIVO}
         />
 
         <CeldaFecha
@@ -76,6 +89,7 @@ export function FilaRegistro({
           ariaLabel="Fecha"
           mostrar={mostrarFecha}
           max={hoyISO()}
+         editable={editable}
         />
 
         <CeldaOpciones
@@ -83,6 +97,7 @@ export function FilaRegistro({
           opciones={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
           onGuardar={guardar("clienteId")}
           ariaLabel="Cliente"
+         editable={editable}
         />
 
         <CeldaOpciones
@@ -95,6 +110,7 @@ export function FilaRegistro({
           // siguen etiquetando su historial.
           etiqueta={registro.conceptoNombre}
           placeholder="Elegí un concepto"
+         editable={editable}
         />
 
         <CeldaOpciones
@@ -102,12 +118,14 @@ export function FilaRegistro({
           opciones={OPCIONES_OWNERSHIP}
           onGuardar={guardar("ownership")}
           ariaLabel="Ownership"
+         editable={editable}
         />
 
         <CeldaHoras
           valor={registro.horas}
           onGuardar={guardar("horas")}
           ariaLabel="Horas"
+         editable={editable}
         />
 
         <CeldaOpciones
@@ -115,6 +133,7 @@ export function FilaRegistro({
           opciones={OPCIONES_MODALIDAD}
           onGuardar={guardar("modalidad")}
           ariaLabel="Modalidad"
+         editable={editable}
         />
 
         {/* Calculados a partir de la tarifa vigente: no se editan. */}
@@ -127,11 +146,17 @@ export function FilaRegistro({
 
         {/* Editar → Eliminar, el mismo par y el mismo orden que Expenses. */}
         <CarrilAcciones temporal={<MarcaEdicion detalle={registro.edicion} />}>
-          <BotonEditarIcono onClick={editarPrimeraCelda} />
-          <BotonEliminarIcono
-            onConfirm={() => eliminarRegistro(registro.id)}
-            mensaje="Hora enviada a papelera"
-          />
+          {editable ? (
+            <>
+              <BotonEditarIcono onClick={editarPrimeraCelda} />
+              <BotonEliminarIcono
+                onConfirm={() => eliminarRegistro(registro.id)}
+                mensaje="Hora enviada a papelera"
+              />
+            </>
+          ) : (
+            <IconoSoloLectura motivo={MOTIVO_INACTIVO} />
+          )}
         </CarrilAcciones>
       </div>
     </div>

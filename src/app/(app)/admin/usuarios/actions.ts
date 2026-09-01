@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { clienteInactivoDe, mensajeInactivo } from "@/lib/cliente-activo";
 import type { ResultadoEstado } from "@/components/boton-estado";
 import { diaUtc, reconstruirVigencias } from "@/lib/vigencias";
 import { fechaDesdeISO } from "@/lib/dias-habiles";
@@ -364,6 +365,12 @@ export async function guardarProyectosAsignados(
   if (clienteIds.length > 0) {
     const existen = await prisma.cliente.count({ where: { id: { in: clienteIds } } });
     if (existen !== clienteIds.length) return { error: "Proyecto inexistente." };
+
+    // Un proyecto inactivo no recibe asignaciones. El formulario ya ofrece solo
+    // los activos, así que por la pantalla no se llega; el chequeo está porque
+    // la regla es del servidor y no de la pantalla que la muestra.
+    const inactivo = await clienteInactivoDe(clienteIds);
+    if (inactivo) return { error: mensajeInactivo(inactivo) };
   }
 
   // Estado actual de los proyectos tocados, sin contar a este usuario: es

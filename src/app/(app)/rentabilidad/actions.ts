@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { clienteInactivoDe, mensajeInactivo } from "@/lib/cliente-activo";
 import { requireAdmin } from "@/lib/require-admin";
 
 const FacturacionSchema = z.object({
@@ -27,6 +28,14 @@ export async function guardarFacturacion(
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
   const { clienteId, anio, mes, montoUsd } = parsed.data;
+
+  // Un cliente inactivo no recibe carga de datos, y la facturacion es carga de
+  // datos como cualquier otra. Se evaluo permitirla para meses anteriores a la
+  // inactivacion -facturar en septiembre lo de julio es normal-, pero la regla
+  // quedo en que un inactivo no acepta nada: si hay que facturarle, se reactiva,
+  // se factura y se vuelve a inactivar.
+  const inactivo = await clienteInactivoDe([clienteId]);
+  if (inactivo) return { error: mensajeInactivo(inactivo) };
 
   await prisma.facturacion.upsert({
     where: { clienteId_anio_mes: { clienteId, anio, mes } },

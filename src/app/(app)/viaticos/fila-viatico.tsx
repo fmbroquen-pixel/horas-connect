@@ -21,6 +21,8 @@ import {
 import { BotonEditarIcono, BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 import { MarcaEdicion } from "@/components/tabla/marca-edicion";
 import { CarrilAcciones } from "@/components/tabla/carril-acciones";
+import { IconoSoloLectura } from "@/components/tabla/icono-solo-lectura";
+import { MOTIVO_INACTIVO } from "@/lib/inactivo";
 import { avisarError } from "@/components/ui/avisos";
 
 const OPCIONES_CONCEPTO = Object.entries(ETIQUETA_CONCEPTO).map(
@@ -56,6 +58,9 @@ export function FilaViatico({
   const archivoRef = useRef<HTMLInputElement>(null);
   const [subiendo, start] = useTransition();
 
+  // Ver si, tocar no: el comprobante se sigue abriendo, pero no se reemplaza.
+  const editable = viatico.clienteActivo;
+
   const guardar = (campo: Parameters<typeof actualizarCampoViatico>[1]) =>
     async (valor: string) => actualizarCampoViatico(viatico.id, campo, valor);
 
@@ -85,6 +90,7 @@ export function FilaViatico({
           ariaLabel="Fecha"
           mostrar={mostrarFecha}
           max={hoyISO()}
+         editable={editable}
         />
 
         <CeldaOpciones
@@ -92,6 +98,7 @@ export function FilaViatico({
           opciones={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
           onGuardar={guardar("clienteId")}
           ariaLabel="Cliente"
+         editable={editable}
         />
 
         <CeldaOpciones
@@ -99,6 +106,7 @@ export function FilaViatico({
           opciones={OPCIONES_CONCEPTO}
           onGuardar={guardar("concepto")}
           ariaLabel="Concepto"
+         editable={editable}
         />
 
         <CeldaOpciones
@@ -106,6 +114,7 @@ export function FilaViatico({
           opciones={OPCIONES_MONEDA}
           onGuardar={guardar("moneda")}
           ariaLabel="Moneda"
+         editable={editable}
         />
 
         <CeldaTexto
@@ -115,6 +124,7 @@ export function FilaViatico({
           // Se muestra formateado y se edita en crudo: con el separador de
           // miles puesto, el campo no se puede seguir escribiendo.
           mostrar={(v) => formatMonto(Number(v))}
+         editable={editable}
         />
 
         {/* El comprobante no entra en una celda de texto: se ve con el clip y
@@ -132,6 +142,7 @@ export function FilaViatico({
               <IconoClip />
             </a>
           )}
+          {editable && (
           <button
             type="button"
             onClick={() => archivoRef.current?.click()}
@@ -142,6 +153,12 @@ export function FilaViatico({
           >
             {viatico.archivoUrl ? <IconoReemplazar /> : <IconoAdjuntar />}
           </button>
+          )}
+          {/* Sin comprobante y sin poder adjuntarlo no queda nada que mostrar:
+              un guion evita que la columna se lea como un dato faltante. */}
+          {!editable && !viatico.archivoUrl && (
+            <span className="text-dc-muted/60">—</span>
+          )}
           <input
             ref={archivoRef}
             type="file"
@@ -157,11 +174,17 @@ export function FilaViatico({
         </span>
 
         <CarrilAcciones temporal={<MarcaEdicion detalle={viatico.edicion} />}>
-          <BotonEditarIcono onClick={editarPrimeraCelda} />
-          <BotonEliminarIcono
-            onConfirm={() => eliminarViatico(viatico.id)}
-            mensaje="Viático enviado a papelera"
-          />
+          {editable ? (
+            <>
+              <BotonEditarIcono onClick={editarPrimeraCelda} />
+              <BotonEliminarIcono
+                onConfirm={() => eliminarViatico(viatico.id)}
+                mensaje="Viático enviado a papelera"
+              />
+            </>
+          ) : (
+            <IconoSoloLectura motivo={MOTIVO_INACTIVO} />
+          )}
         </CarrilAcciones>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { clienteInactivoDe, mensajeInactivo } from "@/lib/cliente-activo";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { fechaDesdeISO, hoyUTC } from "@/lib/dias-habiles";
@@ -169,6 +170,9 @@ export async function actualizarCampoViatico(
     return { error: "No podés modificar viáticos de otra persona." };
   }
 
+  const inactivo = await clienteInactivoDe([existente.clienteId]);
+  if (inactivo) return { error: mensajeInactivo(inactivo) };
+
   const fd = new FormData();
   fd.set("fecha", campo === "fecha" ? valor : existente.fecha.toISOString().slice(0, 10));
   fd.set("clienteId", campo === "clienteId" ? valor : existente.clienteId);
@@ -210,6 +214,9 @@ export async function actualizarComprobante(
     return { error: "No podés modificar viáticos de otra persona." };
   }
 
+  const inactivo = await clienteInactivoDe([existente.clienteId]);
+  if (inactivo) return { error: mensajeInactivo(inactivo) };
+
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) {
     return { error: "No llegó ningún archivo." };
@@ -227,17 +234,21 @@ export async function actualizarComprobante(
 }
 
 
-export async function eliminarViatico(id: string): Promise<void> {
+// Devuelve el error en vez de tirarlo: el boton de eliminar sabe mostrarlo.
+export async function eliminarViatico(id: string): Promise<Resultado> {
   const actor = await requireGuest();
   const esAdmin = actor.rol === "admin";
 
   const existente = await prisma.viatico.findUnique({ where: { id } });
   // Ya en papelera: no se vuelve a borrar. Hacerlo pisaría la fecha de
   // eliminación original, que es el dato con el que se cuenta la retención.
-  if (!existente || existente.eliminadoEn) throw new Error("Viático no encontrado.");
+  if (!existente || existente.eliminadoEn) return { error: "Viático no encontrado." };
   if (!esAdmin && existente.usuarioId !== actor.id) {
-    throw new Error("No podés borrar viáticos de otra persona.");
+    return { error: "No podés borrar viáticos de otra persona." };
   }
+
+  const inactivo = await clienteInactivoDe([existente.clienteId]);
+  if (inactivo) return { error: mensajeInactivo(inactivo) };
 
   // Borrado lógico: va a la papelera. El comprobante se conserva para poder
   // restaurar; solo se borra del storage si el viático se elimina para
@@ -248,4 +259,5 @@ export async function eliminarViatico(id: string): Promise<void> {
   });
 
   revalidar();
+  return {};
 }

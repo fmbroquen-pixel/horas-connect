@@ -8,6 +8,9 @@ export type ViaticoFila = {
   id: string;
   fecha: string; // YYYY-MM-DD
   clienteId: string;
+  // Si el cliente sigue activo. Un inactivo no admite carga ni edicion: su
+  // historia se mira. Mismo criterio que en Time Tracking.
+  clienteActivo: boolean;
   moneda: "USD" | "ARS";
   monto: number;
   concepto: string;

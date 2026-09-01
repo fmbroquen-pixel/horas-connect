@@ -119,12 +119,14 @@ export default async function TimetrackerPage({
   // anterior al catálogo se cae a su clasificación previa, para que el
   // historial no quede en blanco.
 
+  const activoPorCliente = new Map(proyectos.map((p) => [p.id, p.activo]));
   const filas: RegistroFila[] = registros
     .filter((r) => r.ownership !== "valor_cero")
     .map((r) => ({
       id: r.id,
       fecha: r.fecha.toISOString().slice(0, 10),
       clienteId: r.clienteId,
+      clienteActivo: activoPorCliente.get(r.clienteId) ?? true,
       conceptoId: r.conceptoId ?? "",
       conceptoNombre: r.concepto?.nombre ?? r.etapa?.etiqueta ?? "—",
       ownership: r.ownership as "owner" | "backup",

@@ -40,6 +40,7 @@ export async function calcularReporte(
   );
   const proyectoIds = proyectos.map((p) => p.id);
   const nombrePorProyecto = new Map(proyectos.map((p) => [p.id, p.nombre]));
+  const activoPorProyecto = new Map(proyectos.map((p) => [p.id, p.activo]));
 
   const [registros, facturaciones, notaMes] = await Promise.all([
     prisma.registroHoras.findMany({
@@ -78,6 +79,7 @@ export async function calcularReporte(
       montoUsd: Number(f.montoUsd),
     })),
     nombrePorProyecto,
+    activoPorProyecto,
   );
 
   return {

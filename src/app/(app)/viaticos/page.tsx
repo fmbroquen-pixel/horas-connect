@@ -90,6 +90,7 @@ export default async function ViaticosPage({
 
   // URLs firmadas (1 hora) para ver los comprobantes del bucket privado.
   const supabase = createAdminClient();
+  const activoPorCliente = new Map(proyectos.map((p) => [p.id, p.activo]));
   const filas: ViaticoFila[] = await Promise.all(
     viaticos.map(async (v) => {
       let archivoUrl: string | null = null;
@@ -103,6 +104,7 @@ export default async function ViaticosPage({
         id: v.id,
         fecha: v.fecha.toISOString().slice(0, 10),
         clienteId: v.clienteId,
+        clienteActivo: activoPorCliente.get(v.clienteId) ?? true,
         moneda: v.moneda,
         monto: Number(v.monto),
         concepto: v.concepto,

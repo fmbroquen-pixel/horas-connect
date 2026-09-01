@@ -20,6 +20,10 @@ export type RegistroFila = {
   id: string;
   fecha: string; // YYYY-MM-DD
   clienteId: string;
+  // Si el cliente sigue activo. Un inactivo no admite carga ni edicion: su
+  // historia se mira. La fila lo necesita para no ofrecer una edicion que el
+  // servidor va a rechazar igual.
+  clienteActivo: boolean;
   // Concepto de la actividad. Los registros anteriores al catálogo llegan con
   // conceptoId vacío y con la etiqueta de su clasificación anterior en
   // conceptoNombre, para que el historial se siga leyendo.

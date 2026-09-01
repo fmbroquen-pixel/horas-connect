@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { clienteInactivoDe, mensajeInactivo } from "@/lib/cliente-activo";
 import { tarifaVigenteA } from "@/lib/tarifas";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
@@ -212,6 +213,11 @@ export async function actualizarCampoRegistro(
   if (check.error || !check.registro) return { error: check.error };
   const registro = check.registro;
 
+  // Un cliente inactivo no recibe cambios, tampoco sobre lo que ya tiene: sus
+  // registros historicos se miran.
+  const inactivo = await clienteInactivoDe([registro.clienteId]);
+  if (inactivo) return { error: mensajeInactivo(inactivo) };
+
   const fd = new FormData();
   fd.set("fecha", campo === "fecha" ? valor : registro.fecha.toISOString().slice(0, 10));
   fd.set("clienteId", campo === "clienteId" ? valor : registro.clienteId);
@@ -245,12 +251,18 @@ export async function actualizarCampoRegistro(
   return {};
 }
 
-export async function eliminarRegistro(id: string): Promise<void> {
+// Devuelve el error en vez de tirarlo: el boton de eliminar sabe mostrarlo y
+// no anunciar que se borro. Tirar dejaba la pantalla rota para decir algo que
+// se puede decir en un aviso.
+export async function eliminarRegistro(id: string): Promise<Resultado> {
   const usuario = await requireGuest();
   const esAdmin = usuario.rol === "admin";
 
   const check = await registroEditable(id, usuario.id, esAdmin);
-  if (check.error) throw new Error(check.error);
+  if (check.error || !check.registro) return { error: check.error };
+
+  const inactivo = await clienteInactivoDe([check.registro.clienteId]);
+  if (inactivo) return { error: mensajeInactivo(inactivo) };
 
   // Borrado lógico: va a la papelera, se puede restaurar.
   await prisma.registroHoras.update({
@@ -258,14 +270,24 @@ export async function eliminarRegistro(id: string): Promise<void> {
     data: { eliminadoEn: new Date() },
   });
   revalidarHoras();
+  return {};
 }
 
 // Borrado masivo de las filas seleccionadas (solo las propias, o cualquiera
 // si es admin), también lógico.
-export async function eliminarRegistros(ids: string[]): Promise<void> {
+export async function eliminarRegistros(ids: string[]): Promise<Resultado> {
   const usuario = await requireGuest();
   const esAdmin = usuario.rol === "admin";
-  if (ids.length === 0) return;
+  if (ids.length === 0) return {};
+
+  // Se frena toda la seleccion y no solo las filas del inactivo: borrar la
+  // mitad de lo que se pidio, en silencio, es peor que no borrar nada.
+  const afectados = await prisma.registroHoras.findMany({
+    where: { id: { in: ids } },
+    select: { clienteId: true },
+  });
+  const inactivo = await clienteInactivoDe(afectados.map((r) => r.clienteId));
+  if (inactivo) return { error: mensajeInactivo(inactivo) };
 
   await prisma.registroHoras.updateMany({
     where: {
@@ -276,6 +298,7 @@ export async function eliminarRegistros(ids: string[]): Promise<void> {
     data: { eliminadoEn: new Date() },
   });
   revalidarHoras();
+  return {};
 }
 
 export type CampoMasivo = "clienteId" | "conceptoId" | "ownership" | "modalidad";
@@ -300,6 +323,9 @@ export async function editarRegistros(
       ...(esAdmin ? {} : { usuarioId: usuario.id }),
     },
   });
+
+  const inactivo = await clienteInactivoDe(filas.map((f) => f.clienteId));
+  if (inactivo) return { error: mensajeInactivo(inactivo) };
 
   // Validaciones del valor según el campo.
   if (campo === "clienteId") {

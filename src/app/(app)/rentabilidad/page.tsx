@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSesionActual } from "@/lib/auth";
+import { mesDeParams } from "@/lib/mes";
 import { calcularReporte } from "@/lib/rentabilidad";
 import { formatMonto } from "@/lib/formato";
 import { formatHorasHsMin } from "@/lib/horas";
@@ -20,9 +21,10 @@ export default async function RentabilidadPage({
   if (usuario.rol === "guest") redirect("/dashboard");
 
   const params = await searchParams;
-  const hoy = new Date();
-  const anio = Number(params.anio) || hoy.getUTCFullYear();
-  const mes = Number(params.mes) || hoy.getUTCMonth() + 1;
+  // El mes por defecto es el que corre en Argentina. Con `getUTCMonth` sobre el
+  // reloj del servidor, después de las 21:00 del último día del mes Analytics
+  // abría ya en el mes siguiente, vacío.
+  const { anio, mes } = mesDeParams(params.anio, params.mes);
 
   const r = await calcularReporte(usuario, anio, mes);
 
@@ -107,7 +109,7 @@ export default async function RentabilidadPage({
                 <tr key={f.clienteId} className="border-b border-dc-line last:border-0">
                   <td className="px-4 py-2 text-dc-text">{f.nombre}</td>
                   <td className="px-4 py-2 text-right">
-                    {r.esAdmin ? (
+                    {r.esAdmin && f.activo ? (
                       <FacturacionInput
                         clienteId={f.clienteId}
                         anio={anio}

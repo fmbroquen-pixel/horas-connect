@@ -22,6 +22,9 @@ export type FacturacionDelMes = { clienteId: string; montoUsd: number };
 export type FilaProyecto = {
   clienteId: string;
   nombre: string;
+  // Un cliente inactivo aparece en el informe del mes en que operaba, pero no
+  // acepta cargar su facturacion: se mira.
+  activo: boolean;
   facturado: number;
   costo: number;
   margen: number;
@@ -72,6 +75,7 @@ export function construirReporte(
   registros: RegistroDelMes[],
   facturaciones: FacturacionDelMes[],
   nombrePorProyecto: Map<string, string>,
+  activoPorProyecto: Map<string, boolean> = new Map(),
 ): Calculo {
   const facturadoPorProyecto = new Map<string, number>();
   for (const f of facturaciones) {
@@ -144,6 +148,9 @@ export function construirReporte(
       return {
         clienteId: id,
         nombre: nombrePorProyecto.get(id) ?? "—",
+        // Por defecto activo: quien no pasa el mapa -los tests- no esta
+        // probando esta regla y no tiene por que declararla.
+        activo: activoPorProyecto.get(id) ?? true,
         facturado,
         costo,
         margen,
