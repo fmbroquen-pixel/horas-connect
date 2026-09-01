@@ -7,6 +7,7 @@ import type { CierreEtapa } from "../proyectos/actions";
 import { OPCIONES_SEMAFORO, COLOR_SEMAFORO } from "../proyectos/constantes";
 import { TagPopover, type OpcionTag } from "./tag-popover";
 import { CambioEtapaModal } from "./cambio-etapa-modal";
+import { MOTIVO_INACTIVO } from "@/lib/inactivo";
 
 const OPCIONES_SEMAFORO_TAG: OpcionTag[] = OPCIONES_SEMAFORO.map((o) => ({
   ...o,
@@ -123,7 +124,7 @@ export function FilaProyectoEstado({
           anchoMenu="w-44"
           soloPunto
           soloLectura={!activo}
-          motivoSoloLectura={`${nombre} está inactivo: no admite cambios`}
+          motivoSoloLectura={MOTIVO_INACTIVO}
         />
       </div>
       {/* Columna 3/3: etapa centrada con ancho de tag acotado. */}
@@ -137,7 +138,7 @@ export function FilaProyectoEstado({
             ariaLabel={`Etapa de ${nombre}`}
             anchoMenu="w-56"
             soloLectura={!activo}
-            motivoSoloLectura={`${nombre} está inactivo: no admite cambios`}
+            motivoSoloLectura={MOTIVO_INACTIVO}
           />
         </div>
       </div>
