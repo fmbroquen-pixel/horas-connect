@@ -58,6 +58,10 @@ export function FiltrosMes({
 
   const [abierto, setAbierto] = useState(false);
   const [sel, setSel] = useState<Set<string>>(new Set(seleccionados));
+  // El indicador se desvanece apenas se lo toca, sin esperar a que vuelva el
+  // servidor. Desaparecer de golpe al llegar los datos nuevos se leía como un
+  // parpadeo; con el fade, el gesto y su efecto son una sola cosa.
+  const [saliendo, setSaliendo] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const url = (m: { anio: number; mes: number }, ids: Set<string>) =>
@@ -72,16 +76,17 @@ export function FiltrosMes({
 
   const aplicar = (ids: Set<string> = sel) => navegar(url({ anio, mes }, ids));
 
-  // Limpiar el filtro es elegir todo: con todas las opciones puestas el
-  // parámetro no viaja en la URL, que es como se escribe "sin filtro".
+  // El mismo reset que el botón "Limpiar" del submenú de proyectos: vaciar la
+  // selección. Sin ids, el parámetro no viaja en la URL y la pantalla vuelve a
+  // mostrarlos todos, que es como se escribe "sin filtro".
   //
   // También se sincroniza la selección local. Si no, quedaba la vieja y bastaba
   // con abrir el menú y cerrarlo -que confirma sin botón Aplicar- para que el
   // filtro recién limpiado volviera solo.
   const limpiar = () => {
-    const todos = new Set(opciones.map((o) => o.id));
-    setSel(todos);
-    aplicar(todos);
+    setSaliendo(true);
+    setSel(new Set());
+    aplicar(new Set());
   };
 
   // Cerrar el panel confirma: no hay botón Aplicar.
@@ -105,6 +110,16 @@ export function FiltrosMes({
   // un filtro que valga la pena anunciar.
   const filtrando =
     seleccionados.length > 0 && seleccionados.length < opciones.length;
+
+  // Si vuelve un filtro distinto -otro mes, otra selección- el indicador tiene
+  // que estar visible de nuevo. Se sincroniza en el render y no desde un
+  // efecto, que dibujaría la pantalla dos veces. Sin esto, una navegación que
+  // no llegara a limpiar dejaba el indicador invisible pero presente.
+  const [filtroPrevio, setFiltroPrevio] = useState(seleccionados.join());
+  if (seleccionados.join() !== filtroPrevio) {
+    setFiltroPrevio(seleccionados.join());
+    setSaliendo(false);
+  }
 
   const prev = mesAnterior({ anio, mes });
   const next = mesSiguiente({ anio, mes });
@@ -143,40 +158,30 @@ export function FiltrosMes({
 
       {/* Indicador compacto: ícono y número, nada más. Si no hay filtro
           parcial no se dibuja, y esa ausencia es la que dice "todos".
-          Además es el atajo para sacar el filtro. Es el único elemento en
-          pantalla que existe PORQUE hay un filtro puesto, así que es donde se
-          va a buscar cómo sacarlo; obligar a volver al menú ⋮, abrirlo, marcar
-          las que faltan y cerrarlo eran cuatro gestos para deshacer uno. */}
+          Además es el atajo para sacarlo. Es el único elemento en pantalla que
+          existe PORQUE hay un filtro puesto, así que es donde se va a buscar
+          cómo sacarlo; obligar a volver al menú ⋮, abrirlo, marcar las que
+          faltan y cerrarlo eran cuatro gestos para deshacer uno.
+          Sin cruz ni nada agregado: la carpeta y el número siguen siendo un
+          dato, y lo que hace el clic se descubre al usarlo una vez. Agregarle
+          iconografía lo convertía en un botón de cerrar y le quitaba lo que
+          venía a decir. La acción sí se anuncia por aria-label, que es donde un
+          lector de pantalla la necesita. */}
       {filtrando && (
         <button
           type="button"
           onClick={limpiar}
           disabled={pendiente}
-          data-tooltip={`${seleccionados.length} de ${opciones.length} proyectos · Quitar filtro`}
-          aria-label={`Filtrando ${seleccionados.length} de ${opciones.length} proyectos. Quitar filtro.`}
-          className="group flex items-center gap-1 rounded-full bg-dc-peri/15 px-2 py-1 text-xs tabular-nums text-dc-peri transition hover:bg-dc-peri/25 hover:text-dc-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 disabled:cursor-not-allowed disabled:opacity-50"
+          data-tooltip={`${seleccionados.length} de ${opciones.length} proyectos`}
+          aria-label={`Filtrando ${seleccionados.length} de ${opciones.length} proyectos. Quitar el filtro.`}
+          className={`flex items-center gap-1 rounded-full bg-dc-peri/15 px-2 py-1 text-xs tabular-nums text-dc-peri transition duration-150 hover:bg-dc-peri/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 ${
+            saliendo
+              ? "pointer-events-none scale-90 opacity-0"
+              : "opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
+          }`}
         >
           <IconoProyecto size={13} strokeWidth={2} />
           {seleccionados.length}
-          {/* La cruz está siempre, atenuada, y se enciende con el hover del
-              botón. Se probó revelarla solo al pasar por encima, pero eso
-              ensanchaba la píldora en el momento justo en que se le está
-              apuntando y la corría bajo el cursor. Ocupando su lugar desde el
-              principio, el indicador no se mueve y además se ve que es
-              accionable sin tener que descubrirlo. */}
-          <svg
-            viewBox="0 0 24 24"
-            width="11"
-            height="11"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-            className="opacity-50 transition-opacity group-hover:opacity-100"
-            aria-hidden="true"
-          >
-            <path d="M6 6l12 12M18 6L6 18" />
-          </svg>
         </button>
       )}
 
