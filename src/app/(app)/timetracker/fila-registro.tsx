@@ -53,11 +53,17 @@ export function FilaRegistro({
 }) {
   const filaRef = useRef<HTMLDivElement>(null);
 
-  // La historia de un cliente inactivo se mira. El servidor ya lo rechaza; acá
-  // se deja de ofrecer, que es lo que evita el intento inutil: una celda que
-  // invita a escribir y despues avisa que no se podia es peor que una que no
-  // invita.
-  const editable = registro.clienteActivo;
+  // La historia se mira cuando el cliente está inactivo O cuando el dueño de
+  // las horas está bloqueado. El servidor ya rechaza las dos; acá se deja de
+  // ofrecer, que es lo que evita el intento inútil: una celda que invita a
+  // escribir y después avisa que no se podía es peor que una que no invita.
+  //
+  // El motivo se distingue porque se arreglan en lugares distintos: uno se
+  // reactiva en Clientes y el otro en Usuarios.
+  const editable = registro.clienteActivo && registro.usuarioActivo;
+  const motivo = !registro.clienteActivo
+    ? MOTIVO_INACTIVO
+    : `${registro.usuarioNombre} está bloqueado · Solo lectura`;
 
   const guardar = (campo: Parameters<typeof actualizarCampoRegistro>[1]) =>
     async (valor: string) => actualizarCampoRegistro(registro.id, campo, valor);
@@ -80,7 +86,7 @@ export function FilaRegistro({
           disabled={!editable}
           className="h-4 w-4 accent-dc-purple disabled:cursor-not-allowed disabled:opacity-30"
           aria-label="Seleccionar fila"
-          data-tooltip={editable ? undefined : MOTIVO_INACTIVO}
+          data-tooltip={editable ? undefined : motivo}
         />
 
         {/* Solo lectura, como la tarifa y el monto: los tres son consecuencia
@@ -161,7 +167,7 @@ export function FilaRegistro({
               />
             </>
           ) : (
-            <IconoSoloLectura motivo={MOTIVO_INACTIVO} />
+            <IconoSoloLectura motivo={motivo} />
           )}
         </CarrilAcciones>
       </div>

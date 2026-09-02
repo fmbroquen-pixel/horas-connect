@@ -3,6 +3,7 @@
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { clienteInactivoDe, mensajeInactivo } from "@/lib/cliente-activo";
+import { mensajeBloqueado, usuarioBloqueadoDe } from "@/lib/usuario-activo";
 import { tarifaVigenteA } from "@/lib/tarifas";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
@@ -196,6 +197,10 @@ async function registroEditable(id: string, usuarioId: string, esAdmin: boolean)
   if (!esAdmin && registro.usuarioId !== usuarioId) {
     return { error: "No podés modificar registros de otra persona." };
   }
+  // El dueño dado de baja congela sus registros. Un admin puede editar los de
+  // cualquiera, y "cualquiera" incluía a quien ya no está: sus horas se miran.
+  const bloqueado = await usuarioBloqueadoDe([registro.usuarioId]);
+  if (bloqueado) return { error: mensajeBloqueado(bloqueado) };
   return { registro };
 }
 
@@ -286,11 +291,14 @@ export async function eliminarRegistros(ids: string[]): Promise<Resultado> {
   // Se frena toda la seleccion y no solo las filas del inactivo: borrar la
   // mitad de lo que se pidio, en silencio, es peor que no borrar nada.
   const afectados = await prisma.registroHoras.findMany({
+    select: { clienteId: true, usuarioId: true },
     where: { id: { in: ids } },
-    select: { clienteId: true },
   });
   const inactivo = await clienteInactivoDe(afectados.map((r) => r.clienteId));
   if (inactivo) return { error: mensajeInactivo(inactivo) };
+
+  const bloqueado = await usuarioBloqueadoDe(afectados.map((r) => r.usuarioId));
+  if (bloqueado) return { error: mensajeBloqueado(bloqueado) };
 
   await prisma.registroHoras.updateMany({
     where: {
@@ -329,6 +337,9 @@ export async function editarRegistros(
 
   const inactivo = await clienteInactivoDe(filas.map((f) => f.clienteId));
   if (inactivo) return { error: mensajeInactivo(inactivo) };
+
+  const bloqueado = await usuarioBloqueadoDe(filas.map((f) => f.usuarioId));
+  if (bloqueado) return { error: mensajeBloqueado(bloqueado) };
 
   // Validaciones del valor según el campo.
   if (campo === "clienteId") {

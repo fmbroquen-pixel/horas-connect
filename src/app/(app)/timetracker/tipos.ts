@@ -24,6 +24,11 @@ export type RegistroFila = {
   // es mover una etiqueta, es revaluar el registro. Para corregir a quién se
   // le cargó, se borra y se vuelve a cargar.
   usuarioNombre: string;
+  // Si el dueño sigue habilitado. Un usuario bloqueado conserva su historia a
+  // la vista -son horas que se trabajaron y se facturaron- pero congelada:
+  // misma regla que un cliente inactivo, aplicada a la otra dimensión del
+  // registro.
+  usuarioActivo: boolean;
   clienteId: string;
   // Si el cliente sigue activo. Un inactivo no admite carga ni edicion: su
   // historia se mira. La fila lo necesita para no ofrecer una edicion que el

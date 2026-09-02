@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { revalidarHoras } from "@/lib/registros-horas";
 import { prisma } from "@/lib/prisma";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
+import { usuarioBloqueadoDe } from "@/lib/usuario-activo";
 import { formatHorasHsMin } from "@/lib/horas";
 import { formatMonto } from "@/lib/formato";
 import { RETENCION_DIAS } from "./constantes";
@@ -198,9 +199,22 @@ export async function restaurarItem(
   }
 
   if (tipo === "hora") {
+    // Restaurar es devolver el registro a la tabla viva: es un cambio de estado
+    // sobre un dato de alguien, no una lectura. Si ese alguien está bloqueado,
+    // su historia se mira y se queda donde está.
+    const fila = await prisma.registroHoras.findUnique({
+      where: { id },
+      select: { usuarioId: true },
+    });
+    if (fila && (await usuarioBloqueadoDe([fila.usuarioId]))) return;
     await prisma.registroHoras.updateMany({ where: { id, ...scope }, data });
     revalidarHoras();
   } else if (tipo === "viatico") {
+    const fila = await prisma.viatico.findUnique({
+      where: { id },
+      select: { usuarioId: true },
+    });
+    if (fila && (await usuarioBloqueadoDe([fila.usuarioId]))) return;
     await prisma.viatico.updateMany({ where: { id, ...scope }, data });
     revalidatePath("/viaticos");
     revalidatePath("/proyectos", "layout");

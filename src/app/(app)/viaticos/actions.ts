@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { clienteInactivoDe, mensajeInactivo } from "@/lib/cliente-activo";
+import { mensajeBloqueado, usuarioBloqueadoDe } from "@/lib/usuario-activo";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { fechaDesdeISO, hoyUTC } from "@/lib/dias-habiles";
@@ -173,6 +174,9 @@ export async function actualizarCampoViatico(
   const inactivo = await clienteInactivoDe([existente.clienteId]);
   if (inactivo) return { error: mensajeInactivo(inactivo) };
 
+  const bloqueado = await usuarioBloqueadoDe([existente.usuarioId]);
+  if (bloqueado) return { error: mensajeBloqueado(bloqueado) };
+
   const fd = new FormData();
   fd.set("fecha", campo === "fecha" ? valor : existente.fecha.toISOString().slice(0, 10));
   fd.set("clienteId", campo === "clienteId" ? valor : existente.clienteId);
@@ -217,6 +221,9 @@ export async function actualizarComprobante(
   const inactivo = await clienteInactivoDe([existente.clienteId]);
   if (inactivo) return { error: mensajeInactivo(inactivo) };
 
+  const bloqueado = await usuarioBloqueadoDe([existente.usuarioId]);
+  if (bloqueado) return { error: mensajeBloqueado(bloqueado) };
+
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) {
     return { error: "No llegó ningún archivo." };
@@ -249,6 +256,9 @@ export async function eliminarViatico(id: string): Promise<Resultado> {
 
   const inactivo = await clienteInactivoDe([existente.clienteId]);
   if (inactivo) return { error: mensajeInactivo(inactivo) };
+
+  const bloqueado = await usuarioBloqueadoDe([existente.usuarioId]);
+  if (bloqueado) return { error: mensajeBloqueado(bloqueado) };
 
   // Borrado lógico: va a la papelera. El comprobante se conserva para poder
   // restaurar; solo se borra del storage si el viático se elimina para

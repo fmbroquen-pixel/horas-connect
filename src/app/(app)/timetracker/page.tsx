@@ -126,7 +126,7 @@ export default async function TimetrackerPage({
           concepto: { select: { nombre: true } },
           etapa: { select: { etiqueta: true } },
           editadoPor: { select: { nombre: true } },
-          usuario: { select: { nombre: true } },
+          usuario: { select: { nombre: true, activo: true } },
         },
       }),
     ]);
@@ -152,6 +152,7 @@ export default async function TimetrackerPage({
       clienteId: r.clienteId,
       clienteActivo: activoPorCliente.get(r.clienteId) ?? true,
       usuarioNombre: r.usuario.nombre,
+      usuarioActivo: r.usuario.activo,
       conceptoId: r.conceptoId ?? "",
       conceptoNombre: r.concepto?.nombre ?? r.etapa?.etiqueta ?? "—",
       ownership: r.ownership as "owner" | "backup",
