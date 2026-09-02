@@ -47,6 +47,13 @@ export default async function ProyectoHomePage({
     .filter((a) => a.rol === "backup")
     .map((a) => a.usuario.nombre);
 
+  // Cuántos backups entran en la card antes de resumir. Dos es lo que entraba
+  // cómodo cuando ese era además el tope; con el tope en cinco sigue siendo lo
+  // que se lee sin recortar.
+  const BACKUPS_A_LA_VISTA = 2;
+  const backupsVisibles = backups.slice(0, BACKUPS_A_LA_VISTA);
+  const backupsOcultos = backups.slice(BACKUPS_A_LA_VISTA);
+
   const presupuestadas = tareas.reduce((a, t) => a + Number(t.horasEstimadas), 0);
   const entregadas = tareas.reduce(
     (a, t) => a + (t.estado === "finalizada" ? Number(t.horasEstimadas) : 0),
@@ -75,10 +82,17 @@ export default async function ProyectoHomePage({
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="grid shrink-0 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <Kpi titulo="Mentor Owner" valor={owner} texto />
-        {/* Los backups van juntos en una línea: la card no lleva texto
-            secundario. Si no entran, la card los recorta y el nombre completo
-            queda en el tooltip, igual que un nombre largo de Owner. */}
-        <Kpi titulo="Mentor Backup" valor={backups.join(", ") || "-"} texto />
+        {/* Hasta dos nombres a la vista y el resto en un "+N". Con el tope en
+            cinco, ponerlos los cinco en una línea de card no los hacía legibles
+            -se recortaban a la mitad de un nombre- y encima escondía cuántos
+            eran. Dos entran cómodos, y el contador dice de entrada si hay más
+            gente sin tener que pasar por encima. */}
+        <Kpi
+          titulo="Mentor Backup"
+          valor={backupsVisibles.join(", ") || "-"}
+          resto={backupsOcultos}
+          texto
+        />
         <Kpi
           titulo="Hs estimadas de proyecto"
           valor={formatHorasHsMin(presupuestadas)}
@@ -182,6 +196,7 @@ function Kpi({
   valor,
   info,
   texto = false,
+  resto,
 }: {
   titulo: string;
   valor: string;
@@ -194,6 +209,9 @@ function Kpi({
   // una sola línea con ellipsis, y el nombre completo sigue estando en el
   // title.
   texto?: boolean;
+  // Lo que no entró en `valor`. Se muestra como "+N" al lado, y los nombres
+  // quedan en su tooltip.
+  resto?: string[];
 }) {
   return (
     // Alturas fijas en el título y en el valor, no alturas derivadas del
@@ -217,9 +235,24 @@ function Kpi({
         className={`mt-1 flex h-8 items-center text-white ${
           texto ? "text-sm font-medium" : "font-display text-lg tabular-nums"
         }`}
-        data-tooltip={valor}
       >
-        <span className="truncate">{valor}</span>
+        {/* El tooltip pasó del <p> al texto: el contador de al lado tiene el
+            suyo, y con los dos en el mismo elemento se pisaban. */}
+        <span className="truncate" data-tooltip={valor}>
+          {valor}
+        </span>
+        {/* shrink-0: es lo único que garantiza que el contador se vea. Sin eso
+            se encoge junto al texto y con nombres largos desaparecía justo
+            cuando hacía falta -que es cuando no entran-. */}
+        {resto && resto.length > 0 && (
+          <span
+            className="ml-1.5 shrink-0 rounded-full bg-dc-peri/15 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-dc-peri"
+            data-tooltip={`${resto.length} más: ${resto.join(", ")}`}
+            aria-label={`${resto.length} más: ${resto.join(", ")}`}
+          >
+            +{resto.length}
+          </span>
+        )}
       </p>
     </div>
   );
