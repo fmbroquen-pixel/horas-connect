@@ -5,7 +5,15 @@ import { prisma } from "@/lib/prisma";
 import { normalizarNombre as normalizar } from "@/lib/normalizar-nombre";
 import { tarifaVigenteA, type TarifaVigencia } from "@/lib/tarifas";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
-import { resolverUsuarioDestino } from "@/lib/registrar-para";
+import { getUsuariosQueReportan } from "@/lib/registrar-para";
+import { getUsuariosVisibles } from "@/lib/usuarios-tt";
+import {
+  claveDuplicado,
+  esError,
+  resolverClienteDeFila,
+  resolverDuenio,
+} from "@/lib/importar-fila";
+import type { Usuario } from "@/generated/prisma/client";
 import { getConceptosActivos } from "@/lib/conceptos";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { parseHorasHsMin } from "@/lib/horas";
@@ -16,6 +24,10 @@ import type { Modalidad, Ownership } from "@/generated/prisma/client";
 // se excluyen de la importación).
 const COLUMNAS_REQUERIDAS = [
   "fecha",
+  // Obligatoria desde que un mismo archivo puede traer varios mentores. Antes
+  // el dueño lo fijaba un selector fuera del archivo, así que importar el
+  // historial de cinco personas eran cinco importaciones.
+  "usuario",
   "cliente",
   "concepto",
   "ownership",
@@ -30,11 +42,13 @@ const COLUMNAS_IGNORADAS = ["usd/hora", "usd total", "usd/h", "usd", "total", "e
 const ALIAS_COLUMNAS: Record<string, string> = {
   proyecto: "cliente",
   tarea: "concepto",
+  mentor: "usuario",
 };
 
 export type FilaPreview = {
   fila: number;
   fecha: string;
+  usuario: string;
   proyecto: string;
   concepto: string;
   ownership: string;
@@ -119,7 +133,7 @@ async function leerArchivo(
   return { headers, filas };
 }
 
-async function procesar(usuarioId: string, archivo: File) {
+async function procesar(actor: Usuario, archivo: File) {
   const leido = await leerArchivo(archivo);
   if (!leido) return null;
 
@@ -137,13 +151,51 @@ async function procesar(usuarioId: string, archivo: File) {
 
   // La MISMA fuente que usa la carga manual de Time Tracking: el importador no
   // puede tener su propia idea de a qué clientes se puede cargar.
-  const proyectos = await getProyectosPermitidos(usuarioId);
+  // ── Índices por usuario ──────────────────────────────────────────────────
+  // Todo lo que antes se resolvía una vez para el único destino ahora se
+  // resuelve por mentor: sus clientes y sus tarifas. Un archivo con cinco
+  // personas se valida con las reglas de cada una, no con las de quien importa.
 
-  // Y aparte, el catálogo completo. Sin esto no se puede distinguir "ese
-  // cliente no existe" de "existe pero no es tuyo", y las dos cosas salían con
-  // el mismo texto: "Cliente inexistente o no asignado". Ese mensaje mandaba a
-  // revisar la ortografía del nombre cuando el nombre estaba perfecto, que es
-  // exactamente lo que pasó con Embarca.
+  // Quiénes pueden ser dueños de una fila de este archivo.
+  const visibles = await getUsuariosVisibles(actor);
+  const visiblePorNombre = new Map(visibles.map((u) => [normalizar(u.nombre), u]));
+  // Y el padrón completo, para distinguir "ese usuario no existe" de "existe
+  // pero no podés cargarle horas". Son dos problemas distintos: uno se arregla
+  // corrigiendo el archivo y el otro pidiendo permisos.
+  const todosLosUsuarios = new Map(
+    (await getUsuariosQueReportan()).map((u) => [normalizar(u.nombre), u]),
+  );
+
+  const carteras = new Map<string, Map<string, { id: string; nombre: string }>>();
+  for (const u of visibles) {
+    const suyos = await getProyectosPermitidos(u.id);
+    carteras.set(u.id, new Map(suyos.map((p) => [normalizar(p.nombre), p])));
+  }
+
+  // Todas las tarifas, no solo las vigentes: una importación trae historia y
+  // cada fila tiene que valuarse con la tarifa que regía EN SU FECHA. Con solo
+  // las vigentes, importar seis meses aplicaba la tarifa de hoy a todo.
+  const tarifasPorUsuario = new Map<string, Map<string, TarifaVigencia[]>>();
+  for (const t of await prisma.tarifa.findMany({
+    where: { usuarioId: { in: visibles.map((u) => u.id) } },
+  })) {
+    const porCombo = tarifasPorUsuario.get(t.usuarioId) ?? new Map();
+    const k = `${t.modalidad}-${t.ownership}`;
+    porCombo.set(k, [
+      ...(porCombo.get(k) ?? []),
+      {
+        valorUsd: Number(t.valorUsd),
+        vigenteDesde: t.vigenteDesde,
+        vigenteHasta: t.vigenteHasta,
+      },
+    ]);
+    tarifasPorUsuario.set(t.usuarioId, porCombo);
+  }
+
+  // El catálogo completo de clientes. Sin esto no se puede distinguir "ese
+  // cliente no existe" de "existe pero no es de esa persona", y las dos cosas
+  // salían con el mismo texto: "Cliente inexistente o no asignado". Ese mensaje
+  // mandaba a revisar la ortografía de un nombre que estaba perfecto.
   const todos = new Map(
     (
       await prisma.cliente.findMany({
@@ -151,30 +203,6 @@ async function procesar(usuarioId: string, archivo: File) {
       })
     ).map((c) => [normalizar(c.nombre), c]),
   );
-
-  // Para quién se importa. Va en el mensaje: cuando un admin carga para otra
-  // persona, "no está asignado" sin decir a quién no se puede accionar.
-  const destino = await prisma.usuario.findUnique({
-    where: { id: usuarioId },
-    select: { nombre: true },
-  });
-  // Todas las tarifas, no solo las vigentes: una importación trae historia y
-  // cada fila tiene que valuarse con la tarifa que regía EN SU FECHA. Con solo
-  // las vigentes, importar seis meses aplicaba la tarifa de hoy a todo.
-  const tarifas = await prisma.tarifa.findMany({ where: { usuarioId } });
-  const tarifasPorCombo = new Map<string, TarifaVigencia[]>();
-  for (const t of tarifas) {
-    const k = `${t.modalidad}-${t.ownership}`;
-    const lista = tarifasPorCombo.get(k) ?? [];
-    lista.push({
-      valorUsd: Number(t.valorUsd),
-      vigenteDesde: t.vigenteDesde,
-      vigenteHasta: t.vigenteHasta,
-    });
-    tarifasPorCombo.set(k, lista);
-  }
-
-  const proyPorNombre = new Map(proyectos.map((p) => [normalizar(p.nombre), p]));
 
   // El catálogo de conceptos es global, así que basta un índice por nombre.
   const conceptos = await getConceptosActivos();
@@ -186,9 +214,15 @@ async function procesar(usuarioId: string, archivo: File) {
   const hoy = hoyUTC();
 
   // Para detectar duplicados contra la base.
+  //
+  // La clave incluye al dueño: dos mentores pueden haber hecho lo mismo el
+  // mismo día para el mismo cliente, y eso son dos registros distintos, no uno
+  // repetido. Sin el usuario en la clave, la segunda fila del archivo se
+  // habría descartado en silencio.
   const existentes = await prisma.registroHoras.findMany({
-    where: { usuarioId, ...SOLO_ACTIVOS },
+    where: { usuarioId: { in: visibles.map((u) => u.id) }, ...SOLO_ACTIVOS },
     select: {
+      usuarioId: true,
       fecha: true,
       clienteId: true,
       conceptoId: true,
@@ -198,15 +232,23 @@ async function procesar(usuarioId: string, archivo: File) {
     },
   });
   const claveExistente = new Set(
-    existentes.map(
-      (r) =>
-        `${r.fecha.toISOString().slice(0, 10)}|${r.clienteId}|${r.conceptoId}|${r.ownership}|${r.modalidad}|${Number(r.horas)}`,
+    existentes.map((r) =>
+      claveDuplicado({
+        usuarioId: r.usuarioId,
+        fechaISO: r.fecha.toISOString().slice(0, 10),
+        clienteId: r.clienteId,
+        conceptoId: r.conceptoId ?? "",
+        ownership: r.ownership,
+        modalidad: r.modalidad,
+        horas: Number(r.horas),
+      }),
     ),
   );
   const clavesEnLote = new Set<string>();
 
   const filas: FilaPreview[] = [];
   const validas: {
+    usuarioId: string;
     fecha: Date;
     clienteId: string;
     conceptoId: string;
@@ -224,6 +266,7 @@ async function procesar(usuarioId: string, archivo: File) {
     const val = (col: string) => String(cols[idx(col)] ?? "").trim();
     const rawFecha = cols[idx("fecha")];
     const fechaStr = val("fecha");
+    const usuarioTexto = val("usuario");
     const proyecto = val("cliente");
     const conceptoTexto = val("concepto");
     const ownershipRaw = normalizar(val("ownership"));
@@ -236,25 +279,39 @@ async function procesar(usuarioId: string, archivo: File) {
     if (!fechaISO) errores.push("Fecha inválida");
     else if (fechaDesdeISO(fechaISO) > hoy) errores.push("Fecha futura");
 
+    // ── Dueño de la fila ─────────────────────────────────────────────────
+    // Se resuelve primero porque de él dependen las dos validaciones que
+    // siguen: qué clientes son suyos y con qué tarifa se valúa la hora.
+    // Después de esto se trabaja por id; el nombre solo sirvió para encontrarlo.
+    const resDuenio = resolverDuenio(
+      usuarioTexto,
+      normalizar(usuarioTexto),
+      visiblePorNombre,
+      todosLosUsuarios,
+    );
+    const duenio = esError(resDuenio) ? undefined : resDuenio.valor;
+    if (esError(resDuenio)) errores.push(resDuenio.error);
+
     // Una vez resuelto, se trabaja por id: `proy.id` es lo que se guarda y lo
     // que arma la clave de duplicados. El nombre solo sirve para encontrarlo.
-    const claveProyecto = normalizar(proyecto);
-    const proy = proyPorNombre.get(claveProyecto);
-    if (!proyecto) errores.push("Falta el cliente");
-    else if (!proy) {
-      // Tres motivos distintos para el mismo síntoma. Cada uno se arregla de
-      // una forma diferente -corregir el nombre, pedir la asignación, o nada
-      // porque el proyecto ya no opera- así que decirlos por separado es lo
-      // único que hace accionable el error.
-      const real = todos.get(claveProyecto);
-      if (!real) errores.push("Cliente inexistente");
-      else if (!real.activo) {
-        errores.push(`"${real.nombre}" está inactivo: no admite registros nuevos`);
-      } else {
-        errores.push(
-          `"${real.nombre}" no está asignado a ${destino?.nombre ?? "ese usuario"}`,
-        );
-      }
+    //
+    // Sin dueño no se puede decir nada del cliente: "no está asignado" necesita
+    // saber a quién. Se calla y se arregla primero el usuario.
+    let proy: { id: string; nombre: string } | undefined;
+    if (duenio) {
+      const resCliente = resolverClienteDeFila(
+        proyecto,
+        normalizar(proyecto),
+        duenio,
+        // La cartera del DUEÑO de la fila, no la de quien importa: un admin
+        // puede traer horas de un cliente que él no tiene asignado y el mentor sí.
+        carteras.get(duenio.id) ?? new Map(),
+        todos,
+      );
+      if (esError(resCliente)) errores.push(resCliente.error);
+      else proy = resCliente.valor;
+    } else if (!proyecto) {
+      errores.push("Falta el cliente");
     }
 
     const conceptoId = conceptoPorNombre.get(normalizar(conceptoTexto));
@@ -281,18 +338,28 @@ async function procesar(usuarioId: string, archivo: File) {
     if (horas === null || horas <= 0 || horas > 24) errores.push("Horas inválidas");
 
     let tarifa: number | undefined;
-    if (ownership && modalidad && fechaISO) {
+    if (duenio && ownership && modalidad && fechaISO) {
       const aplicable = tarifaVigenteA(
-        tarifasPorCombo.get(`${modalidad}-${ownership}`) ?? [],
+        tarifasPorUsuario.get(duenio.id)?.get(`${modalidad}-${ownership}`) ?? [],
         fechaDesdeISO(fechaISO),
       );
       tarifa = aplicable ?? undefined;
-      if (tarifa === undefined) errores.push("Sin tarifa para esa combinación");
+      if (tarifa === undefined) {
+        errores.push(`${duenio.nombre} no tiene tarifa para esa combinación`);
+      }
     }
 
     // Duplicados (contra la base y dentro del mismo archivo).
-    if (errores.length === 0 && fechaISO && proy && conceptoId && ownership && modalidad && horas !== null) {
-      const clave = `${fechaISO}|${proy.id}|${conceptoId}|${ownership}|${modalidad}|${horas}`;
+    if (errores.length === 0 && duenio && fechaISO && proy && conceptoId && ownership && modalidad && horas !== null) {
+      const clave = claveDuplicado({
+        usuarioId: duenio.id,
+        fechaISO,
+        clienteId: proy.id,
+        conceptoId,
+        ownership,
+        modalidad,
+        horas,
+      });
       if (claveExistente.has(clave)) errores.push("Registro duplicado (ya existe)");
       else if (clavesEnLote.has(clave)) errores.push("Duplicado dentro del archivo");
       else clavesEnLote.add(clave);
@@ -301,6 +368,7 @@ async function procesar(usuarioId: string, archivo: File) {
     filas.push({
       fila: i + 2, // +1 header, +1 base 1
       fecha: fechaStr,
+      usuario: usuarioTexto,
       proyecto,
       concepto: conceptoTexto,
       ownership: val("ownership"),
@@ -309,8 +377,9 @@ async function procesar(usuarioId: string, archivo: File) {
       errores,
     });
 
-    if (errores.length === 0 && fechaISO && proy && conceptoId && ownership && modalidad && horas !== null && tarifa !== undefined) {
+    if (errores.length === 0 && duenio && fechaISO && proy && conceptoId && ownership && modalidad && horas !== null && tarifa !== undefined) {
       validas.push({
+        usuarioId: duenio.id,
         fecha: fechaDesdeISO(fechaISO),
         clienteId: proy.id,
         conceptoId,
@@ -330,21 +399,14 @@ export async function analizarImportacion(
   formData: FormData,
 ): Promise<Preview> {
   const actor = await requireGuest();
-  // La previsualización se calcula contra el usuario dueño de las horas
-  // (clientes asignados y tarifas), no contra quien importa.
-  const destinoRes = await resolverUsuarioDestino(
-    actor,
-    formData.get("usuarioId") as string | null,
-  );
-  if (!destinoRes.ok) {
-    return { error: destinoRes.error, columnasFaltantes: [], columnasDesconocidas: [], filas: [], validas: 0, conError: 0 };
-  }
-
+  // Ya no hay un destino único: cada fila trae el suyo y se valida con sus
+  // reglas. Lo que se pasa es quién importa, para saber a quiénes puede
+  // cargarle horas.
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) {
     return { error: "Elegí un archivo.", columnasFaltantes: [], columnasDesconocidas: [], filas: [], validas: 0, conError: 0 };
   }
-  const r = await procesar(destinoRes.destino.id, archivo);
+  const r = await procesar(actor, archivo);
   if (!r) {
     return { error: "No se pudo leer el archivo.", columnasFaltantes: [], columnasDesconocidas: [], filas: [], validas: 0, conError: 0 };
   }
@@ -364,18 +426,12 @@ export async function confirmarImportacion(
 ): Promise<{ error?: string; importadas?: number; omitidas?: number }> {
   const { revalidatePath } = await import("next/cache");
   const actor = await requireGuest();
-  const destinoRes = await resolverUsuarioDestino(
-    actor,
-    formData.get("usuarioId") as string | null,
-  );
-  if (!destinoRes.ok) return { error: destinoRes.error };
-  const destino = destinoRes.destino;
 
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) {
     return { error: "Elegí un archivo." };
   }
-  const r = await procesar(destino.id, archivo);
+  const r = await procesar(actor, archivo);
   if (!r) return { error: "No se pudo leer el archivo." };
   if (r.columnasFaltantes.length > 0) {
     return { error: `Faltan columnas: ${r.columnasFaltantes.join(", ")}` };
@@ -389,7 +445,8 @@ export async function confirmarImportacion(
       fecha: v.fecha,
       clienteId: v.clienteId,
       conceptoId: v.conceptoId,
-      usuarioId: destino.id, // worked_by
+      // worked_by: el de LA FILA, no un destino global. Es todo el cambio.
+      usuarioId: v.usuarioId,
       horas: v.horas,
       modalidad: v.modalidad,
       ownership: v.ownership,

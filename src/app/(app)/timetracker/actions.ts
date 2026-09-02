@@ -23,6 +23,9 @@ const RegistroSchema = z.object({
 // El "campo" indica qué input tiene el error, para que el formulario resetee
 // solo ése y conserve el resto de lo que el usuario ya cargó bien.
 export type CampoRegistro =
+  // El dueño de las horas. Es un campo del formulario desde que la carga es
+  // multiusuario: el servidor puede rechazarlo y señalarlo como cualquier otro.
+  | "usuarioId"
   | "fecha"
   | "clienteId"
   | "conceptoId"

@@ -18,10 +18,14 @@ export function ListaProyectos({
   opciones,
   seleccionados,
   onCambiar,
+  titulo = "Proyectos",
 }: {
   opciones: OpcionFiltro[];
   seleccionados: Set<string>;
   onCambiar: (ids: Set<string>) => void;
+  // Lo único que cambia entre el filtro de proyectos y el de usuarios: la
+  // lista se ve y se toca igual, y conviene que siga siendo así.
+  titulo?: string;
 }) {
   const todos = opciones.length > 0 && seleccionados.size === opciones.length;
 
@@ -36,7 +40,7 @@ export function ListaProyectos({
     <>
       <div className="mb-1 flex items-center justify-between gap-2 px-1">
         <span className="text-xs uppercase tracking-wide text-dc-muted">
-          Proyectos
+          {titulo}
         </span>
         <span className="flex gap-1">
           <button

@@ -83,6 +83,12 @@ export function FilaRegistro({
           data-tooltip={editable ? undefined : MOTIVO_INACTIVO}
         />
 
+        {/* Solo lectura, como la tarifa y el monto: los tres son consecuencia
+            de a quién y cuándo se le cargó, no datos sueltos de la fila. */}
+        <CeldaSoloLectura alinear="izquierda" titulo={registro.usuarioNombre}>
+          {registro.usuarioNombre}
+        </CeldaSoloLectura>
+
         <CeldaFecha
           valor={registro.fecha}
           onGuardar={guardar("fecha")}

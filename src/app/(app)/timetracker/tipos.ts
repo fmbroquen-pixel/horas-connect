@@ -19,6 +19,11 @@ export type MapaTarifas = Record<string, TarifaVigencia[]>;
 export type RegistroFila = {
   id: string;
   fecha: string; // YYYY-MM-DD
+  // Dueño de las horas (worked_by). Se muestra y no se edita: el monto es una
+  // foto de LA TARIFA DE ESE USUARIO en esa fecha, así que cambiar el dueño no
+  // es mover una etiqueta, es revaluar el registro. Para corregir a quién se
+  // le cargó, se borra y se vuelve a cargar.
+  usuarioNombre: string;
   clienteId: string;
   // Si el cliente sigue activo. Un inactivo no admite carga ni edicion: su
   // historia se mira. La fila lo necesita para no ofrecer una edicion que el

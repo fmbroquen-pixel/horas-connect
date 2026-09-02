@@ -4,9 +4,10 @@ import { getSesionActual } from "@/lib/auth";
 import { getProyectosPermitidos } from "@/lib/require-guest";
 import { getProyectosDelPeriodo } from "@/lib/proyectos";
 import {
-  getUsuariosQueReportan,
-  resolverUsuarioDestino,
-} from "@/lib/registrar-para";
+  getTarifasPorUsuario,
+  getUsuariosVisibles,
+  idsUsuariosDelFiltro,
+} from "@/lib/usuarios-tt";
 import { getConceptosActivos } from "@/lib/conceptos";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { formatHorasHsMin } from "@/lib/horas";
@@ -19,8 +20,19 @@ import { InfoButton } from "@/components/info-button";
 import { TablaRegistros } from "./tabla-registros";
 import { AccionesMenu } from "./acciones-menu";
 import { BarraCaptura } from "./barra-captura";
-import { SelectorUsuario } from "@/components/selector-usuario";
 import type { MapaTarifas, RegistroFila } from "./tipos";
+
+// Une las listas de proyectos de varios usuarios sin repetir. Dos mentores
+// comparten clientes seguido, y el filtro tiene que ofrecer cada uno una vez.
+function unicosPorId<T extends { id: string }>(items: T[]): T[] {
+  const vistos = new Map<string, T>();
+  for (const i of items) if (!vistos.has(i.id)) vistos.set(i.id, i);
+  return [...vistos.values()].sort((a, b) =>
+    (a as { nombre?: string }).nombre?.localeCompare(
+      (b as { nombre?: string }).nombre ?? "",
+    ) ?? 0,
+  );
+}
 
 export default async function TimetrackerPage({
   searchParams,
@@ -29,7 +41,7 @@ export default async function TimetrackerPage({
     anio?: string;
     mes?: string;
     proyectos?: string;
-    usuario?: string;
+    usuarios?: string;
   }>;
 }) {
   const sesion = await getSesionActual();
@@ -45,11 +57,13 @@ export default async function TimetrackerPage({
 
   const esAdmin = actor.rol === "admin";
 
-  // Usuario dueño de las horas. Solo un admin puede elegir otro; para el
-  // resto resolverUsuarioDestino devuelve siempre el propio actor (y si el
-  // param es inválido, se cae al actor sin romper la pantalla).
-  const destinoRes = await resolverUsuarioDestino(actor, params.usuario);
-  const destino = destinoRes.ok ? destinoRes.destino : actor;
+  // Quiénes se ven en esta pantalla. El admin ve a todos los que reportan; un
+  // mentor, solo a sí mismo. Antes había un selector global que ponía la
+  // pantalla entera en los zapatos de UN usuario: el dueño de las horas
+  // siempre estuvo en cada registro, y ese selector obligaba a mirar un mentor
+  // por vez y a importar un archivo por mentor.
+  const visibles = await getUsuariosVisibles(actor);
+  const idsUsuarios = idsUsuariosDelFiltro(visibles, params.usuarios);
 
   // Todo el contexto de la pantalla (clientes, tarifa e historial) es el del
   // usuario destino: si el admin carga para otro, ve exactamente lo que ese
@@ -58,8 +72,24 @@ export default async function TimetrackerPage({
   // filtro y la tabla del mes que se esta mirando, asi que incluye a los
   // clientes que operaban entonces aunque hoy esten inactivos. `paraCargar` es
   // el selector de la barra de captura, donde un inactivo no tiene que estar.
-  const proyectos = await getProyectosDelPeriodo(destino.id, desde);
-  const paraCargar = await getProyectosPermitidos(destino.id);
+  // Los proyectos de TODOS los usuarios visibles, no los de uno solo: la tabla
+  // ahora mezcla mentores y su filtro de clientes tiene que cubrirlos a todos.
+  const proyectosPorUsuario = await Promise.all(
+    visibles.map(async (u) => ({
+      usuarioId: u.id,
+      historia: await getProyectosDelPeriodo(u.id, desde),
+      paraCargar: await getProyectosPermitidos(u.id),
+    })),
+  );
+  const proyectos = unicosPorId(proyectosPorUsuario.flatMap((x) => x.historia));
+  // Lo que puede cargar CADA uno, por separado: el desplegable de la barra
+  // depende de quién sea el dueño de la fila que se está escribiendo.
+  const cargaPorUsuario = Object.fromEntries(
+    proyectosPorUsuario.map((x) => [
+      x.usuarioId,
+      x.paraCargar.map((p) => ({ id: p.id, nombre: p.nombre })),
+    ]),
+  );
   // Sin parámetro se muestran todos los permitidos; con parámetro, solo los
   // pedidos que además lo sean (un id ajeno en la URL no abre nada).
   const idsPermitidos = proyectos.map((p) => p.id);
@@ -72,17 +102,17 @@ export default async function TimetrackerPage({
       ? pedidos.filter((id) => idsPermitidos.includes(id))
       : idsPermitidos;
 
-  const [conceptos, tarifasDelUsuario, registros, usuariosQueReportan] =
+  const [conceptos, tarifasPorUsuario, registros] =
     await Promise.all([
       // Catálogo de conceptos (Settings → Conceptos): clasifica en qué se
       // consumieron las horas, así que no depende del cliente elegido.
       getConceptosActivos(),
       // Historial completo: el total en vivo se calcula con la tarifa de la
       // fecha que se esté cargando, no con la de hoy.
-      prisma.tarifa.findMany({ where: { usuarioId: destino.id } }),
+      getTarifasPorUsuario(visibles.map((u) => u.id)),
       prisma.registroHoras.findMany({
         where: {
-          usuarioId: destino.id,
+          usuarioId: { in: idsUsuarios },
           ...SOLO_ACTIVOS,
           fecha: {
             gte: new Date(desde + "T00:00:00Z"),
@@ -96,20 +126,14 @@ export default async function TimetrackerPage({
           concepto: { select: { nombre: true } },
           etapa: { select: { etiqueta: true } },
           editadoPor: { select: { nombre: true } },
+          usuario: { select: { nombre: true } },
         },
       }),
-      esAdmin ? getUsuariosQueReportan() : Promise.resolve([]),
     ]);
 
-  const tarifas: MapaTarifas = {};
-  for (const t of tarifasDelUsuario) {
-    const k = `${t.modalidad}-${t.ownership}`;
-    (tarifas[k] ??= []).push({
-      valorUsd: Number(t.valorUsd),
-      vigenteDesde: t.vigenteDesde,
-      vigenteHasta: t.vigenteHasta,
-    });
-  }
+  // La tarifa del propio actor: es la que se usa por defecto en la barra, y la
+  // que decide si puede cargar para sí mismo.
+  const tarifas: MapaTarifas = tarifasPorUsuario[actor.id] ?? {};
 
   // Mismo corte que valida el servidor al guardar, del mismo helper: si se
   // calculara acá aparte, la tabla podría mostrar como editable una fila que
@@ -127,6 +151,7 @@ export default async function TimetrackerPage({
       fecha: r.fecha.toISOString().slice(0, 10),
       clienteId: r.clienteId,
       clienteActivo: activoPorCliente.get(r.clienteId) ?? true,
+      usuarioNombre: r.usuario.nombre,
       conceptoId: r.conceptoId ?? "",
       conceptoNombre: r.concepto?.nombre ?? r.etapa?.etiqueta ?? "—",
       ownership: r.ownership as "owner" | "backup",
@@ -137,17 +162,30 @@ export default async function TimetrackerPage({
       edicion: marcaDeEdicion(r.editadoPor, r.updatedAt),
     }));
 
-  const sinTarifa = Object.keys(tarifas).length === 0;
-  // Sin proyectos asignados no hay nada contra qué cargar: se avisa y se
-  // esconde la barra, en vez de dejar un desplegable de clientes vacío que
-  // solo falla al guardar.
-  const sinProyectos = proyectos.length === 0;
-  const esOtroUsuario = destino.id !== actor.id;
+  // Para quiénes se puede cargar de verdad: hace falta tarifa Y algún proyecto
+  // asignado. Un admin sin tarifa propia igual puede cargarle a un mentor que
+  // sí la tenga, cosa que antes no se podía: el aviso apagaba la barra entera.
+  const puedenRecibirCarga = visibles
+    .filter(
+      (u) =>
+        // Bloqueado: sus horas se siguen viendo en la tabla, pero no recibe
+        // ninguna nueva. El servidor lo rechaza igual.
+        u.activo &&
+        Object.keys(tarifasPorUsuario[u.id] ?? {}).length > 0 &&
+        (cargaPorUsuario[u.id] ?? []).length > 0,
+    )
+    .map((u) => ({ id: u.id, nombre: u.nombre }));
+
+  // El motivo por el que el actor no puede cargarse horas a sí mismo, si es
+  // que no puede. Se sigue avisando —era información útil— pero ya no decide
+  // si la barra existe.
+  const sinTarifaPropia = Object.keys(tarifas).length === 0;
+  const sinProyectosPropios = (cargaPorUsuario[actor.id] ?? []).length === 0;
 
   // El filtro y la tabla muestran el periodo; la barra de captura, solo donde
   // se puede cargar hoy.
   const opcionesProyecto = proyectos.map((p) => ({ id: p.id, nombre: p.nombre }));
-  const opcionesCarga = paraCargar.map((p) => ({ id: p.id, nombre: p.nombre }));
+  const opcionesUsuario = visibles.map((u) => ({ id: u.id, nombre: u.nombre }));
 
   return (
     // El provider envuelve a los dos lados: el selector de mes dispara la
@@ -162,35 +200,24 @@ export default async function TimetrackerPage({
         </InfoButton>
       </div>
 
-      {sinTarifa && (
+      {sinTarifaPropia && (
         <p className="mt-4 shrink-0 rounded-xl border border-dc-pink/40 bg-dc-pink/10 px-4 py-3 text-sm text-dc-pink">
-          {esOtroUsuario
-            ? `${destino.nombre} no tiene una tarifa configurada, así que no se le pueden cargar horas.`
-            : "Todavía no tenés una tarifa configurada, así que no podés cargar horas. Pedile al administrador que la configure."}
+          Todavía no tenés una tarifa configurada, así que no podés cargarte
+          horas a vos. Pedile al administrador que la configure.
         </p>
       )}
 
-      {!sinTarifa && sinProyectos && (
+      {!sinTarifaPropia && sinProyectosPropios && (
         <p className="mt-4 shrink-0 rounded-xl border border-dc-pink/40 bg-dc-pink/10 px-4 py-3 text-sm text-dc-pink">
-          {esOtroUsuario
-            ? `${destino.nombre} no tiene proyectos asignados, así que no se le pueden cargar horas.`
-            : "Todavía no tenés proyectos asignados, así que no podés cargar horas. Pedile a un administrador que te asigne los tuyos."}
+          Todavía no tenés proyectos asignados, así que no podés cargarte horas
+          a vos. Pedile a un administrador que te asigne los tuyos.
         </p>
       )}
 
-      {/* Acciones del historial: selector de usuario (admin), consultar
-          (filtro) e importar/exportar (⋮). */}
-      <div className="mt-6 flex shrink-0 flex-wrap items-center justify-between gap-2">
-        {esAdmin ? (
-          <SelectorUsuario
-            etiqueta="Registrar horas para"
-            usuarios={usuariosQueReportan.map((u) => ({ id: u.id, nombre: u.nombre }))}
-            actual={destino.id}
-            actorId={actor.id}
-          />
-        ) : (
-          <span />
-        )}
+      {/* Acciones del historial: el filtro (mes, proyectos y usuarios) y el
+          menú de importar/exportar. El selector global "Registrar horas para"
+          se fue: el dueño ahora se elige por fila. */}
+      <div className="mt-6 flex shrink-0 flex-wrap items-center justify-end gap-2">
         <div className="flex items-center gap-2">
           {/* Mes + proyectos, el mismo componente que el Home. */}
           <FiltrosMesRecalculo
@@ -199,31 +226,35 @@ export default async function TimetrackerPage({
             basePath="/timetracker"
             opciones={opcionesProyecto}
             seleccionados={idsFiltro}
-            extra={{ usuario: params.usuario }}
+            extra={{ usuarios: params.usuarios }}
           />
-          {!sinTarifa && (
-            <AccionesMenu
-              anio={anio}
-              mes={mes}
-              proyectosOpciones={opcionesProyecto}
-              proyectosSeleccionados={idsFiltro}
-              usuarioId={esOtroUsuario ? destino.id : ""}
-            />
-          )}
+          <AccionesMenu
+            anio={anio}
+            mes={mes}
+            proyectosOpciones={opcionesProyecto}
+            proyectosSeleccionados={idsFiltro}
+            usuariosOpciones={esAdmin ? opcionesUsuario : []}
+            usuariosSeleccionados={idsUsuarios}
+          />
         </div>
       </div>
 
-      {/* Barra de captura permanente, inmediatamente encima del historial. */}
-      {!sinTarifa && !sinProyectos && (
+      {/* Barra de captura permanente, inmediatamente encima del historial.
+          Aparece si hay ALGUIEN a quien cargarle: un admin sin tarifa propia
+          igual puede cargarle a un mentor que sí la tenga. */}
+      {puedenRecibirCarga.length > 0 && (
         <div className="mt-4">
-          {/* key por usuario: al cambiar de mentor se remonta la barra y no
-              quedan cargados el cliente ni la etapa del anterior. */}
           <BarraCaptura
-            key={destino.id}
-            proyectos={opcionesCarga}
+            usuarios={puedenRecibirCarga}
+            usuarioPorDefecto={
+              puedenRecibirCarga.some((u) => u.id === actor.id)
+                ? actor.id
+                : puedenRecibirCarga[0].id
+            }
+            puedeElegirUsuario={esAdmin}
+            proyectosPorUsuario={cargaPorUsuario}
             conceptos={conceptos}
-            tarifas={tarifas}
-            usuarioId={esOtroUsuario ? destino.id : ""}
+            tarifasPorUsuario={tarifasPorUsuario}
           />
         </div>
       )}
@@ -236,9 +267,7 @@ export default async function TimetrackerPage({
         className="mt-3 flex min-h-0 flex-1 flex-col"
         claseContenido="flex min-h-0 flex-1 flex-col"
       >
-        {/* key por usuario: limpia la selección múltiple al cambiar de mentor. */}
         <TablaRegistros
-          key={destino.id}
           filas={filas}
           proyectos={opcionesProyecto}
           conceptos={conceptos}

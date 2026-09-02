@@ -19,6 +19,7 @@ const INPUT_ERROR = "border-dc-pink ring-1 ring-dc-pink";
 const LABEL = "mb-1 block text-[11px] uppercase tracking-wide text-dc-muted";
 
 const VALORES_INICIALES = {
+  usuarioId: "",
   fecha: "",
   clienteId: "",
   conceptoId: "",
@@ -38,19 +39,31 @@ const OBLIGATORIOS: { campo: CampoRegistro; label: string }[] = [
 // Barra de captura permanente (no es la primera fila de la tabla): componente
 // independiente, optimizado para cargar varias horas seguidas solo con teclado.
 export function BarraCaptura({
-  proyectos,
+  usuarios,
+  usuarioPorDefecto,
+  puedeElegirUsuario,
+  proyectosPorUsuario,
   conceptos,
-  tarifas,
-  usuarioId = "",
+  tarifasPorUsuario,
 }: {
-  proyectos: OpcionSelect[];
+  // Para quiénes se puede cargar. Un mentor recibe una lista de uno.
+  usuarios: OpcionSelect[];
+  usuarioPorDefecto: string;
+  // Solo el admin elige; para el resto el campo se muestra fijo. Es una regla
+  // de UI: el servidor la revalida igual y ata a un no-admin a sí mismo aunque
+  // manipule el formulario.
+  puedeElegirUsuario: boolean;
+  // El cliente y la tarifa dependen de QUIÉN sea el dueño de la fila, así que
+  // llegan indexados por usuario y se eligen al vuelo. Antes venían los de un
+  // único destino fijado para toda la pantalla.
+  proyectosPorUsuario: Record<string, OpcionSelect[]>;
   conceptos: OpcionConcepto[];
-  tarifas: MapaTarifas;
-  // Usuario dueño de las horas cuando un admin carga en nombre de otro.
-  // Vacío = el propio usuario. El servidor revalida el permiso igual.
-  usuarioId?: string;
+  tarifasPorUsuario: Record<string, MapaTarifas>;
 }) {
-  const [valores, setValores] = useState(VALORES_INICIALES);
+  const [valores, setValores] = useState({
+    ...VALORES_INICIALES,
+    usuarioId: usuarioPorDefecto,
+  });
   const [estado, setEstado] = useState<{ error?: string; campo?: CampoRegistro }>();
   const [pending, start] = useTransition();
   const [abierto, setAbierto] = useState(false);
@@ -58,9 +71,22 @@ export function BarraCaptura({
   const formRef = useRef<HTMLFormElement>(null);
 
   const set = (campo: keyof typeof valores, valor: string) => {
-    setValores((v) => ({ ...v, [campo]: valor }));
+    setValores((v) => {
+      const siguiente = { ...v, [campo]: valor };
+      // Cambiar de dueño cambia sus clientes. Si el que estaba elegido no es
+      // suyo, se limpia: dejarlo puesto guardaba una fila que el servidor iba
+      // a rechazar por un motivo que no se ve en pantalla.
+      if (campo === "usuarioId") {
+        const suyos = proyectosPorUsuario[valor] ?? [];
+        if (!suyos.some((p) => p.id === siguiente.clienteId)) siguiente.clienteId = "";
+      }
+      return siguiente;
+    });
     setEstado((e) => (e?.campo === campo ? { error: e.error } : e));
   };
+
+  const proyectos = proyectosPorUsuario[valores.usuarioId] ?? [];
+  const tarifas: MapaTarifas = tarifasPorUsuario[valores.usuarioId] ?? {};
 
   const enfocar = (campo: string) => {
     const cont = formRef.current?.querySelector(`[data-campo="${campo}"]`);
@@ -160,8 +186,6 @@ export function BarraCaptura({
       className="shrink-0 rounded-xl border border-dc-peri/25 bg-dc-card px-3 py-2"
       aria-label="Barra de captura de horas"
     >
-      {/* Dueño de las horas cuando un admin carga para otro mentor. */}
-      {usuarioId && <input type="hidden" name="usuarioId" value={usuarioId} />}
       {/* Una sola fila, sin flex-wrap. Con wrap, los campos y el carril de
           acciones suman más ancho del que suele haber disponible y el botón
           se iba solo a un segundo renglón, dejando un hueco vacío arriba.
@@ -169,6 +193,38 @@ export function BarraCaptura({
           es lo que permite a un flex item bajar del ancho de su contenido— y
           el carril de la derecha se queda quieto. */}
       <div className="flex items-end gap-2">
+        {/* Primero en la fila porque define el resto: de quién sea la hora
+            decide qué clientes se ofrecen y con qué tarifa se valúa. */}
+        <div className="w-40 min-w-0" data-campo="usuarioId">
+          <span className={LABEL}>Usuario</span>
+          {puedeElegirUsuario && usuarios.length > 1 ? (
+            <Dropdown
+              name="usuarioId"
+              value={valores.usuarioId}
+              onChange={(v) => set("usuarioId", v)}
+              options={usuarios.map((u) => ({ value: u.id, label: u.nombre }))}
+              placeholder="Usuario"
+              invalido={estado?.campo === "usuarioId"}
+              className="w-full"
+              ariaLabel="Usuario dueño de las horas"
+            />
+          ) : (
+            // Un mentor carga siempre para sí: se muestra quién es en vez de
+            // un desplegable de una sola opción, y el valor viaja igual.
+            <>
+              <input type="hidden" name="usuarioId" value={valores.usuarioId} />
+              <p
+                className={`${INPUT} truncate text-dc-muted`}
+                data-tooltip={
+                  usuarios.find((u) => u.id === valores.usuarioId)?.nombre
+                }
+              >
+                {usuarios.find((u) => u.id === valores.usuarioId)?.nombre ?? "—"}
+              </p>
+            </>
+          )}
+        </div>
+
         <div className="w-36 min-w-0" data-campo="fecha">
           <span className={LABEL}>Fecha</span>
           <DatePicker

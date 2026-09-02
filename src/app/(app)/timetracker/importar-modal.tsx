@@ -8,15 +8,7 @@ import {
 } from "./importar/actions";
 import { BTN_PRIMARY, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 
-export function ImportarModal({
-  onCerrar,
-  usuarioId = "",
-}: {
-  onCerrar: () => void;
-  // Usuario dueño de las horas importadas cuando un admin importa en
-  // nombre de otro mentor. Vacío = el propio usuario.
-  usuarioId?: string;
-}) {
+export function ImportarModal({ onCerrar }: { onCerrar: () => void }) {
   const [archivo, setArchivo] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [resultado, setResultado] = useState<{ importadas: number; omitidas: number } | null>(null);
@@ -42,7 +34,6 @@ export function ImportarModal({
     if (f) {
       const fd = new FormData();
       fd.set("archivo", f);
-      if (usuarioId) fd.set("usuarioId", usuarioId);
       startAnalizar(async () => {
         const p = await analizarImportacion(undefined, fd);
         if (p.error) setError(p.error);
@@ -55,7 +46,6 @@ export function ImportarModal({
     if (!archivo) return;
     const fd = new FormData();
     fd.set("archivo", archivo);
-    if (usuarioId) fd.set("usuarioId", usuarioId);
     startImportar(async () => {
       const r = await confirmarImportacion(undefined, fd);
       if (r.error) setError(r.error);
@@ -93,7 +83,8 @@ export function ImportarModal({
             <div className="mt-4 rounded-xl border border-dc-line bg-dc-deeper/40 p-4 text-xs text-dc-muted">
               <p className="text-sm text-dc-text">Columnas obligatorias</p>
               <p className="mt-1 font-medium text-dc-peri">
-                Fecha · Cliente · Concepto · Ownership · Horas · Modalidad
+                Fecha · Usuario · Cliente · Concepto · Ownership · Horas ·
+                Modalidad
               </p>
               <ul className="mt-3 space-y-2">
                 <li className="flex gap-2">
@@ -103,6 +94,14 @@ export function ImportarModal({
                     <strong className="text-dc-text">USD/Hora</strong> ni{" "}
                     <strong className="text-dc-text">USD Total</strong>: los calcula
                     el sistema automáticamente.
+                  </span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-dc-peri" aria-hidden="true">•</span>
+                  <span>
+                    <strong className="text-dc-text">Usuario:</strong> el mentor
+                    dueño de las horas. Un mismo archivo puede traer varios; cada
+                    fila se valida con los clientes y la tarifa de esa persona.
                   </span>
                 </li>
                 <li className="flex gap-2">
@@ -121,11 +120,7 @@ export function ImportarModal({
                 </li>
               </ul>
               <a
-                href={
-                  usuarioId
-                    ? `/timetracker/plantilla?usuario=${usuarioId}`
-                    : "/timetracker/plantilla"
-                }
+                href="/timetracker/plantilla"
                 className="mt-4 inline-flex items-center gap-2 rounded-lg border border-dc-peri/50 bg-dc-peri/10 px-3 py-2 text-sm font-medium text-dc-peri transition hover:border-dc-peri hover:bg-dc-peri/20 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri focus-visible:ring-offset-2 focus-visible:ring-offset-dc-deep"
               >
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

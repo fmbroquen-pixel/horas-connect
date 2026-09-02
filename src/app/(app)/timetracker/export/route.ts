@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
-import { resolverUsuarioDestino } from "@/lib/registrar-para";
+import { getUsuariosVisibles, idsUsuariosDelFiltro } from "@/lib/usuarios-tt";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { mesDeParams, rangoDelMes } from "@/lib/mes";
 
@@ -18,8 +18,13 @@ const ETIQUETA_MODALIDAD: Record<string, string> = {
 };
 
 // Columnas de la exportación (mismas de la tabla).
+//
+// "Usuario" va siempre, incluso cuando el archivo trae uno solo: una planilla
+// de horas sin decir de quién son no se puede leer fuera de la app, y sin esa
+// columna tampoco se podía volver a importar un archivo de varios mentores.
 const COLUMNAS = [
   "Fecha",
+  "Usuario",
   "Cliente",
   "Concepto",
   "Ownership",
@@ -59,17 +64,16 @@ export async function GET(request: NextRequest) {
     .map((x) => x.trim())
     .filter(Boolean);
 
-  // Un admin puede exportar el historial de otro mentor; el resto siempre
-  // exporta el suyo, aunque manipule el query param.
-  const destinoRes = await resolverUsuarioDestino(usuario, sp.get("usuario"));
-  if (!destinoRes.ok) {
-    return NextResponse.json({ error: destinoRes.error }, { status: 403 });
-  }
-  const destino = destinoRes.destino;
+  // Los mismos usuarios que muestra la pantalla. Sin filtro, TODOS los que el
+  // actor puede ver: la exportación general es una sola planilla con todos los
+  // mentores, no una por cabeza. El cruce con los visibles es lo que impide
+  // que un mentor se baje las horas de otro escribiendo un id en la URL.
+  const visibles = await getUsuariosVisibles(usuario);
+  const idsUsuarios = idsUsuariosDelFiltro(visibles, sp.get("usuarios") ?? undefined);
 
   const registros = await prisma.registroHoras.findMany({
     where: {
-      usuarioId: destino.id,
+      usuarioId: { in: idsUsuarios },
       ...SOLO_ACTIVOS,
       ownership: { not: "valor_cero" },
       fecha: {
@@ -78,12 +82,20 @@ export async function GET(request: NextRequest) {
       },
       ...(idsProyecto.length > 0 ? { clienteId: { in: idsProyecto } } : {}),
     },
-    include: { cliente: true, etapa: true, concepto: true },
-    orderBy: [{ fecha: "asc" }, { createdAt: "asc" }],
+    include: {
+      cliente: true,
+      etapa: true,
+      concepto: true,
+      usuario: { select: { nombre: true } },
+    },
+    // Por usuario y después por fecha: una planilla de varios mentores se lee
+    // por bloques, no intercalada.
+    orderBy: [{ usuario: { nombre: "asc" } }, { fecha: "asc" }, { createdAt: "asc" }],
   });
 
   const filas = registros.map((r) => [
     fmtFecha(r.fecha),
+    r.usuario.nombre,
     r.cliente.nombre,
     // Registros anteriores al catálogo: se exporta su clasificación previa
     // para no perder el dato, aunque ya no sea un valor válido al reimportar.

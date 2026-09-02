@@ -11,6 +11,7 @@ import {
   ITEM_MENU,
 } from "@/components/ui/menu-acciones";
 import { SubmenuProyectos } from "@/components/submenu-proyectos";
+import { SubmenuUsuarios } from "@/components/submenu-usuarios";
 import type { OpcionFiltro } from "@/components/lista-proyectos";
 
 // Todo lo que no es la tabla, en un solo botón: importar, exportar, filtrar
@@ -21,15 +22,17 @@ export function AccionesMenu({
   mes,
   proyectosOpciones,
   proyectosSeleccionados,
-  usuarioId = "",
+  usuariosOpciones,
+  usuariosSeleccionados,
 }: {
   anio: number;
   mes: number;
   proyectosOpciones: OpcionFiltro[];
   proyectosSeleccionados: string[];
-  // Usuario dueño de las horas cuando un admin opera para otro mentor: se
-  // propaga a la importación, a la exportación y al filtro.
-  usuarioId?: string;
+  // Vacío para un mentor: se ve a sí mismo y no hay nada que filtrar, así que
+  // el submenú directamente no se dibuja.
+  usuariosOpciones: OpcionFiltro[];
+  usuariosSeleccionados: string[];
 }) {
   const [importOpen, setImportOpen] = useState(false);
   const [papeleraOpen, setPapeleraOpen] = useState(false);
@@ -43,7 +46,15 @@ export function AccionesMenu({
   ) {
     params.set("proyectos", proyectosSeleccionados.join(","));
   }
-  if (usuarioId) params.set("usuario", usuarioId);
+  // Y a los usuarios que se están mirando, con el mismo criterio: con todos
+  // elegidos no viaja. La exportación general es una sola planilla con todos.
+  if (
+    usuariosOpciones.length > 0 &&
+    usuariosSeleccionados.length > 0 &&
+    usuariosSeleccionados.length < usuariosOpciones.length
+  ) {
+    params.set("usuarios", usuariosSeleccionados.join(","));
+  }
   const url = (formato: string) =>
     `/timetracker/export?${params.toString()}&formato=${formato}`;
 
@@ -69,8 +80,23 @@ export function AccionesMenu({
           basePath="/timetracker"
           opciones={proyectosOpciones}
           seleccionados={proyectosSeleccionados}
-          extra={{ usuario: usuarioId || undefined }}
+          extra={{ usuarios: params.get("usuarios") ?? undefined }}
         />
+
+        {/* Solo para quien ve a más de uno: a un mentor no le sirve un filtro
+            con una única opción que además es él. */}
+        {usuariosOpciones.length > 1 && (
+          <SubmenuUsuarios
+            basePath="/timetracker"
+            parametros={{
+              anio: String(anio),
+              mes: String(mes),
+              proyectos: params.get("proyectos") ?? undefined,
+            }}
+            opciones={usuariosOpciones}
+            seleccionados={usuariosSeleccionados}
+          />
+        )}
 
         <SeparadorMenu />
 
@@ -79,9 +105,7 @@ export function AccionesMenu({
         </ItemMenu>
       </MenuAcciones>
 
-      {importOpen && (
-        <ImportarModal onCerrar={() => setImportOpen(false)} usuarioId={usuarioId} />
-      )}
+      {importOpen && <ImportarModal onCerrar={() => setImportOpen(false)} />}
       <PapeleraModal tipo="hora" open={papeleraOpen} onClose={() => setPapeleraOpen(false)} />
     </>
   );

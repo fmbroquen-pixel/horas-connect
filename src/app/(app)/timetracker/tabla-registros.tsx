@@ -182,6 +182,7 @@ export function TablaRegistros({
               aria-label="Seleccionar todo"
             />
             <span>Fecha</span>
+            <span>Usuario</span>
             <span>Cliente</span>
             <span>Concepto</span>
             <span>Ownership</span>
