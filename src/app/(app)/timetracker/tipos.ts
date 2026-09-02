@@ -19,10 +19,10 @@ export type MapaTarifas = Record<string, TarifaVigencia[]>;
 export type RegistroFila = {
   id: string;
   fecha: string; // YYYY-MM-DD
-  // Dueño de las horas (worked_by). Se muestra y no se edita: el monto es una
-  // foto de LA TARIFA DE ESE USUARIO en esa fecha, así que cambiar el dueño no
-  // es mover una etiqueta, es revaluar el registro. Para corregir a quién se
-  // le cargó, se borra y se vuelve a cargar.
+  // Dueño de las horas (worked_by). Editable solo por un admin: cambiarlo
+  // revalúa el registro con la tarifa del nuevo dueño en la fecha del
+  // registro, porque el monto es una foto de esa tarifa y no una etiqueta.
+  usuarioId: string;
   usuarioNombre: string;
   // Si el dueño sigue habilitado. Un usuario bloqueado conserva su historia a
   // la vista -son horas que se trabajaron y se facturaron- pero congelada:

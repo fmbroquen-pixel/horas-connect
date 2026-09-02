@@ -13,10 +13,14 @@ export function TablaRegistros({
   filas,
   proyectos,
   conceptos,
+  usuarios,
 }: {
   filas: RegistroFila[];
   proyectos: OpcionSelect[];
   conceptos: OpcionConcepto[];
+  // A quiénes se puede reasignar un registro. Vacío para un mentor: la celda
+  // de usuario se le muestra de solo lectura.
+  usuarios: OpcionSelect[];
 }) {
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirmar, setConfirmar] = useState(false);
@@ -200,6 +204,7 @@ export function TablaRegistros({
                 registro={f}
                 proyectos={proyectos}
                 conceptos={conceptos}
+                usuarios={usuarios}
                 seleccionado={sel.has(f.id)}
                 onToggle={toggle}
               />

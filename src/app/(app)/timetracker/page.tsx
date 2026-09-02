@@ -151,6 +151,7 @@ export default async function TimetrackerPage({
       fecha: r.fecha.toISOString().slice(0, 10),
       clienteId: r.clienteId,
       clienteActivo: activoPorCliente.get(r.clienteId) ?? true,
+      usuarioId: r.usuarioId,
       usuarioNombre: r.usuario.nombre,
       usuarioActivo: r.usuario.activo,
       conceptoId: r.conceptoId ?? "",
@@ -272,6 +273,9 @@ export default async function TimetrackerPage({
           filas={filas}
           proyectos={opcionesProyecto}
           conceptos={conceptos}
+          // Reasignar es privilegio de admin: para un mentor la celda se ve y
+          // no se toca, igual que la tarifa.
+          usuarios={esAdmin ? opcionesUsuario : []}
         />
       </BloqueRecalculable>
     </div>

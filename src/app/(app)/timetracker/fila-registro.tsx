@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { actualizarCampoRegistro, eliminarRegistro } from "./actions";
 import { formatMonto, hoyISO } from "@/lib/formato";
 import { GRID_TIMETRACKER } from "./grid";
@@ -14,6 +14,10 @@ import type { OpcionConcepto, OpcionSelect, RegistroFila } from "./tipos";
 import { BotonEditarIcono, BotonEliminarIcono } from "@/components/tabla/acciones-fila";
 import { MarcaEdicion } from "@/components/tabla/marca-edicion";
 import { CarrilAcciones } from "@/components/tabla/carril-acciones";
+import { Modal } from "@/components/ui/modal";
+import { avisarError } from "@/components/ui/avisos";
+import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
+import type { PreguntaAsignacion } from "./actions";
 import { IconoSoloLectura } from "@/components/tabla/icono-solo-lectura";
 // El mismo texto que en Home CORE y en la vista del proyecto: la celda, el
 // checkbox y el candado de esta fila dicen lo mismo que el semáforo de allá
@@ -42,16 +46,28 @@ export function FilaRegistro({
   registro,
   proyectos,
   conceptos,
+  usuarios,
   seleccionado,
   onToggle,
 }: {
   registro: RegistroFila;
   proyectos: OpcionSelect[];
   conceptos: OpcionConcepto[];
+  usuarios: OpcionSelect[];
   seleccionado: boolean;
   onToggle: (id: string) => void;
 }) {
   const filaRef = useRef<HTMLDivElement>(null);
+
+  // Reasignar cuando el nuevo dueño no tiene el proyecto: el servidor devuelve
+  // la pregunta en vez de rechazar, y acá se ofrece resolverla en el momento.
+  // Rechazar sin más obligaba a salir de Time Tracking, ir a Settings, asignar
+  // y volver a buscar la fila.
+  const [pregunta, setPregunta] = useState<{
+    datos: PreguntaAsignacion;
+    usuarioId: string;
+  } | null>(null);
+  const [asignando, setAsignando] = useState(false);
 
   // La historia se mira cuando el cliente está inactivo O cuando el dueño de
   // las horas está bloqueado. El servidor ya rechaza las dos; acá se deja de
@@ -67,6 +83,31 @@ export function FilaRegistro({
 
   const guardar = (campo: Parameters<typeof actualizarCampoRegistro>[1]) =>
     async (valor: string) => actualizarCampoRegistro(registro.id, campo, valor);
+
+  // El dueño va aparte: su respuesta puede ser una pregunta, no un error.
+  const guardarUsuario = async (valor: string) => {
+    const r = await actualizarCampoRegistro(registro.id, "usuarioId", valor);
+    if (r.asignacion) {
+      setPregunta({ datos: r.asignacion, usuarioId: valor });
+      // No es un error: la celda vuelve a lo que estaba y el popup explica.
+      return { revertir: true };
+    }
+    return r;
+  };
+
+  const confirmarAsignacion = async () => {
+    if (!pregunta) return;
+    setAsignando(true);
+    const r = await actualizarCampoRegistro(
+      registro.id,
+      "usuarioId",
+      pregunta.usuarioId,
+      true,
+    );
+    setAsignando(false);
+    setPregunta(null);
+    if (r.error) avisarError(r.error);
+  };
 
   // El lápiz no abre un modo de edición —acá no existe— sino que entra a la
   // primera celda editable de la fila. Es la misma acción que hacer clic en
@@ -89,11 +130,18 @@ export function FilaRegistro({
           data-tooltip={editable ? undefined : motivo}
         />
 
-        {/* Solo lectura, como la tarifa y el monto: los tres son consecuencia
-            de a quién y cuándo se le cargó, no datos sueltos de la fila. */}
-        <CeldaSoloLectura alinear="izquierda" titulo={registro.usuarioNombre}>
-          {registro.usuarioNombre}
-        </CeldaSoloLectura>
+        {/* Cambiar el dueño revalúa el registro con la tarifa de esa persona
+            en la fecha del registro: no es mover una etiqueta. Por eso lo hace
+            solo un admin, y por eso el servidor puede frenar y preguntar. */}
+        <CeldaOpciones
+          valor={registro.usuarioId}
+          opciones={usuarios.map((u) => ({ value: u.id, label: u.nombre }))}
+          onGuardar={guardarUsuario}
+          ariaLabel="Usuario dueño de las horas"
+          etiqueta={registro.usuarioNombre}
+          alinear="izquierda"
+          editable={editable && usuarios.length > 1}
+        />
 
         <CeldaFecha
           valor={registro.fecha}
@@ -171,6 +219,48 @@ export function FilaRegistro({
           )}
         </CarrilAcciones>
       </div>
+
+      {/* El proyecto no es de quien va a quedar como dueño. No se rechaza: se
+          ofrece asignárselo como Backup, que es el rol que no desplaza a nadie
+          -el Owner es uno solo y ya tiene dueño-. Cancelar no toca nada: hasta
+          acá no se escribió. */}
+      <Modal
+        open={pregunta !== null}
+        onClose={() => setPregunta(null)}
+        labelledBy="titulo-asignar-proyecto"
+      >
+        <div className="w-full max-w-lg rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+          <h2
+            id="titulo-asignar-proyecto"
+            className="font-display text-sm uppercase text-white"
+          >
+            Proyecto no asignado
+          </h2>
+          <p className="mt-3 text-sm text-dc-text">
+            <strong className="text-white">{pregunta?.datos.usuarioNombre}</strong> no
+            tiene asignado{" "}
+            <strong className="text-white">{pregunta?.datos.clienteNombre}</strong>.
+            ¿Asignarlo como Backup?
+          </p>
+          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setPregunta(null)}
+              className={BTN_SECONDARY}
+            >
+              No
+            </button>
+            <button
+              type="button"
+              onClick={confirmarAsignacion}
+              disabled={asignando}
+              className={BTN_PRIMARY}
+            >
+              {asignando ? "Asignando…" : "Sí, asignar"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

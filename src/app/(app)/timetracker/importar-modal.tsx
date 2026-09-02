@@ -14,6 +14,10 @@ export function ImportarModal({ onCerrar }: { onCerrar: () => void }) {
   const [resultado, setResultado] = useState<{ importadas: number; omitidas: number } | null>(null);
   const [error, setError] = useState<string>();
   const [dragOver, setDragOver] = useState(false);
+  // Si el admin aceptó asignar los proyectos que faltan. Vive acá y no en el
+  // servidor porque es una respuesta, no un dato del archivo: se vuelve a
+  // analizar con ella puesta y recién ahí esas filas cuentan como válidas.
+  const [asignar, setAsignar] = useState(false);
   const [analizando, startAnalizar] = useTransition();
   const [importando, startImportar] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -31,6 +35,7 @@ export function ImportarModal({ onCerrar }: { onCerrar: () => void }) {
     setPreview(null);
     setResultado(null);
     setError(undefined);
+    setAsignar(false);
     if (f) {
       const fd = new FormData();
       fd.set("archivo", f);
@@ -42,10 +47,25 @@ export function ImportarModal({ onCerrar }: { onCerrar: () => void }) {
     }
   };
 
+  // Vuelve a analizar el mismo archivo contando las asignaciones aceptadas.
+  const reanalizar = (conAsignacion: boolean) => {
+    if (!archivo) return;
+    setAsignar(conAsignacion);
+    const fd = new FormData();
+    fd.set("archivo", archivo);
+    if (conAsignacion) fd.set("asignar", "1");
+    startAnalizar(async () => {
+      const p = await analizarImportacion(undefined, fd);
+      if (p.error) setError(p.error);
+      else setPreview(p);
+    });
+  };
+
   const importar = () => {
     if (!archivo) return;
     const fd = new FormData();
     fd.set("archivo", archivo);
+    if (asignar) fd.set("asignar", "1");
     startImportar(async () => {
       const r = await confirmarImportacion(undefined, fd);
       if (r.error) setError(r.error);
@@ -184,6 +204,59 @@ export function ImportarModal({ onCerrar }: { onCerrar: () => void }) {
                     {preview.conError} con error
                   </span>
                 </div>
+
+                {/* Proyectos que le faltan a alguien. No es un error del
+                    archivo: es un permiso que se puede dar acá mismo. En lote
+                    la pregunta va una sola vez y no fila por fila -un archivo
+                    de 300 filas puede necesitar dos asignaciones-. */}
+                {preview.faltantes.length > 0 && !asignar && (
+                  <div className="mt-3 rounded-lg border border-dc-peri/40 bg-dc-peri/10 px-3 py-2.5 text-xs">
+                    <p className="text-dc-text">
+                      {preview.faltantes.length === 1
+                        ? `${preview.faltantes[0].usuarioNombre} no tiene asignado ${preview.faltantes[0].clienteNombre}.`
+                        : `Hay ${preview.faltantes.length} proyectos sin asignar.`}{" "}
+                      Para ingresar la información hay que asignarlos.
+                    </p>
+                    {preview.faltantes.length > 1 && (
+                      <ul className="mt-1.5 space-y-0.5 text-dc-muted">
+                        {preview.faltantes.map((f) => (
+                          <li key={`${f.usuarioId}|${f.clienteId}`}>
+                            {f.usuarioNombre} → {f.clienteNombre}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <p className="mt-2 text-dc-text">
+                      ¿Asignar{preview.faltantes.length > 1 ? "los" : "lo"} como
+                      Backup?
+                    </p>
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => reanalizar(true)}
+                        className={BTN_PRIMARY_SM}
+                      >
+                        Sí, asignar
+                      </button>
+                      {/* "No" no necesita botón: esas filas ya figuran como
+                          rechazadas con su motivo, que es lo que hace "No". */}
+                    </div>
+                  </div>
+                )}
+
+                {asignar && preview.faltantes.length > 0 && (
+                  <p className="mt-3 rounded-lg border border-dc-peri/30 bg-dc-peri/5 px-3 py-2 text-xs text-dc-peri">
+                    Se van a asignar {preview.faltantes.length} proyecto(s) como
+                    Backup al importar.{" "}
+                    <button
+                      type="button"
+                      onClick={() => reanalizar(false)}
+                      className="underline underline-offset-2 hover:text-dc-text"
+                    >
+                      Deshacer
+                    </button>
+                  </p>
+                )}
 
                 {preview.conError > 0 && (
                   <div className="mt-3 max-h-48 overflow-y-auto rounded-lg border border-dc-line">

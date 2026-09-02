@@ -105,18 +105,32 @@ const VigenciaSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, { error: "Fecha de vigencia inválida." });
 
+// Mayor a cero, no "no negativo".
+//
+// Una tarifa en cero no es un valor: es una tarifa sin cargar disfrazada de
+// dato. Deja registros valuados en 0 USD que ensucian el margen y el costo del
+// proyecto sin que nada avise, y desde que el dueño de un registro se puede
+// cambiar es además lo que impediría revaluarlo -no hay con qué-.
+//
+// La modalidad "Valor cero" queda afuera de esta regla a propósito: ahí el cero
+// es el significado, no la ausencia. Por eso el tope se aplica solo a los
+// COMBOS_FACTURABLES, que son las cuatro combinaciones que sí cobran.
+const MONTO_TARIFA = z.coerce
+  .number()
+  .positive({ error: "La tarifa tiene que ser mayor a cero." });
+
 const TarifaFijaSchema = z.object({
   tipoTarifa: z.literal("fija"),
-  valorUsd: z.coerce.number().min(0, { error: "El valor no puede ser negativo." }),
+  valorUsd: MONTO_TARIFA,
   vigenteDesde: VigenciaSchema,
 });
 
 const TarifaVariableSchema = z.object({
   tipoTarifa: z.literal("variable"),
-  presencialOwner: z.coerce.number().min(0),
-  presencialBackup: z.coerce.number().min(0),
-  virtualOwner: z.coerce.number().min(0),
-  virtualBackup: z.coerce.number().min(0),
+  presencialOwner: MONTO_TARIFA,
+  presencialBackup: MONTO_TARIFA,
+  virtualOwner: MONTO_TARIFA,
+  virtualBackup: MONTO_TARIFA,
   vigenteDesde: VigenciaSchema,
 });
 
@@ -135,7 +149,9 @@ export async function guardarTarifa(
       valorUsd: formData.get("valorUsd"),
       vigenteDesde: formData.get("vigenteDesde"),
     });
-    if (!parsed.success) return { error: "Valor o fecha de vigencia inválidos." };
+    if (!parsed.success) {
+      return { error: parsed.error.issues[0]?.message ?? "Valor o fecha inválidos." };
+    }
     const desde = fechaDesdeISO(parsed.data.vigenteDesde);
 
     await prisma.usuario.update({
@@ -162,7 +178,7 @@ export async function guardarTarifa(
       vigenteDesde: formData.get("vigenteDesde"),
     });
     if (!parsed.success) {
-      return { error: "Alguno de los valores o la fecha de vigencia es inválido." };
+      return { error: parsed.error.issues[0]?.message ?? "Algún valor o la fecha es inválido." };
     }
     const desde = fechaDesdeISO(parsed.data.vigenteDesde);
 

@@ -216,7 +216,7 @@ export function TarifaForm({
             name="valorUsd"
             type="number"
             step="0.01"
-            min="0"
+            min="0.01"
             defaultValue={valorFijaInicial}
             required
             className="w-40 rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
@@ -232,7 +232,7 @@ export function TarifaForm({
               name="presencialOwner"
               type="number"
               step="0.01"
-              min="0"
+              min="0.01"
               defaultValue={valores.presencialOwner ?? ""}
               required
               className="w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
@@ -246,7 +246,7 @@ export function TarifaForm({
               name="presencialBackup"
               type="number"
               step="0.01"
-              min="0"
+              min="0.01"
               defaultValue={valores.presencialBackup ?? ""}
               required
               className="w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
@@ -260,7 +260,7 @@ export function TarifaForm({
               name="virtualOwner"
               type="number"
               step="0.01"
-              min="0"
+              min="0.01"
               defaultValue={valores.virtualOwner ?? ""}
               required
               className="w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
@@ -274,7 +274,7 @@ export function TarifaForm({
               name="virtualBackup"
               type="number"
               step="0.01"
-              min="0"
+              min="0.01"
               defaultValue={valores.virtualBackup ?? ""}
               required
               className="w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"

@@ -7,9 +7,11 @@ import { tarifaVigenteA, type TarifaVigencia } from "@/lib/tarifas";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { getUsuariosQueReportan } from "@/lib/registrar-para";
 import { getUsuariosVisibles } from "@/lib/usuarios-tt";
+import { MAX_BACKUPS } from "@/app/(app)/admin/usuarios/constantes";
 import {
   claveDuplicado,
   esError,
+  faltaAsignar,
   resolverClienteDeFila,
   resolverDuenio,
 } from "@/lib/importar-fila";
@@ -57,6 +59,15 @@ export type FilaPreview = {
   errores: string[];
 };
 
+// Un proyecto que le falta a alguien para que su fila entre. No es un error
+// del archivo: es un permiso que un admin puede dar en el momento.
+export type AsignacionFaltante = {
+  usuarioId: string;
+  usuarioNombre: string;
+  clienteId: string;
+  clienteNombre: string;
+};
+
 export type Preview = {
   error?: string;
   columnasFaltantes: string[];
@@ -64,6 +75,7 @@ export type Preview = {
   filas: FilaPreview[];
   validas: number;
   conError: number;
+  faltantes: AsignacionFaltante[];
 };
 
 function parseFecha(raw: unknown): string | null {
@@ -133,7 +145,10 @@ async function leerArchivo(
   return { headers, filas };
 }
 
-async function procesar(actor: Usuario, archivo: File) {
+// `asignar` es la respuesta al popup del preview: el admin aceptó darle los
+// proyectos faltantes como Backup. Sin eso, esas filas quedan pendientes y no
+// se importan.
+async function procesar(actor: Usuario, archivo: File, asignar = false) {
   const leido = await leerArchivo(archivo);
   if (!leido) return null;
 
@@ -199,10 +214,15 @@ async function procesar(actor: Usuario, archivo: File) {
   const todos = new Map(
     (
       await prisma.cliente.findMany({
-        select: { nombre: true, activo: true },
+        select: { id: true, nombre: true, activo: true },
       })
     ).map((c) => [normalizar(c.nombre), c]),
   );
+
+  // Proyectos que habría que asignarle a alguien para que el archivo entre
+  // entero. Se juntan sin repetir: un archivo de 300 filas puede necesitar dos
+  // asignaciones, y preguntarlo 300 veces no es preguntar.
+  const faltantes = new Map<string, AsignacionFaltante>();
 
   // El catálogo de conceptos es global, así que basta un índice por nombre.
   const conceptos = await getConceptosActivos();
@@ -259,7 +279,9 @@ async function procesar(actor: Usuario, archivo: File) {
   }[] = [];
 
   if (columnasFaltantes.length > 0) {
-    return { columnasFaltantes, columnasDesconocidas, filas, validas };
+    // Faltan columnas: no se llego a mirar ninguna fila, asi que tampoco hay
+    // asignaciones que ofrecer.
+    return { columnasFaltantes, columnasDesconocidas, filas, validas, faltantes: [] };
   }
 
   leido.filas.forEach((cols, i) => {
@@ -308,8 +330,23 @@ async function procesar(actor: Usuario, archivo: File) {
         carteras.get(duenio.id) ?? new Map(),
         todos,
       );
-      if (esError(resCliente)) errores.push(resCliente.error);
-      else proy = resCliente.valor;
+      if (faltaAsignar(resCliente)) {
+        const c = resCliente.faltaAsignar;
+        faltantes.set(`${duenio.id}|${c.id}`, {
+          usuarioId: duenio.id,
+          usuarioNombre: duenio.nombre,
+          clienteId: c.id,
+          clienteNombre: c.nombre,
+        });
+        // Con el visto bueno la fila sigue como válida y la asignación se crea
+        // al confirmar. Sin él queda rechazada, con el motivo exacto.
+        if (asignar) proy = { id: c.id, nombre: c.nombre };
+        else errores.push(`"${c.nombre}" no está asignado a ${duenio.nombre}`);
+      } else if (esError(resCliente)) {
+        errores.push(resCliente.error);
+      } else {
+        proy = resCliente.valor;
+      }
     } else if (!proyecto) {
       errores.push("Falta el cliente");
     }
@@ -391,7 +428,13 @@ async function procesar(actor: Usuario, archivo: File) {
     }
   });
 
-  return { columnasFaltantes, columnasDesconocidas, filas, validas };
+  return {
+    columnasFaltantes,
+    columnasDesconocidas,
+    filas,
+    validas,
+    faltantes: [...faltantes.values()],
+  };
 }
 
 export async function analizarImportacion(
@@ -404,11 +447,14 @@ export async function analizarImportacion(
   // cargarle horas.
   const archivo = formData.get("archivo");
   if (!(archivo instanceof File) || archivo.size === 0) {
-    return { error: "Elegí un archivo.", columnasFaltantes: [], columnasDesconocidas: [], filas: [], validas: 0, conError: 0 };
+    return { error: "Elegí un archivo.", columnasFaltantes: [], columnasDesconocidas: [], filas: [], validas: 0, conError: 0, faltantes: [] };
   }
-  const r = await procesar(actor, archivo);
+  // El preview se calcula SIN asignar nada: primero se muestra qué haría falta
+  // y recién con el visto bueno se vuelve a calcular contando esas asignaciones.
+  const asignar = formData.get("asignar") === "1";
+  const r = await procesar(actor, archivo, asignar);
   if (!r) {
-    return { error: "No se pudo leer el archivo.", columnasFaltantes: [], columnasDesconocidas: [], filas: [], validas: 0, conError: 0 };
+    return { error: "No se pudo leer el archivo.", columnasFaltantes: [], columnasDesconocidas: [], filas: [], validas: 0, conError: 0, faltantes: [] };
   }
   const conError = r.filas.filter((f) => f.errores.length > 0).length;
   return {
@@ -417,6 +463,7 @@ export async function analizarImportacion(
     filas: r.filas,
     validas: r.validas.length,
     conError,
+    faltantes: r.faltantes,
   };
 }
 
@@ -431,13 +478,34 @@ export async function confirmarImportacion(
   if (!(archivo instanceof File) || archivo.size === 0) {
     return { error: "Elegí un archivo." };
   }
-  const r = await procesar(actor, archivo);
+  const asignar = formData.get("asignar") === "1";
+  const r = await procesar(actor, archivo, asignar);
   if (!r) return { error: "No se pudo leer el archivo." };
   if (r.columnasFaltantes.length > 0) {
     return { error: `Faltan columnas: ${r.columnasFaltantes.join(", ")}` };
   }
   if (r.validas.length === 0) {
     return { error: "No hay registros válidos para importar." };
+  }
+
+  // Las asignaciones aceptadas se crean ANTES de insertar: si el cupo de
+  // Backups está lleno la importación se frena entera y no a la mitad.
+  if (asignar && r.faltantes.length > 0) {
+    for (const f of r.faltantes) {
+      const ajenos = await prisma.proyectoAsignado.count({
+        where: { clienteId: f.clienteId, rol: "backup", usuarioId: { not: f.usuarioId } },
+      });
+      if (ajenos >= MAX_BACKUPS) {
+        return {
+          error: `"${f.clienteNombre}" ya tiene ${MAX_BACKUPS} Mentores Backup: no se puede asignar a ${f.usuarioNombre}.`,
+        };
+      }
+      await prisma.proyectoAsignado.upsert({
+        where: { usuarioId_clienteId: { usuarioId: f.usuarioId, clienteId: f.clienteId } },
+        create: { usuarioId: f.usuarioId, clienteId: f.clienteId, rol: "backup" },
+        update: {},
+      });
+    }
   }
 
   await prisma.registroHoras.createMany({

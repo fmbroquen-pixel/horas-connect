@@ -18,9 +18,9 @@ const TODOS = mapa([ANA, BETO, CARO]);
 const EMBARCA: Persona = { id: "c-emb", nombre: "Embarca" };
 const NITES: Persona = { id: "c-nit", nombre: "Nites" };
 const CATALOGO = new Map<string, ClienteCatalogo>([
-  [k("Embarca"), { nombre: "Embarca", activo: true }],
-  [k("Nites"), { nombre: "Nites", activo: false }],
-  [k("Valca"), { nombre: "Valca", activo: true }],
+  [k("Embarca"), { id: "c-emb", nombre: "Embarca", activo: true }],
+  [k("Nites"), { id: "c-nit", nombre: "Nites", activo: false }],
+  [k("Valca"), { id: "c-val", nombre: "Valca", activo: true }],
 ]);
 
 describe("resolverDuenio", () => {
@@ -93,12 +93,12 @@ describe("resolverClienteDeFila", () => {
     });
   });
 
-  it("existe y está activo, pero no es de esa persona", () => {
-    // El caso que antes salía como "inexistente" y mandaba a revisar la
-    // ortografía. Dice de quién no es, que es lo que permite accionar.
+  it("existe y está activo pero no es suyo: se puede asignar, no es un error", () => {
+    // No es un problema del archivo sino un permiso que falta, y un admin lo
+    // puede dar en el momento. Se devuelve aparte para poder ofrecerlo.
     expect(
       resolverClienteDeFila("Valca", k("Valca"), ANA, carteraDeAna, CATALOGO),
-    ).toEqual({ error: '"Valca" no está asignado a Ana Perez' });
+    ).toEqual({ faltaAsignar: { id: "c-val", nombre: "Valca", activo: true } });
   });
 
   it("el mismo cliente resuelve para uno y falla para otro", () => {
@@ -110,7 +110,7 @@ describe("resolverClienteDeFila", () => {
     ).toEqual({ valor: EMBARCA });
     expect(
       resolverClienteDeFila("Embarca", k("Embarca"), BETO, carteraDeBeto, CATALOGO),
-    ).toEqual({ error: '"Embarca" no está asignado a Beto Diaz' });
+    ).toEqual({ faltaAsignar: { id: "c-emb", nombre: "Embarca", activo: true } });
   });
 });
 

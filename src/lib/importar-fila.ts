@@ -11,7 +11,7 @@
 // resuelto a id: el nombre solo sirve para encontrar, nunca para guardar.
 
 export type Persona = { id: string; nombre: string };
-export type ClienteCatalogo = { nombre: string; activo: boolean };
+export type ClienteCatalogo = { id: string; nombre: string; activo: boolean };
 
 export type Resuelto<T> = { valor: T } | { error: string };
 
@@ -51,7 +51,7 @@ export function resolverClienteDeFila(
   duenio: Persona,
   carteraDelDuenio: Map<string, Persona>,
   catalogoCompleto: Map<string, ClienteCatalogo>,
-): Resuelto<Persona> {
+): Resuelto<Persona> | { faltaAsignar: ClienteCatalogo } {
   if (!celda.trim()) return { error: "Falta el cliente" };
   const suyo = carteraDelDuenio.get(clave);
   if (suyo) return { valor: suyo };
@@ -61,7 +61,16 @@ export function resolverClienteDeFila(
   if (!real.activo) {
     return { error: `"${real.nombre}" está inactivo: no admite registros nuevos` };
   }
-  return { error: `"${real.nombre}" no está asignado a ${duenio.nombre}` };
+  // Existe, está activo, y solo falta el permiso. No es un error de archivo:
+  // es algo que un admin puede resolver en el momento, así que se devuelve
+  // aparte para poder ofrecer asignarlo en vez de rechazar la fila.
+  return { faltaAsignar: real };
+}
+
+export function faltaAsignar<T>(
+  r: Resuelto<T> | { faltaAsignar: ClienteCatalogo },
+): r is { faltaAsignar: ClienteCatalogo } {
+  return "faltaAsignar" in r;
 }
 
 // La clave de duplicado de un registro. Incluye al dueño a propósito: dos

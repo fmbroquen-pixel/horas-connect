@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { clienteInactivoDe, mensajeInactivo } from "@/lib/cliente-activo";
 import { mensajeBloqueado, usuarioBloqueadoDe } from "@/lib/usuario-activo";
+import { MAX_BACKUPS } from "@/app/(app)/admin/usuarios/constantes";
 import { tarifaVigenteA } from "@/lib/tarifas";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
@@ -35,6 +36,60 @@ export type CampoRegistro =
   | "horas";
 
 type Resultado = { error?: string; campo?: CampoRegistro };
+
+// Cuando la edición es válida salvo por un permiso que el admin puede otorgar
+// en el momento, el servidor no decide solo: devuelve la pregunta y espera.
+// Mismo patrón que el conflicto de "En curso" en el Follow Up.
+export type PreguntaAsignacion = {
+  usuarioNombre: string;
+  clienteNombre: string;
+};
+type ResultadoRegistro = Resultado & { asignacion?: PreguntaAsignacion };
+
+// ¿El dueño puede trabajar en ese cliente? Y si no, ¿se le asigna?
+//
+// Tres respuestas: ya lo tiene, hay que preguntar, o se acaba de asignar. La
+// del medio es la que hace falta: rechazar sin más obligaba a salir de Time
+// Tracking, ir a Settings, asignar y volver a buscar la fila.
+async function asegurarAsignacion(
+  duenio: { id: string; nombre: string },
+  clienteId: string,
+  asignar: boolean,
+): Promise<{ ok: true } | { asignacion: PreguntaAsignacion } | { error: string }> {
+  const yaLoTiene = await prisma.proyectoAsignado.findUnique({
+    where: { usuarioId_clienteId: { usuarioId: duenio.id, clienteId } },
+    select: { id: true },
+  });
+  if (yaLoTiene) return { ok: true };
+
+  const cliente = await prisma.cliente.findUnique({
+    where: { id: clienteId },
+    select: { nombre: true, activo: true },
+  });
+  if (!cliente) return { error: "Cliente inexistente." };
+  // Un cliente inactivo no se asigna: no admite carga nueva de nadie, así que
+  // ofrecer asignarlo sería ofrecer algo que después se rechaza igual.
+  if (!cliente.activo) return { error: mensajeInactivo(cliente.nombre) };
+
+  if (!asignar) {
+    return { asignacion: { usuarioNombre: duenio.nombre, clienteNombre: cliente.nombre } };
+  }
+
+  // Entra como Backup, que es el rol que no desplaza a nadie: el Owner es uno
+  // solo y ya tiene dueño.
+  const backupsAjenos = await prisma.proyectoAsignado.count({
+    where: { clienteId, rol: "backup", usuarioId: { not: duenio.id } },
+  });
+  if (backupsAjenos >= MAX_BACKUPS) {
+    return {
+      error: `"${cliente.nombre}" ya tiene ${MAX_BACKUPS} Mentores Backup. Liberá un lugar en Settings → Usuarios.`,
+    };
+  }
+  await prisma.proyectoAsignado.create({
+    data: { usuarioId: duenio.id, clienteId, rol: "backup" },
+  });
+  return { ok: true };
+}
 
 // Todo en UTC, como el resto del sistema: la columna es @db.Date y Prisma la
 // lee y escribe a medianoche UTC. Construir la fecha con la hora local del
@@ -136,10 +191,15 @@ async function validarEntrada(usuarioId: string, formData: FormData) {
     parsed.data.ownership,
     fecha,
   );
-  if (tarifa === null) {
+  // Cero no es una tarifa, es una tarifa sin cargar. Dejarla pasar producía
+  // registros de 0 USD que ensucian el margen sin que nada avise, y desde que
+  // el dueño de un registro se puede cambiar es además lo que impediría
+  // revaluarlo. La modalidad "Valor cero" no llega acá: su ownership no está
+  // entre los editables.
+  if (tarifa === null || tarifa <= 0) {
     return {
       error:
-        "No tenés una tarifa configurada para esa combinación. Contactá al administrador.",
+        "No hay una tarifa mayor a cero para esa combinación en esa fecha. Cargala en Settings → Usuarios.",
       campo: "modalidad" as const,
     };
   }
@@ -213,7 +273,10 @@ export async function actualizarCampoRegistro(
   id: string,
   campo: CampoRegistro,
   valor: string,
-): Promise<Resultado> {
+  // Respuesta del popup: el admin aceptó asignarle el proyecto al nuevo dueño.
+  // Sin esto la acción devuelve la pregunta y no escribe nada.
+  asignarComoBackup = false,
+): Promise<ResultadoRegistro> {
   const usuario = await requireGuest();
   const esAdmin = usuario.rol === "admin";
 
@@ -226,6 +289,24 @@ export async function actualizarCampoRegistro(
   const inactivo = await clienteInactivoDe([registro.clienteId]);
   if (inactivo) return { error: mensajeInactivo(inactivo) };
 
+  // ── Cambio de dueño ──────────────────────────────────────────────────────
+  // Reasignar un registro NO es mover una etiqueta: el monto es una foto de la
+  // tarifa DE ESE mentor en ESA fecha, así que el registro se revalúa con la
+  // tarifa del nuevo dueño en la fecha del registro. De eso se encarga
+  // validarEntrada, que ya valida cliente y tarifa contra quien se le pase.
+  let duenio = { id: registro.usuarioId, nombre: "" };
+  if (campo === "usuarioId") {
+    const destinoRes = await resolverUsuarioDestino(usuario, valor);
+    if (!destinoRes.ok) return { error: destinoRes.error, campo: "usuarioId" };
+    duenio = { id: destinoRes.destino.id, nombre: destinoRes.destino.nombre };
+
+    // El cliente del registro tiene que ser suyo. Si no lo es, se pregunta
+    // antes de escribir nada.
+    const asign = await asegurarAsignacion(duenio, registro.clienteId, asignarComoBackup);
+    if ("error" in asign) return { error: asign.error, campo: "usuarioId" };
+    if ("asignacion" in asign) return { asignacion: asign.asignacion };
+  }
+
   const fd = new FormData();
   fd.set("fecha", campo === "fecha" ? valor : registro.fecha.toISOString().slice(0, 10));
   fd.set("clienteId", campo === "clienteId" ? valor : registro.clienteId);
@@ -234,13 +315,17 @@ export async function actualizarCampoRegistro(
   fd.set("modalidad", campo === "modalidad" ? valor : registro.modalidad);
   fd.set("horas", campo === "horas" ? valor : formatHorasHsMin(Number(registro.horas)));
 
-  const r = await validarEntrada(registro.usuarioId, fd);
+  const r = await validarEntrada(duenio.id, fd);
   if (r.error || !r.datos) return { error: r.error, campo: r.campo };
   const d = r.datos;
 
   await prisma.registroHoras.update({
     where: { id },
     data: {
+      // worked_by. La tarifa y el monto de abajo ya salen de validarEntrada
+      // calculados para este dueño, así que el registro queda coherente: no
+      // hay forma de guardar la persona nueva con el precio del anterior.
+      usuarioId: duenio.id,
       fecha: d.fecha,
       clienteId: d.clienteId,
       conceptoId: d.conceptoId,
