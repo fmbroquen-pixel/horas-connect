@@ -14,6 +14,7 @@ import { ProyectosForm } from "./proyectos-form";
 import type { ProyectoAsignable } from "../constantes";
 import { HistorialTarifas } from "@/components/perfil/historial-tarifas";
 import { SeccionDatosUsuario } from "@/components/perfil/seccion-datos";
+import { MAX_BACKUPS } from "../constantes";
 
 export default async function UsuarioDetallePage({
   params,
@@ -161,7 +162,7 @@ export default async function UsuarioDetallePage({
           <p className="mt-1 text-xs text-dc-muted">
             {usuario.rol === "reader"
               ? "Limitan qué clientes puede ver en el informe de rentabilidad."
-              : "Limitan en qué clientes puede cargar horas y con qué rol. Cada proyecto tiene un único Mentor Owner y hasta dos Backup."}
+              : `Limitan en qué clientes puede cargar horas y con qué rol. Cada proyecto tiene un único Mentor Owner y hasta ${MAX_BACKUPS} Backup.`}
           </p>
           <div className="mt-4">
             <ProyectosForm

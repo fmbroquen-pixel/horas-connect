@@ -336,7 +336,7 @@ model Usuario {
 }
 
 // Rol de un mentor dentro de un proyecto. Un proyecto tiene un único owner y
-// hasta dos backups; el mismo usuario no puede ocupar los dos roles, cosa que
+// varios backups; el mismo usuario no puede ocupar los dos roles, cosa que
 // ya garantiza la unicidad de (usuario, cliente): una sola fila por par.
 enum RolProyecto {
   owner

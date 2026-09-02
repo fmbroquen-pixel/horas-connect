@@ -3,7 +3,12 @@
 // así que las constantes no pueden vivir en actions.ts.
 
 // Un proyecto tiene un único Mentor Owner y hasta esta cantidad de Backups.
-export const MAX_BACKUPS = 2;
+//
+// Es un tope del producto, no de la base: la base solo garantiza el owner
+// único. Cambiar este número alcanza -la validación del servidor, el cupo que
+// muestra el formulario y los textos de ayuda salen todos de acá- y no
+// requiere migración ni toca las asignaciones ya cargadas.
+export const MAX_BACKUPS = 5;
 
 export type RolAsignacion = "owner" | "backup";
 

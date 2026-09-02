@@ -41,7 +41,7 @@ export default async function ProyectoHomePage({
 
   // Owner y Backup salen de la asignación explícita que hace el admin en
   // Settings → Usuarios; no se deducen de las horas cargadas. Un proyecto
-  // tiene un único Owner y hasta dos Backup.
+  // tiene un único Owner y varios Backup (el tope vive en MAX_BACKUPS).
   const owner = asignaciones.find((a) => a.rol === "owner")?.usuario.nombre ?? "-";
   const backups = asignaciones
     .filter((a) => a.rol === "backup")
@@ -75,7 +75,9 @@ export default async function ProyectoHomePage({
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="grid shrink-0 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <Kpi titulo="Mentor Owner" valor={owner} texto />
-        {/* Los dos backups van juntos: la card no lleva texto secundario. */}
+        {/* Los backups van juntos en una línea: la card no lleva texto
+            secundario. Si no entran, la card los recorta y el nombre completo
+            queda en el tooltip, igual que un nombre largo de Owner. */}
         <Kpi titulo="Mentor Backup" valor={backups.join(", ") || "-"} texto />
         <Kpi
           titulo="Hs estimadas de proyecto"

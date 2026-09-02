@@ -22,7 +22,7 @@ const SOLAPAS: { rol: RolAsignacion; label: string }[] = [
 // y un único submit: son dos vistas de la misma decisión (qué rol tiene este
 // usuario en cada proyecto), no dos formularios independientes.
 //
-// Las reglas —un owner por proyecto, hasta dos backups, nadie en los dos
+// Las reglas —un owner por proyecto, hasta MAX_BACKUPS backups, nadie en los dos
 // roles— se bloquean acá para que el problema se vea antes de guardar, y se
 // vuelven a validar en el servidor: deshabilitar un checkbox no impide que
 // alguien mande el dato igual.

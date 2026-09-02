@@ -328,7 +328,8 @@ async function asegurarTarifaCero(usuarioId: string) {
 export type ResultadoAsignacion = { error?: string; ok?: boolean };
 
 // Guarda los proyectos del usuario con su rol. Reglas, todas revalidadas acá
-// aunque la UI ya las bloquee: un único owner por proyecto, hasta dos backups,
+// aunque la UI ya las bloquee: un único owner por proyecto, un tope de
+// backups (MAX_BACKUPS),
 // y nadie puede ser owner y backup del mismo proyecto.
 //
 // Solo toca las filas CON rol: las asignaciones viejas sin rol declarado se
