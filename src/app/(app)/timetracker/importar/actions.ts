@@ -2,6 +2,7 @@
 
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
+import { normalizarNombre as normalizar } from "@/lib/normalizar-nombre";
 import { tarifaVigenteA, type TarifaVigencia } from "@/lib/tarifas";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
@@ -50,10 +51,6 @@ export type Preview = {
   validas: number;
   conError: number;
 };
-
-function normalizar(s: string) {
-  return s.trim().toLowerCase();
-}
 
 function parseFecha(raw: unknown): string | null {
   if (raw instanceof Date) return raw.toISOString().slice(0, 10);
@@ -138,18 +135,29 @@ async function procesar(usuarioId: string, archivo: File) {
 
   const idx = (col: string) => headersNorm.indexOf(col);
 
+  // La MISMA fuente que usa la carga manual de Time Tracking: el importador no
+  // puede tener su propia idea de a qué clientes se puede cargar.
   const proyectos = await getProyectosPermitidos(usuarioId);
-  // Los inactivos, aparte: no se pueden importar, pero la fila tiene que decir
-  // por que. "Cliente inexistente o no asignado" manda a revisar la ortografia
-  // del nombre cuando el nombre estaba bien.
-  const inactivos = new Map(
+
+  // Y aparte, el catálogo completo. Sin esto no se puede distinguir "ese
+  // cliente no existe" de "existe pero no es tuyo", y las dos cosas salían con
+  // el mismo texto: "Cliente inexistente o no asignado". Ese mensaje mandaba a
+  // revisar la ortografía del nombre cuando el nombre estaba perfecto, que es
+  // exactamente lo que pasó con Embarca.
+  const todos = new Map(
     (
       await prisma.cliente.findMany({
-        where: { activo: false },
-        select: { nombre: true },
+        select: { nombre: true, activo: true },
       })
-    ).map((c) => [normalizar(c.nombre), c.nombre]),
+    ).map((c) => [normalizar(c.nombre), c]),
   );
+
+  // Para quién se importa. Va en el mensaje: cuando un admin carga para otra
+  // persona, "no está asignado" sin decir a quién no se puede accionar.
+  const destino = await prisma.usuario.findUnique({
+    where: { id: usuarioId },
+    select: { nombre: true },
+  });
   // Todas las tarifas, no solo las vigentes: una importación trae historia y
   // cada fila tiene que valuarse con la tarifa que regía EN SU FECHA. Con solo
   // las vigentes, importar seis meses aplicaba la tarifa de hoy a todo.
@@ -228,15 +236,25 @@ async function procesar(usuarioId: string, archivo: File) {
     if (!fechaISO) errores.push("Fecha inválida");
     else if (fechaDesdeISO(fechaISO) > hoy) errores.push("Fecha futura");
 
-    const proy = proyPorNombre.get(normalizar(proyecto));
+    // Una vez resuelto, se trabaja por id: `proy.id` es lo que se guarda y lo
+    // que arma la clave de duplicados. El nombre solo sirve para encontrarlo.
+    const claveProyecto = normalizar(proyecto);
+    const proy = proyPorNombre.get(claveProyecto);
     if (!proyecto) errores.push("Falta el cliente");
     else if (!proy) {
-      const inactivo = inactivos.get(normalizar(proyecto));
-      errores.push(
-        inactivo
-          ? `"${inactivo}" está inactivo: no admite registros nuevos`
-          : "Cliente inexistente o no asignado",
-      );
+      // Tres motivos distintos para el mismo síntoma. Cada uno se arregla de
+      // una forma diferente -corregir el nombre, pedir la asignación, o nada
+      // porque el proyecto ya no opera- así que decirlos por separado es lo
+      // único que hace accionable el error.
+      const real = todos.get(claveProyecto);
+      if (!real) errores.push("Cliente inexistente");
+      else if (!real.activo) {
+        errores.push(`"${real.nombre}" está inactivo: no admite registros nuevos`);
+      } else {
+        errores.push(
+          `"${real.nombre}" no está asignado a ${destino?.nombre ?? "ese usuario"}`,
+        );
+      }
     }
 
     const conceptoId = conceptoPorNombre.get(normalizar(conceptoTexto));
