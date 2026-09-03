@@ -101,32 +101,6 @@ export default async function RentabilidadPage({
             pct={r.filasProyecto.map((f) => f.margenPct)}
           />
 
-          {/* El margen % al lado de cada cliente, en el mismo orden que las
-              barras. Va acá y no adentro del canvas: Chart.js dibuja en un
-              bitmap, así que una etiqueta suya no se puede seleccionar, no
-              escala con el zoom del navegador y no la lee un lector de
-              pantalla. */}
-          {r.filasProyecto.length > 0 && (
-            <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-dc-line pt-4">
-              {r.filasProyecto.map((f) => (
-                <li key={f.clienteId} className="flex items-center gap-1.5 text-xs">
-                  <span className="text-dc-muted">{f.nombre}</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 font-medium tabular-nums ${
-                      f.margenPct === null
-                        ? "bg-dc-line/60 text-dc-muted"
-                        : f.margenPct < 0
-                          ? "bg-dc-pink/15 text-dc-pink"
-                          : "bg-dc-peri/15 text-dc-peri"
-                    }`}
-                    data-tooltip={`${f.nombre}: cobrado ${formatMonto(f.cobrado)} · costo ${formatMonto(f.costo)} · margen ${formatMonto(f.margen)}`}
-                  >
-                    {f.margenPct === null ? "—" : `${f.margenPct.toFixed(1)}%`}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
         </BloqueRecalculable>
       </section>
