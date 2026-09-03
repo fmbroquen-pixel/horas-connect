@@ -17,18 +17,76 @@ export type RegistroDelMes = {
   montoUsd: number;
 };
 
-export type FacturacionDelMes = { clienteId: string; montoUsd: number };
+// Lo que un cliente cobra en un mes.
+//
+// El ingreso es la CUOTA del cliente, no una factura cargada aparte. La tabla
+// de facturaciones existía para eso y quedó vacía: nadie cargó nunca un monto,
+// así que Analytics venía mostrando cero de ingreso y cero de margen en todos
+// los meses. El dato que sí está cargado, en los veinte clientes, es la cuota.
+export type ClienteCobro = {
+  clienteId: string;
+  valorCuotaUsd: number | null;
+  // Desde cuándo y por cuántos meses corre el contrato. Sin esto la cuota se
+  // cobraría en todos los meses de la historia, incluidos los anteriores al
+  // arranque del cliente: un cliente que empieza en agosto aparecería
+  // facturando en julio.
+  fechaInicio: Date | null;
+  duracionMeses: number | null;
+  // Si dejó de operar, desde cuándo. Un cliente apagado no cobra los meses
+  // posteriores a su baja, aunque su contrato siguiera corriendo en el papel.
+  inactivadoEn: Date | null;
+};
+
+// Índice de mes absoluto (año * 12 + mes), para comparar sin pelear con fechas.
+function indiceMes(anio: number, mes: number): number {
+  return anio * 12 + (mes - 1);
+}
+
+function indiceDe(fecha: Date): number {
+  return indiceMes(fecha.getUTCFullYear(), fecha.getUTCMonth() + 1);
+}
+
+// Cuánto cobra este cliente en este mes. Cero si el mes cae fuera de su
+// contrato o después de su baja.
+//
+// El corte de la baja es por MES y no por día: la cuota es mensual y no se
+// prorratea, así que un cliente dado de baja el 31 de agosto cobró agosto.
+export function cobradoDelMes(
+  c: ClienteCobro,
+  anio: number,
+  mes: number,
+): number {
+  const cuota = Number(c.valorCuotaUsd ?? 0);
+  if (cuota <= 0) return 0;
+
+  const objetivo = indiceMes(anio, mes);
+
+  // Sin fecha de inicio no hay ventana que verificar: se cobra. Es preferible
+  // a esconder un ingreso real por un dato de contrato sin cargar.
+  if (c.fechaInicio) {
+    const inicio = indiceDe(c.fechaInicio);
+    if (objetivo < inicio) return 0;
+    if (c.duracionMeses && c.duracionMeses > 0) {
+      if (objetivo >= inicio + c.duracionMeses) return 0;
+    }
+  }
+
+  if (c.inactivadoEn && objetivo > indiceDe(c.inactivadoEn)) return 0;
+
+  return cuota;
+}
+
 
 export type FilaProyecto = {
   clienteId: string;
   nombre: string;
   // Un cliente inactivo aparece en el informe del mes en que operaba, pero no
-  // acepta cargar su facturacion: se mira.
+  // acepta carga de datos: se mira.
   activo: boolean;
-  facturado: number;
+  cobrado: number;
   costo: number;
   margen: number;
-  margenPct: number | null; // null = sin facturación
+  margenPct: number | null; // null = sin ingreso
   horas: number;
 };
 
@@ -50,7 +108,7 @@ export type HorasStack = {
 
 export type Kpis = {
   proyectosConActividad: number;
-  facturado: number;
+  cobrado: number;
   margen: number;
   margenPct: number | null;
   horas: number;
@@ -73,13 +131,18 @@ const ETIQUETA_MODALIDAD: Record<string, string> = {
 
 export function construirReporte(
   registros: RegistroDelMes[],
-  facturaciones: FacturacionDelMes[],
+  // Los clientes del período con su cuota y su ventana de contrato. El ingreso
+  // sale de acá: cada uno cobra su cuota en los meses en que operó.
+  clientes: ClienteCobro[],
+  anio: number,
+  mes: number,
   nombrePorProyecto: Map<string, string>,
   activoPorProyecto: Map<string, boolean> = new Map(),
 ): Calculo {
-  const facturadoPorProyecto = new Map<string, number>();
-  for (const f of facturaciones) {
-    facturadoPorProyecto.set(f.clienteId, f.montoUsd);
+  const cobradoPorProyecto = new Map<string, number>();
+  for (const c of clientes) {
+    const cobrado = cobradoDelMes(c, anio, mes);
+    if (cobrado > 0) cobradoPorProyecto.set(c.clienteId, cobrado);
   }
 
   // Agregación por proyecto (costo = suma de montoUsd de las horas).
@@ -131,33 +194,33 @@ export function construirReporte(
     modalidadHoras.set(r.modalidad, (modalidadHoras.get(r.modalidad) ?? 0) + r.horas);
   }
 
-  // Un proyecto entra al informe si tuvo horas O si tuvo facturación. Las dos
-  // mitades hacen falta: un proyecto que se facturó sin trabajar ese mes es
-  // margen puro y no puede faltar, y uno donde se trabajó sin facturar es
+  // Un proyecto entra al informe si tuvo horas O si cobró. Las dos
+  // mitades hacen falta: un proyecto que cobró sin trabajar ese mes es
+  // margen puro y no puede faltar, y uno donde se trabajó sin cobrar es
   // justamente el que hay que ver.
   const idsConActividad = new Set<string>([
     ...costoPorProyecto.keys(),
-    ...facturadoPorProyecto.keys(),
+    ...cobradoPorProyecto.keys(),
   ]);
 
   const filasProyecto: FilaProyecto[] = [...idsConActividad]
     .map((id) => {
-      const facturado = facturadoPorProyecto.get(id) ?? 0;
+      const cobrado = cobradoPorProyecto.get(id) ?? 0;
       const costo = costoPorProyecto.get(id) ?? 0;
-      const margen = facturado - costo;
+      const margen = cobrado - costo;
       return {
         clienteId: id,
         nombre: nombrePorProyecto.get(id) ?? "—",
         // Por defecto activo: quien no pasa el mapa -los tests- no esta
         // probando esta regla y no tiene por que declararla.
         activo: activoPorProyecto.get(id) ?? true,
-        facturado,
+        cobrado,
         costo,
         margen,
-        // Sin facturación no hay porcentaje: dividir por cero daría -Infinity
-        // y mostrar "-100%" seria afirmar algo que todavia no se sabe -puede
-        // que la factura de ese mes no este cargada aun-.
-        margenPct: facturado > 0 ? (margen / facturado) * 100 : null,
+        // Sin ingreso no hay porcentaje: dividir por cero daría -Infinity, y
+        // mostrar "-100%" seria afirmar algo que no se sabe -puede que el
+        // cliente todavia no tenga cuota cargada-.
+        margenPct: cobrado > 0 ? (margen / cobrado) * 100 : null,
         horas: horasPorProyecto.get(id) ?? 0,
       };
     })
@@ -186,7 +249,7 @@ export function construirReporte(
     .sort((a, b) => b.horas - a.horas);
 
   // Gráfico apilado: una columna por proyecto con horas, una serie por mentor.
-  // Los proyectos que solo tuvieron facturación quedan afuera; sin horas no
+  // Los proyectos que solo cobraron quedan afuera; sin horas no
   // aportan nada a apilar.
   const proyectosConHoras = filasProyecto.filter((f) => f.horas > 0);
   const mentoresUnicos = [...nombreMentor.entries()]; // [id, nombre]
@@ -200,16 +263,16 @@ export function construirReporte(
     })),
   };
 
-  const facturadoTotal = filasProyecto.reduce((a, f) => a + f.facturado, 0);
+  const cobradoTotal = filasProyecto.reduce((a, f) => a + f.cobrado, 0);
   const costoTotal = filasProyecto.reduce((a, f) => a + f.costo, 0);
-  const margenTotal = facturadoTotal - costoTotal;
+  const margenTotal = cobradoTotal - costoTotal;
 
   return {
     kpis: {
       proyectosConActividad: idsConActividad.size,
-      facturado: facturadoTotal,
+      cobrado: cobradoTotal,
       margen: margenTotal,
-      margenPct: facturadoTotal > 0 ? (margenTotal / facturadoTotal) * 100 : null,
+      margenPct: cobradoTotal > 0 ? (margenTotal / cobradoTotal) * 100 : null,
       horas: horasTotales,
       horasFacturables,
     },

@@ -3,11 +3,11 @@ import { getSesionActual } from "@/lib/auth";
 import { mesDeParams } from "@/lib/mes";
 import { calcularReporte } from "@/lib/rentabilidad";
 import { formatMonto } from "@/lib/formato";
+import { InfoButton } from "@/components/info-button";
 import { formatHorasHsMin } from "@/lib/horas";
 import { MargenChart, HorasStackChart } from "./charts";
 import { SelectorMesAnalytics } from "./selector-mes";
 import { RecalculoProvider, BloqueRecalculable } from "@/components/recalculo";
-import { FacturacionInput } from "./facturacion-input";
 import { NotaMesEditor } from "./nota-mes-editor";
 
 export default async function RentabilidadPage({
@@ -57,7 +57,12 @@ export default async function RentabilidadPage({
         <Kpi label="Clientes con actividad" value={String(r.kpis.proyectosConActividad)} />
         </BloqueRecalculable>
         <BloqueRecalculable>
-        <Kpi label="Facturado" value={`$${formatMonto(r.kpis.facturado)}`} sub="USD" />
+        <Kpi
+          label="Cobrado"
+          value={`$${formatMonto(r.kpis.cobrado)}`}
+          sub="USD"
+          info="Sin IVA"
+        />
         </BloqueRecalculable>
         <BloqueRecalculable>
         <Kpi
@@ -65,8 +70,8 @@ export default async function RentabilidadPage({
           value={`$${formatMonto(r.kpis.margen)}`}
           sub={
             r.kpis.margenPct === null
-              ? "sin facturación"
-              : `${r.kpis.margenPct.toFixed(1)}% sobre facturación`
+              ? "sin cobrado"
+              : `${r.kpis.margenPct.toFixed(1)}% sobre cobrado`
           }
           destacado
         />
@@ -82,7 +87,7 @@ export default async function RentabilidadPage({
 
       {/* 01 Margen por proyecto */}
       <section>
-        <SecHead num="01" title="Margen por cliente" sub="Facturación menos costo de mentores, en USD." />
+        <SecHead num="01" title="Margen por cliente" sub="Cobrado menos costo de mentores, en USD." />
         <BloqueRecalculable>
         <div className="mt-4 rounded-2xl border border-dc-line bg-dc-card p-5">
           <MargenChart
@@ -97,7 +102,7 @@ export default async function RentabilidadPage({
             <thead>
               <tr className="border-b border-dc-line text-xs text-dc-muted">
                 <th className="px-4 py-2">Cliente</th>
-                <th className="px-4 py-2">Facturado</th>
+                <th className="px-4 py-2">Cobrado</th>
                 <th className="px-4 py-2">Costo mentores</th>
                 <th className="px-4 py-2">Margen</th>
                 <th className="px-4 py-2">Margen %</th>
@@ -108,17 +113,13 @@ export default async function RentabilidadPage({
               {r.filasProyecto.map((f) => (
                 <tr key={f.clienteId} className="border-b border-dc-line last:border-0">
                   <td className="px-4 py-2 text-dc-text">{f.nombre}</td>
-                  <td className="px-4 py-2 text-right">
-                    {r.esAdmin && f.activo ? (
-                      <FacturacionInput
-                        clienteId={f.clienteId}
-                        anio={anio}
-                        mes={mes}
-                        valor={f.facturado}
-                      />
-                    ) : (
-                      <span className="tabular-nums text-dc-text">{formatMonto(f.facturado)}</span>
-                    )}
+                  {/* Solo lectura: el cobrado es la cuota del cliente, y la
+                      cuota se edita en Settings → Clientes, que es donde vive.
+                      Acá había un input que escribía en la tabla de
+                      facturaciones; esa tabla dejó de leerse, así que el campo
+                      habría seguido aceptando números sin cambiar nada. */}
+                  <td className="px-4 py-2 text-right tabular-nums text-dc-text">
+                    {formatMonto(f.cobrado)}
                   </td>
                   <td className="px-4 py-2 text-right tabular-nums text-dc-text">{formatMonto(f.costo)}</td>
                   <td className={`px-4 py-2 text-right tabular-nums ${f.margen < 0 ? "text-dc-pink" : "text-dc-text"}`}>
@@ -133,7 +134,7 @@ export default async function RentabilidadPage({
               {r.filasProyecto.length === 0 && (
                 <tr>
                   <td className="px-4 py-6 text-center text-dc-muted" colSpan={6}>
-                    No hay actividad ni facturación cargada en este mes.
+                    No hay actividad ni cobrado en este mes.
                   </td>
                 </tr>
               )}
@@ -227,15 +228,22 @@ function Kpi({
   value,
   sub,
   destacado,
+  info,
 }: {
   label: string;
   value: string;
   sub?: string;
   destacado?: boolean;
+  // Aclaración que el rótulo no puede llevar sin volverse una frase. La usa
+  // Cobrado, que va sin IVA.
+  info?: string;
 }) {
   return (
     <div className="rounded-2xl border border-dc-line bg-dc-card px-5 py-4">
-      <p className="text-[10.5px] uppercase tracking-wider text-dc-muted">{label}</p>
+      <p className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-wider text-dc-muted">
+        {label}
+        {info && <InfoButton>{info}</InfoButton>}
+      </p>
       <p className={`mt-1 font-display text-2xl ${destacado ? "text-dc-pink" : "text-white"}`}>
         {value}
       </p>

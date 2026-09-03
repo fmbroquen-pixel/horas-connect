@@ -42,7 +42,7 @@ export async function calcularReporte(
   const nombrePorProyecto = new Map(proyectos.map((p) => [p.id, p.nombre]));
   const activoPorProyecto = new Map(proyectos.map((p) => [p.id, p.activo]));
 
-  const [registros, facturaciones, notaMes] = await Promise.all([
+  const [registros, clientes, notaMes] = await Promise.all([
     prisma.registroHoras.findMany({
       where: {
         clienteId: { in: proyectoIds },
@@ -58,9 +58,19 @@ export async function calcularReporte(
         usuario: { select: { nombre: true } },
       },
     }),
-    prisma.facturacion.findMany({
-      where: { clienteId: { in: proyectoIds }, anio, mes },
-      select: { clienteId: true, montoUsd: true },
+    // El ingreso sale de la CUOTA del cliente, no de una factura cargada
+    // aparte. La tabla de facturaciones existía para eso y quedó vacía: nadie
+    // cargó nunca un monto, así que el informe venía mostrando cero de ingreso
+    // y cero de margen en todos los meses.
+    prisma.cliente.findMany({
+      where: { id: { in: proyectoIds } },
+      select: {
+        id: true,
+        valorCuotaUsd: true,
+        fechaInicio: true,
+        duracionMeses: true,
+        inactivadoEn: true,
+      },
     }),
     prisma.notaMes.findUnique({ where: { anio_mes: { anio, mes } } }),
   ]);
@@ -74,10 +84,15 @@ export async function calcularReporte(
       horas: Number(r.horas),
       montoUsd: Number(r.montoUsd),
     })),
-    facturaciones.map((f) => ({
-      clienteId: f.clienteId,
-      montoUsd: Number(f.montoUsd),
+    clientes.map((c) => ({
+      clienteId: c.id,
+      valorCuotaUsd: c.valorCuotaUsd === null ? null : Number(c.valorCuotaUsd),
+      fechaInicio: c.fechaInicio,
+      duracionMeses: c.duracionMeses,
+      inactivadoEn: c.inactivadoEn,
     })),
+    anio,
+    mes,
     nombrePorProyecto,
     activoPorProyecto,
   );

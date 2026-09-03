@@ -60,7 +60,7 @@ export function MargenChart({
         callbacks: {
           label: (c) => {
             const p = pct[c.dataIndex];
-            const pctTxt = p === null ? "sin facturación" : `${p.toFixed(1)}%`;
+            const pctTxt = p === null ? "sin cobrado" : `${p.toFixed(1)}%`;
             return `${fmtUsd(Number(c.parsed.x))} — ${pctTxt}`;
           },
         },
