@@ -16,7 +16,6 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 const PERI = "#8b8cff";
 const PINK = "#ff91ff";
-const MUTED = "#413d80";
 const GRID = "rgba(139,140,255,.14)";
 const TICK = "#a5a3d6";
 const PALETA = ["#8b8cff", "#ff91ff", "#602eca", "#6f7bff", "#c9a7ff", "#3f7fd6"];
@@ -34,40 +33,71 @@ const tooltip = {
 const fmtUsd = (v: number) =>
   (v < 0 ? "-" : "") + "$" + Math.abs(Math.round(v)).toLocaleString("es-AR");
 
+// Cobrado y costo de mentores, uno al lado del otro por cliente.
+//
+// Agrupadas y no apiladas: apilar suma, y acá no hay nada que sumar -el costo
+// no se le agrega al cobrado, se le resta-. Una al lado de la otra la
+// comparación se lee sola: la distancia entre las dos barras ES el margen.
+//
+// Antes el gráfico mostraba una sola barra con el margen ya calculado y el
+// detalle vivía en una tabla debajo. Eso obligaba a mirar dos lugares para
+// entender un número que sale de dos: cuánto entra y cuánto cuesta.
 export function MargenChart({
   proyectos,
-  margenes,
+  cobrado,
+  costo,
   pct,
 }: {
   proyectos: string[];
-  margenes: number[];
+  cobrado: number[];
+  costo: number[];
   pct: (number | null)[];
 }) {
   if (proyectos.length === 0) {
     return <SinDatos />;
   }
-  const colores = margenes.map((v) => (v > 0 ? PERI : v < 0 ? PINK : MUTED));
-  const alto = Math.max(180, proyectos.length * 34 + 40);
+  // Dos barras por cliente más el aire entre grupos.
+  const alto = Math.max(200, proyectos.length * 52 + 48);
 
   const options: ChartOptions<"bar"> = {
     indexAxis: "y",
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { display: false },
+      legend: {
+        display: true,
+        position: "top",
+        align: "end",
+        labels: {
+          color: TICK,
+          boxWidth: 10,
+          boxHeight: 10,
+          usePointStyle: true,
+          pointStyle: "circle",
+        },
+      },
       tooltip: {
         ...tooltip,
         callbacks: {
-          label: (c) => {
-            const p = pct[c.dataIndex];
-            const pctTxt = p === null ? "sin cobrado" : `${p.toFixed(1)}%`;
-            return `${fmtUsd(Number(c.parsed.x))} — ${pctTxt}`;
+          // Las dos barras y el margen en el mismo globo: son la misma
+          // pregunta, y separarlas obligaba a pasar por encima dos veces.
+          afterBody: (items) => {
+            const i = items[0]?.dataIndex ?? 0;
+            const p = pct[i];
+            const margen = (cobrado[i] ?? 0) - (costo[i] ?? 0);
+            return [
+              `Margen: ${fmtUsd(margen)}`,
+              `Margen %: ${p === null ? "—" : `${p.toFixed(1)}%`}`,
+            ];
           },
         },
       },
     },
     scales: {
-      x: { ticks: { callback: (v) => fmtUsd(Number(v)), color: TICK }, grid: { color: GRID } },
+      x: {
+        ticks: { callback: (v) => fmtUsd(Number(v)), color: TICK },
+        grid: { color: GRID },
+      },
       y: { ticks: { color: TICK }, grid: { display: false } },
     },
   };
@@ -75,13 +105,32 @@ export function MargenChart({
   return (
     <div style={{ height: alto }}>
       <Bar
+        options={options}
         data={{
           labels: proyectos,
           datasets: [
-            { data: margenes, backgroundColor: colores, borderRadius: 4, maxBarThickness: 22 },
+            {
+              label: "Cobrado",
+              data: cobrado,
+              backgroundColor: PERI,
+              // Redondeado solo en la punta que crece: redondear el arranque
+              // despega la barra del eje y deja de leerse desde dónde mide.
+              borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 6, bottomRight: 6 },
+              borderSkipped: false,
+              barPercentage: 0.82,
+              categoryPercentage: 0.72,
+            },
+            {
+              label: "Costo mentores",
+              data: costo,
+              backgroundColor: PINK,
+              borderRadius: { topLeft: 0, bottomLeft: 0, topRight: 6, bottomRight: 6 },
+              borderSkipped: false,
+              barPercentage: 0.82,
+              categoryPercentage: 0.72,
+            },
           ],
         }}
-        options={options}
       />
     </div>
   );

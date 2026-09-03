@@ -112,7 +112,10 @@ describe("construirReporte · qué cuenta como actividad", () => {
     );
     expect(r.filasProyecto).toHaveLength(1);
     expect(r.filasProyecto[0]).toMatchObject({ nombre: "Gama", costo: 0, horas: 4 });
-    expect(r.kpis.proyectosConActividad).toBe(1);
+    // El KPI cuenta clientes VIGENTES, no filas del informe: acá no se pasó
+    // ninguno, así que es cero aunque haya una fila. Son dos preguntas
+    // distintas y el número las separa a propósito.
+    expect(r.kpis.clientesActivos).toBe(0);
   });
 
   it("las horas que no cuestan nada no son facturables", () => {
@@ -132,7 +135,7 @@ describe("construirReporte · qué cuenta como actividad", () => {
       MES,
       NOMBRES);
     expect(r.kpis).toEqual({
-      proyectosConActividad: 0,
+      clientesActivos: 0,
       cobrado: 0,
       margen: 0,
       margenPct: null,
@@ -151,7 +154,7 @@ describe("construirReporte · qué cuenta como actividad", () => {
       MES,
       NOMBRES,
     );
-    expect(r.kpis.proyectosConActividad).toBe(1);
+    expect(r.kpis.clientesActivos).toBe(1);
   });
 });
 
@@ -348,5 +351,68 @@ describe("cobradoDelMes", () => {
     expect(cobradoDelMes(arrancaEnNoviembre, 2026, 10)).toBe(0);
     expect(cobradoDelMes(arrancaEnNoviembre, 2026, 11)).toBe(1000);
     expect(cobradoDelMes(arrancaEnNoviembre, 2027, 2)).toBe(1000);
+  });
+});
+
+// ── Vigencia y presencia en el informe ─────────────────────────────────────
+describe("construirReporte · quién entra al informe", () => {
+  const cli2 = (
+    clienteId: string,
+    valorCuotaUsd: number,
+    extra: Partial<ClienteCobro> = {},
+  ): ClienteCobro => ({
+    clienteId,
+    valorCuotaUsd,
+    fechaInicio: null,
+    inactivadoEn: null,
+    ...extra,
+  });
+
+  it("un cliente vigente sin cuota y sin horas aparece igual", () => {
+    // El caso de Valos: activo, cuota en cero, ninguna hora cargada. Antes no
+    // aparecía en ningún lado -ni en el KPI ni en el gráfico- así que el dato
+    // que le faltaba era invisible.
+    const r = construirReporte([], [cli2("acme", 0)], ANIO, MES, NOMBRES);
+    expect(r.filasProyecto).toHaveLength(1);
+    expect(r.filasProyecto[0]).toMatchObject({ cobrado: 0, costo: 0, horas: 0 });
+    expect(r.filasProyecto[0].margenPct).toBeNull();
+    expect(r.kpis.clientesActivos).toBe(1);
+  });
+
+  it("el KPI cuenta la vigencia del MES, no el estado de hoy", () => {
+    // Dado de baja en agosto: cuenta en julio y no en septiembre.
+    const dadoDeBaja = cli2("acme", 1000, {
+      inactivadoEn: new Date("2026-08-31T00:00:00Z"),
+    });
+    expect(construirReporte([], [dadoDeBaja], 2026, 7, NOMBRES).kpis.clientesActivos).toBe(1);
+    expect(construirReporte([], [dadoDeBaja], 2026, 8, NOMBRES).kpis.clientesActivos).toBe(1);
+    expect(construirReporte([], [dadoDeBaja], 2026, 9, NOMBRES).kpis.clientesActivos).toBe(0);
+  });
+
+  it("no cuenta a los que todavía no arrancaron", () => {
+    const arrancaEnAgosto = cli2("acme", 500, {
+      fechaInicio: new Date("2026-08-01T00:00:00Z"),
+    });
+    expect(construirReporte([], [arrancaEnAgosto], 2026, 7, NOMBRES).kpis.clientesActivos).toBe(0);
+    expect(construirReporte([], [arrancaEnAgosto], 2026, 8, NOMBRES).kpis.clientesActivos).toBe(1);
+  });
+
+  it("un cliente ya dado de baja con horas de ese mes no desaparece", () => {
+    // Las horas son un hecho: un costo cargado no puede irse del informe
+    // porque después se haya apagado al cliente. Entra a la tabla aunque no
+    // cuente como vigente.
+    const dadoDeBaja = cli2("acme", 1000, {
+      inactivadoEn: new Date("2026-07-31T00:00:00Z"),
+    });
+    const r = construirReporte(
+      [reg("acme", "ana", 5, 200)],
+      [dadoDeBaja],
+      2026,
+      9,
+      NOMBRES,
+    );
+    expect(r.filasProyecto).toHaveLength(1);
+    expect(r.filasProyecto[0]).toMatchObject({ cobrado: 0, costo: 200 });
+    expect(r.kpis.clientesActivos).toBe(0);
   });
 });

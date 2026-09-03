@@ -44,19 +44,37 @@ function indiceDe(fecha: Date): number {
   return indiceMes(fecha.getUTCFullYear(), fecha.getUTCMonth() + 1);
 }
 
-// Cuánto cobra este cliente en este mes. Cero antes de que arranque y después
-// de su baja.
+// ¿Este cliente operaba en este mes?
+//
+// Es la vigencia HISTORICA y no el estado de hoy: un cliente dado de baja en
+// agosto operaba en julio, y el informe de julio tiene que contarlo. Sin esto,
+// apagar un cliente le borraba retroactivamente todos los meses en que sí
+// estuvo.
+//
+// El corte es por MES y no por día en las dos puntas: los informes son
+// mensuales, así que un cliente que arrancó el 20 de julio operó en julio, y
+// uno dado de baja el 31 de agosto operó en agosto.
+export function vigenteEnElMes(
+  c: ClienteCobro,
+  anio: number,
+  mes: number,
+): boolean {
+  const objetivo = indiceMes(anio, mes);
+  // Sin fecha de inicio no hay ventana que verificar. Es preferible a esconder
+  // un cliente real por un dato de contrato sin cargar.
+  if (c.fechaInicio && objetivo < indiceDe(c.fechaInicio)) return false;
+  if (c.inactivadoEn && objetivo > indiceDe(c.inactivadoEn)) return false;
+  return true;
+}
+
+// Cuánto cobra este cliente en este mes: su cuota, si estaba vigente.
 //
 // Lo que corta el ingreso es la BAJA del cliente, no el fin de su contrato.
 // `duracionMeses` existe para otra cosa -define cuántos tableros trimestrales
 // se siembran en el roadmap- y es un dato de planificación que nadie actualiza
 // cuando un contrato se renueva. Usarlo acá hacía que la facturación se apagara
 // sola: Cono Sur figuraba con dos meses desde julio y desaparecía del informe de
-// septiembre estando activo y operando. Un cliente que sigue activo sigue
-// cobrando; el día que deja de hacerlo, se lo da de baja.
-//
-// El corte de la baja es por MES y no por día: la cuota es mensual y no se
-// prorratea, así que un cliente dado de baja el 31 de agosto cobró agosto.
+// septiembre estando activo y operando.
 export function cobradoDelMes(
   c: ClienteCobro,
   anio: number,
@@ -64,18 +82,9 @@ export function cobradoDelMes(
 ): number {
   const cuota = Number(c.valorCuotaUsd ?? 0);
   if (cuota <= 0) return 0;
-
-  const objetivo = indiceMes(anio, mes);
-
-  // Sin fecha de inicio no hay ventana que verificar: se cobra. Es preferible
-  // a esconder un ingreso real por un dato de contrato sin cargar.
-  if (c.fechaInicio && objetivo < indiceDe(c.fechaInicio)) return 0;
-
-  if (c.inactivadoEn && objetivo > indiceDe(c.inactivadoEn)) return 0;
-
+  if (!vigenteEnElMes(c, anio, mes)) return 0;
   return cuota;
 }
-
 
 export type FilaProyecto = {
   clienteId: string;
@@ -107,7 +116,8 @@ export type HorasStack = {
 };
 
 export type Kpis = {
-  proyectosConActividad: number;
+  // Clientes vigentes en el mes del informe.
+  clientesActivos: number;
   cobrado: number;
   margen: number;
   margenPct: number | null;
@@ -140,7 +150,13 @@ export function construirReporte(
   activoPorProyecto: Map<string, boolean> = new Map(),
 ): Calculo {
   const cobradoPorProyecto = new Map<string, number>();
+  // Los que operaban ese mes, cobren o no. Un cliente vigente sin cuota cargada
+  // y sin horas sigue siendo un cliente vigente: tiene que estar en el informe,
+  // con cero, para que se vea que le falta la cuota. Escondiéndolo, el dato
+  // faltante era invisible.
+  const vigentes = new Set<string>();
   for (const c of clientes) {
+    if (vigenteEnElMes(c, anio, mes)) vigentes.add(c.clienteId);
     const cobrado = cobradoDelMes(c, anio, mes);
     if (cobrado > 0) cobradoPorProyecto.set(c.clienteId, cobrado);
   }
@@ -194,16 +210,21 @@ export function construirReporte(
     modalidadHoras.set(r.modalidad, (modalidadHoras.get(r.modalidad) ?? 0) + r.horas);
   }
 
-  // Un proyecto entra al informe si tuvo horas O si cobró. Las dos
-  // mitades hacen falta: un proyecto que cobró sin trabajar ese mes es
-  // margen puro y no puede faltar, y uno donde se trabajó sin cobrar es
-  // justamente el que hay que ver.
-  const idsConActividad = new Set<string>([
+  // Al informe entran los VIGENTES del mes, más cualquiera que haya tenido
+  // horas o cobrado aunque ya no lo esté.
+  //
+  // Antes entraban solo los que tenían horas o cobraban, y eso escondía a los
+  // vigentes sin ninguna de las dos: Valos figuraba activo y no aparecía en
+  // ningún lado, ni en el KPI ni en el gráfico. Las horas se suman igual porque
+  // son un hecho: un costo cargado no puede desaparecer del informe porque el
+  // cliente se haya dado de baja después.
+  const idsDelInforme = new Set<string>([
+    ...vigentes,
     ...costoPorProyecto.keys(),
     ...cobradoPorProyecto.keys(),
   ]);
 
-  const filasProyecto: FilaProyecto[] = [...idsConActividad]
+  const filasProyecto: FilaProyecto[] = [...idsDelInforme]
     .map((id) => {
       const cobrado = cobradoPorProyecto.get(id) ?? 0;
       const costo = costoPorProyecto.get(id) ?? 0;
@@ -269,7 +290,9 @@ export function construirReporte(
 
   return {
     kpis: {
-      proyectosConActividad: idsConActividad.size,
+      // Los clientes que operaban ese mes según su vigencia histórica, no los
+      // que están activos hoy.
+      clientesActivos: vigentes.size,
       cobrado: cobradoTotal,
       margen: margenTotal,
       margenPct: cobradoTotal > 0 ? (margenTotal / cobradoTotal) * 100 : null,

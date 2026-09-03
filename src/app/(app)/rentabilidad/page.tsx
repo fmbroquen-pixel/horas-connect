@@ -54,7 +54,11 @@ export default async function RentabilidadPage({
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <BloqueRecalculable>
-        <Kpi label="Clientes con actividad" value={String(r.kpis.proyectosConActividad)} />
+        <Kpi
+          label="Clientes activos"
+          value={String(r.kpis.clientesActivos)}
+          info="Los que operaban en el mes consultado, no los activos hoy."
+        />
         </BloqueRecalculable>
         <BloqueRecalculable>
         <Kpi
@@ -92,54 +96,37 @@ export default async function RentabilidadPage({
         <div className="mt-4 rounded-2xl border border-dc-line bg-dc-card p-5">
           <MargenChart
             proyectos={r.filasProyecto.map((f) => f.nombre)}
-            margenes={r.filasProyecto.map((f) => f.margen)}
+            cobrado={r.filasProyecto.map((f) => f.cobrado)}
+            costo={r.filasProyecto.map((f) => f.costo)}
             pct={r.filasProyecto.map((f) => f.margenPct)}
           />
-        </div>
 
-        <div className="mt-4 overflow-x-auto dc-panel">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead>
-              <tr className="border-b border-dc-line text-xs text-dc-muted">
-                <th className="px-4 py-2">Cliente</th>
-                <th className="px-4 py-2">Cobrado</th>
-                <th className="px-4 py-2">Costo mentores</th>
-                <th className="px-4 py-2">Margen</th>
-                <th className="px-4 py-2">Margen %</th>
-                <th className="px-4 py-2">Horas</th>
-              </tr>
-            </thead>
-            <tbody>
+          {/* El margen % al lado de cada cliente, en el mismo orden que las
+              barras. Va acá y no adentro del canvas: Chart.js dibuja en un
+              bitmap, así que una etiqueta suya no se puede seleccionar, no
+              escala con el zoom del navegador y no la lee un lector de
+              pantalla. */}
+          {r.filasProyecto.length > 0 && (
+            <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-dc-line pt-4">
               {r.filasProyecto.map((f) => (
-                <tr key={f.clienteId} className="border-b border-dc-line last:border-0">
-                  <td className="px-4 py-2 text-dc-text">{f.nombre}</td>
-                  {/* Solo lectura: el cobrado es la cuota del cliente, y la
-                      cuota se edita en Settings → Clientes, que es donde vive.
-                      Acá había un input que escribía en la tabla de
-                      facturaciones; esa tabla dejó de leerse, así que el campo
-                      habría seguido aceptando números sin cambiar nada. */}
-                  <td className="px-4 py-2 text-right tabular-nums text-dc-text">
-                    {formatMonto(f.cobrado)}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-dc-text">{formatMonto(f.costo)}</td>
-                  <td className={`px-4 py-2 text-right tabular-nums ${f.margen < 0 ? "text-dc-pink" : "text-dc-text"}`}>
-                    {formatMonto(f.margen)}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-dc-muted">
+                <li key={f.clienteId} className="flex items-center gap-1.5 text-xs">
+                  <span className="text-dc-muted">{f.nombre}</span>
+                  <span
+                    className={`rounded-full px-2 py-0.5 font-medium tabular-nums ${
+                      f.margenPct === null
+                        ? "bg-dc-line/60 text-dc-muted"
+                        : f.margenPct < 0
+                          ? "bg-dc-pink/15 text-dc-pink"
+                          : "bg-dc-peri/15 text-dc-peri"
+                    }`}
+                    data-tooltip={`${f.nombre}: cobrado ${formatMonto(f.cobrado)} · costo ${formatMonto(f.costo)} · margen ${formatMonto(f.margen)}`}
+                  >
                     {f.margenPct === null ? "—" : `${f.margenPct.toFixed(1)}%`}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums text-dc-text">{formatHorasHsMin(f.horas)}</td>
-                </tr>
+                  </span>
+                </li>
               ))}
-              {r.filasProyecto.length === 0 && (
-                <tr>
-                  <td className="px-4 py-6 text-center text-dc-muted" colSpan={6}>
-                    No hay actividad ni cobrado en este mes.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+            </ul>
+          )}
         </div>
         </BloqueRecalculable>
       </section>
