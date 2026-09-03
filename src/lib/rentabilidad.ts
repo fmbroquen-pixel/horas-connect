@@ -7,7 +7,6 @@ import type { Usuario } from "@/generated/prisma/client";
 export type {
   FilaProyecto,
   FilaMentor,
-  TotalModalidad,
   HorasStack,
 } from "@/lib/rentabilidad-calculo";
 
@@ -52,7 +51,6 @@ export async function calcularReporte(
       select: {
         clienteId: true,
         usuarioId: true,
-        modalidad: true,
         horas: true,
         montoUsd: true,
         usuario: { select: { nombre: true } },
@@ -79,7 +77,6 @@ export async function calcularReporte(
       clienteId: r.clienteId,
       usuarioId: r.usuarioId,
       usuarioNombre: r.usuario.nombre,
-      modalidad: r.modalidad,
       horas: Number(r.horas),
       montoUsd: Number(r.montoUsd),
     })),

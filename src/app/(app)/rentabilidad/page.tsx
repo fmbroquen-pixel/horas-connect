@@ -91,7 +91,7 @@ export default async function RentabilidadPage({
 
       {/* 01 Margen por proyecto */}
       <section>
-        <SecHead num="01" title="Margen por cliente" sub="Cobrado menos costo de mentores, en USD." />
+        <SecHead num="01" title="Margen por cliente" sub="Cobrado menos costo de mentores, en USD. De menor a mayor margen." />
         <BloqueRecalculable>
         <div className="mt-4 rounded-2xl border border-dc-line bg-dc-card p-5">
           <MargenChart
@@ -107,7 +107,7 @@ export default async function RentabilidadPage({
 
       {/* 02 Horas por proyecto y mentor */}
       <section>
-        <SecHead num="02" title="Horas por cliente y mentor" sub="Horas entregadas, apiladas por quién las entregó." />
+        <SecHead num="02" title="Horas por cliente y mentor" sub="Horas entregadas, apiladas por quién las entregó. De más a menos." />
         <BloqueRecalculable>
         <div className="mt-4 rounded-2xl border border-dc-line bg-dc-card p-5">
           <HorasStackChart stack={r.horasStack} />
@@ -144,27 +144,9 @@ export default async function RentabilidadPage({
         </BloqueRecalculable>
       </section>
 
-      {/* 04 Totales por modalidad */}
+      {/* 04 Lecturas del mes */}
       <section>
-        <SecHead num="04" title="Horas por modalidad" />
-        <BloqueRecalculable>
-        <div className="mt-4 flex flex-wrap gap-3">
-          {r.totalesModalidad.map((t) => (
-            <div key={t.modalidad} className="rounded-xl border border-dc-line bg-dc-card px-5 py-3">
-              <p className="text-[11px] uppercase tracking-wider text-dc-muted">{t.modalidad}</p>
-              <p className="mt-1 font-display text-lg text-white">{formatHorasHsMin(t.horas)} hs</p>
-            </div>
-          ))}
-          {r.totalesModalidad.length === 0 && (
-            <p className="text-sm text-dc-muted">Sin horas cargadas.</p>
-          )}
-        </div>
-        </BloqueRecalculable>
-      </section>
-
-      {/* 05 Lecturas del mes */}
-      <section>
-        <SecHead num="05" title="Lecturas del mes" sub="Observaciones cualitativas del período." />
+        <SecHead num="04" title="Lecturas del mes" sub="Observaciones cualitativas del período." />
         <BloqueRecalculable>
         <div className="mt-4">
           {r.esAdmin ? (

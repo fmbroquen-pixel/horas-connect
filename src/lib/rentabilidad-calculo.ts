@@ -10,7 +10,6 @@ export type RegistroDelMes = {
   clienteId: string;
   usuarioId: string;
   usuarioNombre: string;
-  modalidad: string;
   horas: number;
   // Lo que esa hora le cuesta a la empresa: horas × tarifa del mentor, ya
   // calculado y congelado al guardar el registro.
@@ -108,8 +107,6 @@ export type FilaMentor = {
   usdPorHora: number | null;
 };
 
-export type TotalModalidad = { modalidad: string; horas: number };
-
 export type HorasStack = {
   proyectos: string[]; // etiquetas (nombres de proyecto)
   mentores: { nombre: string; horas: number[] }[]; // una serie por mentor
@@ -129,14 +126,7 @@ export type Calculo = {
   kpis: Kpis;
   filasProyecto: FilaProyecto[];
   filasMentor: FilaMentor[];
-  totalesModalidad: TotalModalidad[];
   horasStack: HorasStack;
-};
-
-const ETIQUETA_MODALIDAD: Record<string, string> = {
-  presencial: "Presencial",
-  virtual: "Virtual",
-  valor_cero: "Valor cero",
 };
 
 export function construirReporte(
@@ -173,9 +163,6 @@ export function construirReporte(
   const mentorHonorarios = new Map<string, number>();
   const mentorProyectos = new Map<string, Set<string>>();
 
-  // Totales por modalidad.
-  const modalidadHoras = new Map<string, number>();
-
   let horasTotales = 0;
   let horasFacturables = 0;
 
@@ -206,8 +193,6 @@ export function construirReporte(
     );
     if (!mentorProyectos.has(r.usuarioId)) mentorProyectos.set(r.usuarioId, new Set());
     mentorProyectos.get(r.usuarioId)!.add(r.clienteId);
-
-    modalidadHoras.set(r.modalidad, (modalidadHoras.get(r.modalidad) ?? 0) + r.horas);
   }
 
   // Al informe entran los VIGENTES del mes, más cualquiera que haya tenido
@@ -262,13 +247,6 @@ export function construirReporte(
     })
     .sort((a, b) => b.honorarios - a.honorarios);
 
-  const totalesModalidad: TotalModalidad[] = [...modalidadHoras.entries()]
-    .map(([modalidad, horas]) => ({
-      modalidad: ETIQUETA_MODALIDAD[modalidad] ?? modalidad,
-      horas,
-    }))
-    .sort((a, b) => b.horas - a.horas);
-
   // Gráfico apilado: una columna por proyecto con horas, una serie por mentor.
   // Los proyectos que solo cobraron quedan afuera; sin horas no
   // aportan nada a apilar.
@@ -301,7 +279,6 @@ export function construirReporte(
     },
     filasProyecto,
     filasMentor,
-    totalesModalidad,
     horasStack,
   };
 }

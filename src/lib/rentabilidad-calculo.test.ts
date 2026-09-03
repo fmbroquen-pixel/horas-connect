@@ -17,12 +17,10 @@ const reg = (
   usuarioId: string,
   horas: number,
   montoUsd: number,
-  modalidad = "presencial",
 ): RegistroDelMes => ({
   clienteId,
   usuarioId,
   usuarioNombre: usuarioId.toUpperCase(),
-  modalidad,
   horas,
   montoUsd,
 });
@@ -104,7 +102,7 @@ describe("construirReporte · qué cuenta como actividad", () => {
     // Se trabajó: tiene que estar en el informe aunque no cueste nada, si no
     // esas horas desaparecen de la vista.
     const r = construirReporte(
-      [reg("gama", "ana", 4, 0, "valor_cero")],
+      [reg("gama", "ana", 4, 0)],
       [],
       ANIO,
       MES,
@@ -120,7 +118,7 @@ describe("construirReporte · qué cuenta como actividad", () => {
 
   it("las horas que no cuestan nada no son facturables", () => {
     const r = construirReporte(
-      [reg("acme", "ana", 10, 350), reg("gama", "ana", 4, 0, "valor_cero")],
+      [reg("acme", "ana", 10, 350), reg("gama", "ana", 4, 0)],
       [],
       ANIO,
       MES,
@@ -189,7 +187,7 @@ describe("construirReporte · mentores", () => {
   it("un mentor con horas gratis tiene USD/hora en cero, no null", () => {
     // null esta reservado para "no tiene horas"; cero es un dato real.
     const r = construirReporte(
-      [reg("gama", "leo", 4, 0, "valor_cero")],
+      [reg("gama", "leo", 4, 0)],
       [],
       ANIO,
       MES,
@@ -242,33 +240,6 @@ describe("construirReporte · gráfico apilado", () => {
     );
     expect(r.filasProyecto).toHaveLength(2);
     expect(r.horasStack.proyectos).toEqual(["ACME"]);
-  });
-});
-
-describe("construirReporte · modalidades", () => {
-  it("agrupa por modalidad con su etiqueta y ordena por horas", () => {
-    const r = construirReporte(
-      [
-        reg("acme", "ana", 2, 70, "virtual"),
-        reg("acme", "ana", 8, 280, "presencial"),
-        reg("acme", "ana", 1, 35, "virtual"),
-      ],
-      [],
-      ANIO,
-      MES,
-      NOMBRES,
-    );
-    expect(r.totalesModalidad).toEqual([
-      { modalidad: "Presencial", horas: 8 },
-      { modalidad: "Virtual", horas: 3 },
-    ]);
-  });
-
-  it("una modalidad desconocida se muestra tal cual en vez de desaparecer", () => {
-    const r = construirReporte([reg("acme", "ana", 1, 35, "hibrida")], [], ANIO,
-      MES,
-      NOMBRES);
-    expect(r.totalesModalidad).toEqual([{ modalidad: "hibrida", horas: 1 }]);
   });
 });
 
