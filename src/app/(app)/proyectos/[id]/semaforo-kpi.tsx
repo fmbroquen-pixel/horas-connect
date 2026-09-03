@@ -60,6 +60,7 @@ export function SemaforoKpi({
       ariaLabel={`Semáforo de ${nombre}`}
       anchoMenu="w-44"
       soloPunto
+      puntoGrande
       soloLectura={!activo}
       motivoSoloLectura={MOTIVO_INACTIVO}
       tooltip={ultimoCambio || undefined}

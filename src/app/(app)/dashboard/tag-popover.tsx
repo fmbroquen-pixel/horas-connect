@@ -28,6 +28,7 @@ export function TagPopover({
   soloLectura = false,
   motivoSoloLectura,
   tooltip,
+  puntoGrande = false,
 }: {
   valor: string;
   opciones: OpcionTag[];
@@ -52,6 +53,10 @@ export function TagPopover({
   // 31/08/2026" que mostraba Follow Up: ahi hay lugar para el historial, y en
   // una lista de veinte filas no.
   tooltip?: string;
+  // Un punto más grande, para cuando el semáforo es el único contenido de su
+  // card y no una celda más de una lista. En Home CORE queda como está: ahí
+  // convive con veinte filas y agrandarlo le sacaría peso al resto.
+  puntoGrande?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -104,7 +109,7 @@ export function TagPopover({
         }
         className={
           soloPunto
-            ? `inline-flex h-7 w-7 items-center justify-center rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
+            ? `inline-flex ${puntoGrande ? "h-8 w-8" : "h-7 w-7"} items-center justify-center rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
                 soloLectura ? "cursor-not-allowed opacity-50" : "hover:bg-dc-line/60"
               }`
             : `inline-flex w-full items-center justify-center gap-1.5 truncate rounded-full px-2.5 py-1 text-xs outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
@@ -121,14 +126,16 @@ export function TagPopover({
           // algo que se vea y se pueda tocar.
           <span
             aria-hidden
-            className={`block h-3.5 w-3.5 rounded-full ${
+            className={`block rounded-full ${puntoGrande ? "h-5 w-5" : "h-3.5 w-3.5"} ${
               seleccionada?.dot ? "" : "border-2 border-dc-muted/50"
             }`}
             style={
               seleccionada?.dot
                 ? {
                     backgroundColor: seleccionada.dot,
-                    boxShadow: `0 0 8px ${seleccionada.dot}`,
+                    // El glow acompaña al tamaño: el mismo radio sobre un punto
+                    // más grande se lee como un halo más chico.
+                    boxShadow: `0 0 ${puntoGrande ? 11 : 8}px ${seleccionada.dot}`,
                   }
                 : undefined
             }

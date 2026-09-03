@@ -95,10 +95,14 @@ export default async function ProyectoHomePage({
           texto, y darle una sexta columna igual apretaba a las otras cinco. */}
       <div className="grid shrink-0 gap-3 sm:grid-cols-3 lg:grid-cols-[6.5rem_repeat(5,minmax(0,1fr))]">
         <div className={`${CARD} flex flex-col`}>
-          <p className="flex h-8 items-start text-[11px] uppercase leading-tight tracking-wide text-dc-muted">
+          {/* Rótulo y punto centrados: la card no tiene texto que alinear a la
+              izquierda, solo un punto, y con los dos al centro se lee como una
+              unidad. El punto se queda en la fila de alto fijo de los valores,
+              así que sigue sobre la misma línea óptica que las otras cinco. */}
+          <p className="flex h-8 items-start justify-center text-[11px] uppercase leading-tight tracking-wide text-dc-muted">
             Semáforo
           </p>
-          <p className="mt-1 flex h-8 items-center">
+          <p className="mt-1 flex h-8 items-center justify-center">
             <SemaforoKpi
               clienteId={id}
               nombre={acceso.cliente.nombre}
