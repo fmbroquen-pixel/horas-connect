@@ -362,10 +362,12 @@ function Tablero({
                     className="pointer-events-none absolute -bottom-2 left-0 right-0 h-0.5 rounded-full bg-dc-peri shadow-[0_0_8px_var(--color-dc-peri)]"
                   />
                 )}
+                {/* Mismo tratamiento que las tareas: la lista que se mueve
+                    queda como el hueco que dejó. */}
                 <div
                   className={
                     dnd.arrastrada(lista.id)
-                      ? "opacity-40 transition-opacity"
+                      ? "rounded-2xl opacity-40 shadow-[inset_0_0_0_1px_var(--color-dc-peri)] transition-opacity"
                       : "transition-opacity"
                   }
                 >

@@ -183,7 +183,8 @@ export function FilaTareaRoadmap({
     // poco y parecía que la fila seguía a medio seleccionar.
     <div
       ref={filaRef}
-      className={`border-b border-dc-line px-4 py-2 last:border-0 ${
+      data-fila-arrastrable
+      className={`group/fila border-b border-dc-line px-4 py-2 last:border-0 ${
         seleccionada ? "dc-fila-seleccionada" : ""
       } ${destacada ? "dc-fila-destino" : ""} ${
         editandoFechas
@@ -195,12 +196,37 @@ export function FilaTareaRoadmap({
         {/* La celda entera es la zona de agarre: acá no hay nada que editar,
             así que arrastrar desde la izquierda no compite con el nombre, las
             fechas ni los botones de la derecha. El checkbox sigue andando con
-            un clic, porque el navegador no emite click si hubo arrastre. */}
+            un clic, porque el navegador no emite click si hubo arrastre.
+            La agarradera es la señal de que se puede: antes solo lo decía un
+            tooltip, que hay que descubrir pasando por encima. */}
         <span
           {...agarre}
           data-tooltip={agarre ? "Arrastrá para reordenar la tarea" : undefined}
-          className={`flex items-center ${agarre ? "cursor-grab active:cursor-grabbing" : ""}`}
+          // Tres cosas para que el agarre sea agarrable, las tres medidas:
+          // self-stretch, porque en una grilla con items-center la celda se
+          // encoge al alto de su contenido y quedaba en una tira de 16px -el
+          // alto del checkbox-; y el -my-2 con py-2, que la hace sangrar sobre
+          // el padding vertical de la fila, que si no queda muerto.
+          // De 34x16 a 56x36: cuatro veces el área.
+          className={`-my-2 flex items-center gap-1.5 py-2 ${agarre ? "cursor-grab active:cursor-grabbing" : ""}`}
         >
+          {agarre && (
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="currentColor"
+              aria-hidden="true"
+              className="shrink-0 text-dc-muted/50 transition-colors group-hover/fila:text-dc-muted"
+            >
+              <circle cx="9" cy="6" r="1.5" />
+              <circle cx="15" cy="6" r="1.5" />
+              <circle cx="9" cy="12" r="1.5" />
+              <circle cx="15" cy="12" r="1.5" />
+              <circle cx="9" cy="18" r="1.5" />
+              <circle cx="15" cy="18" r="1.5" />
+            </svg>
+          )}
           {!soloLectura && (
             <input
               type="checkbox"

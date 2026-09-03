@@ -30,10 +30,15 @@ export const OPCIONES_ESTADO = Object.entries(ETIQUETA_ESTADO).map(
   ([value, label]) => ({ value, label }),
 );
 
-// (checkbox) · Tarea (+ personas) · Inicio · Fin · Horas est. · Estado · (acciones)
+// (agarre + checkbox) · Tarea (+ personas) · Inicio · Fin · Horas est. · Estado · (acciones)
 // La duración no tiene columna: se deriva de Inicio y Fin y se guarda sola.
+//
+// La primera columna pasó de 34px a 56px: es la zona de arrastre, y con el
+// ancho del checkbox había que apuntarle a una tira de 34px para poder agarrar
+// una tarea. Ahora entra además la agarradera, que es lo que lo dice sin
+// tooltip: antes había que descubrir que esa celda se arrastraba.
 export const GRID_ROADMAP =
-  "grid min-w-[880px] grid-cols-[34px_minmax(220px,1fr)_120px_120px_110px_150px_80px] items-center gap-2";
+  "grid min-w-[900px] grid-cols-[56px_minmax(220px,1fr)_120px_120px_110px_150px_80px] items-center gap-2";
 
 export type TareaRoadmapFila = {
   id: string;

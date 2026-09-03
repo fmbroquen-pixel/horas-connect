@@ -92,7 +92,7 @@ export function ListaRoadmapCard({
     .filter(Boolean) as typeof lista.tareas;
 
   return (
-    <section className="dc-panel overflow-hidden">
+    <section data-fila-arrastrable className="dc-panel overflow-hidden">
       {/* Todo el header pliega y despliega. Los controles que hacen otra cosa
           (renombrar, duplicar, eliminar) frenan la propagación para no
           arrastrar el desplegable con ellos. */}
@@ -265,9 +265,16 @@ export function ListaRoadmapCard({
                   className="pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-0.5 rounded-full bg-dc-peri shadow-[0_0_8px_var(--color-dc-peri)]"
                 />
               )}
+              {/* La fila que se está moviendo queda como el hueco que dejó:
+                  atenuada y punteada. Antes solo bajaba la opacidad, y con el
+                  fantasma nuevo encima costaba distinguir cuál era el original
+                  y cuál la copia que sigue al cursor. El borde no ocupa
+                  espacio -es inset- así que la lista no se mueve. */}
               <div
                 className={`transition-opacity ${
-                  dnd.arrastrada(t.id) ? "opacity-40" : ""
+                  dnd.arrastrada(t.id)
+                    ? "opacity-40 shadow-[inset_0_0_0_1px_var(--color-dc-peri)] [border-radius:0.5rem]"
+                    : ""
                 }`}
               >
                 <FilaTareaRoadmap

@@ -30,6 +30,56 @@ import { useState } from "react";
 //
 // Con dirección, cualquier lugar del ítem apuntado produce un movimiento
 // real, y la línea indicadora aparece del lado por el que venís.
+// La imagen que sigue al cursor mientras se arrastra.
+//
+// Por defecto el navegador usa como fantasma el elemento del que se agarró —la
+// celda del checkbox— y lo que se veía moverse era un cuadradito suelto, sin
+// relación con la fila que en realidad se estaba moviendo. Acá se le pasa una
+// copia de la FILA entera.
+//
+// Se usa setDragImage y no un div siguiendo al mouse: el navegador ya mueve
+// esa imagen con el cursor, a 60fps y fuera del hilo de JavaScript. Un
+// seguidor propio sería una segunda implementación del arrastre, con su
+// listener de mousemove y sus saltos, para llegar a lo mismo.
+function prepararFantasma(e: React.DragEvent) {
+  const fila = (e.currentTarget as HTMLElement).closest<HTMLElement>(
+    "[data-fila-arrastrable]",
+  );
+  if (!fila) return;
+
+  const rect = fila.getBoundingClientRect();
+  const copia = fila.cloneNode(true) as HTMLElement;
+
+  // Ancho fijo: la copia sale del flujo y sin esto colapsaría al ancho de su
+  // contenido, que es justo lo que la haría dejar de parecerse a la fila.
+  copia.style.width = `${rect.width}px`;
+  copia.style.height = `${rect.height}px`;
+  copia.style.opacity = "0.85";
+  copia.style.borderRadius = "0.75rem";
+  copia.style.background = "var(--dc-card)";
+  copia.style.boxShadow =
+    "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px var(--color-dc-peri)";
+  copia.style.pointerEvents = "none";
+  // Fuera de la pantalla: el navegador la fotografía igual, y si estuviera a la
+  // vista se vería un instante antes de que arranque el arrastre.
+  copia.style.position = "fixed";
+  copia.style.top = "-10000px";
+  copia.style.left = "-10000px";
+  document.body.appendChild(copia);
+
+  // El agarre queda bajo el cursor en el mismo punto donde se apoyó: sin esto
+  // la fila salta a la esquina superior izquierda del puntero al empezar.
+  e.dataTransfer.setDragImage(
+    copia,
+    e.clientX - rect.left,
+    e.clientY - rect.top,
+  );
+
+  // El navegador toma la foto de forma sincrónica al terminar dragstart, así
+  // que para el próximo tick la copia ya no hace falta.
+  setTimeout(() => copia.remove(), 0);
+}
+
 export type Reordenable = {
   // Va en el elemento desde el que se puede empezar a arrastrar.
   agarre: (id: string) => {
@@ -174,6 +224,7 @@ export function useReordenable(
         e.dataTransfer.effectAllowed = "move";
         // Firefox no arranca el arrastre sin datos asociados.
         e.dataTransfer.setData("text/plain", id);
+        prepararFantasma(e);
       },
       onDragEnd: limpiar,
     }),
