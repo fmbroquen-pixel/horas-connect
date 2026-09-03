@@ -8,7 +8,6 @@ import { InfoButton } from "@/components/info-button";
 import { RoadmapTablero } from "./tablero";
 import { CabeceraSeguimiento } from "./cabecera-seguimiento";
 import { PapeleraMenu } from "../../../papelera/papelera-menu";
-import { formatFecha } from "@/lib/formato";
 import type { ListaRoadmapVista } from "./constantes";
 
 // Pestaña Follow Up: el seguimiento del proyecto. Arriba, el estado de un
@@ -34,30 +33,23 @@ export default async function ProyectoRoadmapPage({
   // proyecto y no se vuelven a tocar.
   await asegurarRoadmap(acceso.cliente);
 
-  // Un proyecto inactivo se mira entero: el semáforo, el tablero, las listas y
-  // las tareas quedan a la vista pero sin controles. La condición se resuelve
+  // Un proyecto inactivo se mira entero: el tablero, las listas y las tareas
+  // quedan a la vista pero sin controles. La condición se resuelve
   // una vez acá y baja a las dos mitades de la pantalla.
   const soloLectura = !acceso.cliente.activo;
 
-  // En paralelo: son independientes entre sí, y contra una base remota cada
-  // ida y vuelta cuesta más que la consulta en sí. En serie, el semáforo
-  // retrasaba las listas sin ningún motivo.
-  const [semaforo, listas] = await Promise.all([
-    prisma.semaforoEvento.findFirst({
-      where: { clienteId: id },
-      orderBy: { createdAt: "desc" },
-    }),
-    prisma.listaRoadmap.findMany({
-      where: listasVivas({ clienteId: id }),
-      orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
-      include: {
-        tareas: {
-          where: SOLO_TAREAS_VIVAS,
-          orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
-        },
+  // Una sola consulta: el semáforo se mudó al Home del proyecto y con él se fue
+  // la segunda mitad del Promise.all que había acá.
+  const listas = await prisma.listaRoadmap.findMany({
+    where: listasVivas({ clienteId: id }),
+    orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
+    include: {
+      tareas: {
+        where: SOLO_TAREAS_VIVAS,
+        orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
       },
-    }),
-  ]);
+    },
+  });
 
   const vistas: ListaRoadmapVista[] = listas.map((l) => {
     const tareas = l.tareas.map((t) => ({
@@ -92,8 +84,6 @@ export default async function ProyectoRoadmapPage({
 
       <CabeceraSeguimiento
         clienteId={id}
-        semaforo={semaforo?.estado ?? ""}
-        ultimoCambio={semaforo ? formatFecha(semaforo.createdAt) : ""}
         tableroUrl={acceso.cliente.tableroUrl ?? ""}
         soloLectura={soloLectura}
       />

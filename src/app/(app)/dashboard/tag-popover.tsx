@@ -27,6 +27,7 @@ export function TagPopover({
   soloPunto = false,
   soloLectura = false,
   motivoSoloLectura,
+  tooltip,
 }: {
   valor: string;
   opciones: OpcionTag[];
@@ -46,6 +47,11 @@ export function TagPopover({
   // Por que no se puede tocar. Sin esto, un control que no responde se lee
   // como algo roto.
   motivoSoloLectura?: string;
+  // Reemplaza al tooltip por defecto -que en modo punto es la etiqueta-. Lo
+  // usa el Home del proyecto para conservar el "Ultimo cambio: Verde ·
+  // 31/08/2026" que mostraba Follow Up: ahi hay lugar para el historial, y en
+  // una lista de veinte filas no.
+  tooltip?: string;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -92,7 +98,9 @@ export function TagPopover({
         // es lo único que lo dice para quien no ve el color.
         aria-label={`${ariaLabel}: ${etiqueta}`}
         data-tooltip={
-          soloLectura ? motivoSoloLectura : soloPunto ? etiqueta : undefined
+          soloLectura
+            ? motivoSoloLectura
+            : (tooltip ?? (soloPunto ? etiqueta : undefined))
         }
         className={
           soloPunto

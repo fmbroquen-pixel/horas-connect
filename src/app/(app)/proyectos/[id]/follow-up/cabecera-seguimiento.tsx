@@ -1,48 +1,37 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { cambiarSemaforo, guardarTablero } from "../../actions";
+import { guardarTablero } from "../../actions";
 import { MOTIVO_INACTIVO } from "@/lib/inactivo";
-import { OPCIONES_SEMAFORO, COLOR_SEMAFORO, ETIQUETA_SEMAFORO } from "../../constantes";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
 
-// Semáforo y tablero, arriba del plan y en cards separadas. Antes compartían
-// una sola franja, pero no tienen nada que ver entre sí: uno es el estado del
-// proyecto y el otro un enlace. Juntos se leían como un bloque de
-// configuración y el semáforo —que es lo que se mira— perdía peso.
+// El enlace al tablero de trabajo, arriba del plan.
 //
-// Los dos guardan solos, con el mismo criterio del resto de la app: el
-// semáforo al elegirlo y el tablero al salir del campo.
+// Acá vivía también el semáforo. Se mudó al Home del proyecto: es un indicador
+// de estado, y su lugar es el tablero de control junto a los KPIs, no la
+// pantalla donde se arma el plan. Los dos nunca tuvieron mucho que ver entre
+// sí —uno es el estado del proyecto y el otro un enlace— y juntos se leían
+// como un bloque de configuración.
+//
+// Guarda solo, con el mismo criterio del resto de la app: al salir del campo.
 export function CabeceraSeguimiento({
   clienteId,
-  semaforo: semaforoInicial,
-  ultimoCambio,
   tableroUrl,
   soloLectura = false,
 }: {
   clienteId: string;
-  semaforo: string;
-  ultimoCambio: string;
   tableroUrl: string;
-  // Proyecto inactivo: el semáforo y el tablero se leen, no se tocan. El
-  // servidor ya los rechaza; acá se deja de ofrecerlos.
+  // Proyecto inactivo: el enlace se lee y se copia, no se cambia. El servidor
+  // ya lo rechaza; acá se deja de ofrecer.
   soloLectura?: boolean;
 }) {
-  const [semaforo, setSemaforo] = useState(semaforoInicial);
   const [url, setUrl] = useState(tableroUrl);
   const [urlGuardada, setUrlGuardada] = useState(tableroUrl);
   const [error, setError] = useState<string>();
   const [pendiente, start] = useTransition();
 
-  const elegirSemaforo = (valor: string) => {
-    if (valor === semaforo) return;
-    setSemaforo(valor);
-    start(async () => {
-      await cambiarSemaforo(clienteId, valor);
-    });
-  };
 
   const guardarUrl = () => {
     const limpia = url.trim();
@@ -64,79 +53,13 @@ export function CabeceraSeguimiento({
   // El último cambio se cuenta al pasar por encima, no ocupando una línea
   // permanente: es un dato de contexto que se consulta de vez en cuando, no
   // algo que haya que leer cada vez que se abre el plan.
-  const detalleUltimoCambio = ultimoCambio
-    ? `Último cambio: ${ETIQUETA_SEMAFORO[semaforoInicial] ?? "—"} · ${ultimoCambio}`
-    : "Sin cambios registrados";
 
   return (
-    <div className="flex shrink-0 flex-wrap items-start gap-3">
-      {/* Semáforo: los tres estados a la vista y a un clic. El desplegable
-          escondía tres opciones detrás de dos clics para algo que se cambia
-          seguido y que además es un color, no un texto. */}
-      <div
-        className="rounded-2xl border border-dc-line bg-dc-card px-4 py-3"
-        data-tooltip={detalleUltimoCambio}
-      >
-        <span className="mb-2 block text-[11px] uppercase tracking-wide text-dc-muted">
-          Semáforo
-        </span>
-        <div role="group" aria-label="Semáforo del proyecto" className="flex gap-1.5">
-          {OPCIONES_SEMAFORO.map((o) => {
-            const activo = semaforo === o.value;
-            return (
-              <button
-                key={o.value}
-                type="button"
-                onClick={() => elegirSemaforo(o.value)}
-                disabled={pendiente || soloLectura}
-                aria-pressed={activo}
-                // Con el proyecto apagado, solo el motivo. El color adelante
-                // -"Verde · Proyecto inactivo"- se leia como si dijera algo del
-                // estado del semaforo, cuando lo unico que hay para decir es
-                // que no se puede cambiar. La etiqueta ya esta escrita en el
-                // boton, al lado del punto de color.
-                data-tooltip={
-                  soloLectura
-                    ? MOTIVO_INACTIVO
-                    : `${o.label} · ${detalleUltimoCambio}`
-                }
-                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition ${
-                  soloLectura
-                    ? "cursor-not-allowed"
-                    : "disabled:opacity-60"
-                } ${
-                  activo
-                    ? "border-transparent text-dc-text"
-                    : soloLectura
-                      ? "border-dc-line text-dc-muted/50"
-                      : "border-dc-line text-dc-muted hover:border-dc-peri hover:text-dc-text"
-                }`}
-                // El estado activo se marca con el propio color del semáforo,
-                // en fondo tenue y con glow: es la única señal que no depende
-                // de leer la etiqueta.
-                style={
-                  activo
-                    ? {
-                        backgroundColor: `${COLOR_SEMAFORO[o.value]}22`,
-                        boxShadow: `0 0 10px ${COLOR_SEMAFORO[o.value]}55`,
-                      }
-                    : undefined
-                }
-              >
-                <span
-                  aria-hidden
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: COLOR_SEMAFORO[o.value] }}
-                />
-                {o.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
+    <div className="flex shrink-0 items-start gap-3">
       {/* Tablero: card propia y compacta. Solo el enlace. */}
-      <div className="min-w-[18rem] flex-1 rounded-2xl border border-dc-line bg-dc-card px-4 py-3">
+      {/* Sin el semáforo al lado, el tablero toma la fila entera en vez de
+          quedarse con su ancho viejo y dejar el hueco donde estaba el otro. */}
+      <div className="min-w-0 flex-1 rounded-2xl border border-dc-line bg-dc-card px-4 py-3">
         <span className="mb-2 block text-[11px] uppercase tracking-wide text-dc-muted">
           Tablero
         </span>

@@ -7,6 +7,9 @@ import { formatHorasHsMin } from "@/lib/horas";
 import { construirCurvaHoras } from "@/lib/curva-horas";
 import { InfoButton } from "@/components/info-button";
 import { CurvaHoras } from "@/components/curva-horas";
+import { SemaforoKpi } from "./semaforo-kpi";
+import { ETIQUETA_SEMAFORO } from "../constantes";
+import { formatFecha } from "@/lib/formato";
 
 const CARD = "rounded-2xl border border-dc-line bg-dc-card px-4 py-3";
 
@@ -23,7 +26,7 @@ export default async function ProyectoHomePage({
   const acceso = await getAccesoProyecto(id);
   if (!acceso) notFound();
 
-  const [asignaciones, registros, tareas] = await Promise.all([
+  const [asignaciones, registros, tareas, semaforo] = await Promise.all([
     prisma.proyectoAsignado.findMany({
       where: { clienteId: id, rol: { not: null } },
       include: { usuario: { select: { nombre: true } } },
@@ -36,6 +39,13 @@ export default async function ProyectoHomePage({
     prisma.tareaRoadmap.findMany({
       where: tareasVivas({ clienteId: id }),
       select: { horasEstimadas: true, estado: true, fechaFin: true },
+    }),
+    // El semáforo vive acá desde que se lo movió de Follow Up: es un indicador
+    // de estado del proyecto, y su lugar es el tablero de control y no la
+    // pantalla del plan de trabajo. El dato es el mismo evento de siempre.
+    prisma.semaforoEvento.findFirst({
+      where: { clienteId: id },
+      orderBy: { createdAt: "desc" },
     }),
   ]);
 
@@ -80,7 +90,29 @@ export default async function ProyectoHomePage({
     // Una sola pantalla: KPIs y progreso fijos, y el gráfico ocupa el resto
     // del alto disponible en vez de empujar la página hacia abajo.
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="grid shrink-0 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      {/* El semáforo entra en la misma fila que los KPIs, con una pista propia
+          más angosta: es un punto de color, no necesita el ancho de una card de
+          texto, y darle una sexta columna igual apretaba a las otras cinco. */}
+      <div className="grid shrink-0 gap-3 sm:grid-cols-3 lg:grid-cols-[6.5rem_repeat(5,minmax(0,1fr))]">
+        <div className={`${CARD} flex flex-col`}>
+          <p className="flex h-8 items-start text-[11px] uppercase leading-tight tracking-wide text-dc-muted">
+            Semáforo
+          </p>
+          <p className="mt-1 flex h-8 items-center">
+            <SemaforoKpi
+              clienteId={id}
+              nombre={acceso.cliente.nombre}
+              semaforo={semaforo?.estado ?? ""}
+              ultimoCambio={
+                semaforo
+                  ? `Último cambio: ${ETIQUETA_SEMAFORO[semaforo.estado] ?? "—"} · ${formatFecha(semaforo.createdAt)}`
+                  : "Sin cambios registrados"
+              }
+              activo={acceso.cliente.activo}
+            />
+          </p>
+        </div>
+
         <Kpi titulo="Mentor Owner" valor={owner} texto />
         {/* Hasta dos nombres a la vista y el resto en un "+N". Con el tope en
             cinco, ponerlos los cinco en una línea de card no los hacía legibles
