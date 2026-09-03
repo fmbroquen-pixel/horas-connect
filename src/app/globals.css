@@ -246,9 +246,39 @@ input[type="number"]::-webkit-inner-spin-button {
 .dc-recalculo {
   animation: dc-recalculo 1.3s ease-out both;
 }
+
+/* La dependencia: mismo color, la mitad de todo lo demas.
+   Antes compartia los fotogramas de la causa y se distinguia solo por
+   `opacity: 0.85`. Eso no atenuaba el realce sino el NUMERO: la fecha
+   recalculada se leia mas palida que las demas, que es exactamente al reves de
+   lo que se quiere -el dato tiene que leerse igual de bien, lo que baja es
+   cuanto grita-. Y un 15% no alcanzaba para ver cual habia sido la causa.
+
+   Ahora la diferencia es de tres cosas a la vez, que es lo que la hace legible
+   de reojo: el halo arranca a la mitad de intensidad, con la mitad de radio, y
+   dura menos. La consecuencia se apaga antes que su causa, asi que en el ultimo
+   tercio de la animacion queda encendida solo la tarea que se movio. */
+@keyframes dc-recalculo-suave {
+  0% {
+    text-shadow:
+      0 0 5px rgba(139, 140, 255, 0.5),
+      0 0 12px rgba(139, 140, 255, 0.3);
+  }
+  /* Sostiene y despues se apaga, igual que la causa. Sin este fotograma la
+     curva ease-out se lo comia casi entero de entrada: medido, a los 400ms de
+     800 ya estaba en 0,15 de alpha y 1,6px de radio, o sea invisible. La mitad
+     de la animacion no mostraba nada. */
+  55% {
+    text-shadow:
+      0 0 5px rgba(139, 140, 255, 0.4),
+      0 0 12px rgba(139, 140, 255, 0.22);
+  }
+  100% {
+    text-shadow: none;
+  }
+}
 .dc-recalculo-suave {
-  animation: dc-recalculo 1.3s ease-out both;
-  opacity: 0.85;
+  animation: dc-recalculo-suave 0.8s ease-out both;
 }
 @media (prefers-reduced-motion: reduce) {
   .dc-recalculo,
