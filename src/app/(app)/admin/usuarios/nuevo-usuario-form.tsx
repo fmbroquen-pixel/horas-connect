@@ -8,7 +8,7 @@ import { BotonAgregar } from "@/components/ui/boton-agregar";
 import {
   BotonCancelarIcono,
   BotonGuardarIcono,
-} from "@/components/tabla/acciones-fila";
+} from "@/components/ui/acciones-fila";
 import { avisarOk } from "@/components/ui/avisos";
 
 const INPUT =

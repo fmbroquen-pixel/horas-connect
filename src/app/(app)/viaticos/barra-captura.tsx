@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { crearViatico, type CampoViatico } from "./actions";
-import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
+import { BotonGuardarIcono } from "@/components/ui/acciones-fila";
 import { avisarOk } from "@/components/ui/avisos";
 import { hoyISO } from "@/lib/formato";
 import { Dropdown } from "@/components/dropdown";

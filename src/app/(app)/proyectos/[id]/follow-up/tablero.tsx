@@ -6,7 +6,7 @@ import { OPCIONES_ESTADO, type ListaRoadmapVista } from "./constantes";
 import { ListaRoadmapCard } from "./lista-roadmap";
 import { NuevaListaBoton } from "./nueva-lista-boton";
 import { Dropdown } from "@/components/dropdown";
-import { useReordenable } from "@/components/tabla/reordenable";
+import { useReordenable } from "./reordenable";
 import { avisarOk } from "@/components/ui/avisos";
 import { ResaltadoProvider, useResaltado } from "./resaltado";
 import { SoloLecturaProvider, useSoloLectura } from "./solo-lectura";

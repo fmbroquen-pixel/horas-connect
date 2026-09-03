@@ -14,7 +14,7 @@ import { BotonAgregar } from "@/components/ui/boton-agregar";
 import {
   BotonCancelarIcono,
   BotonGuardarIcono,
-} from "@/components/tabla/acciones-fila";
+} from "@/components/ui/acciones-fila";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri";

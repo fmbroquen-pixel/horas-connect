@@ -9,7 +9,7 @@ import {
   BotonEditarIcono,
   BotonGuardarIcono,
   BotonCancelarIcono,
-} from "@/components/tabla/acciones-fila";
+} from "@/components/ui/acciones-fila";
 
 const INPUT =
   "w-full rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-center text-sm text-dc-text outline-none focus:border-dc-peri";

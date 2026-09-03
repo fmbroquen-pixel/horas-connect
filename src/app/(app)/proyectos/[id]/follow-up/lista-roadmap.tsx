@@ -16,8 +16,8 @@ import { BTN_ICON_SM } from "@/lib/ui";
 import {
   BotonEditarIcono,
   BotonEliminarIcono,
-} from "@/components/tabla/acciones-fila";
-import { useReordenable } from "@/components/tabla/reordenable";
+} from "@/components/ui/acciones-fila";
+import { useReordenable } from "./reordenable";
 import { useResaltado } from "./resaltado";
 
 // Una lista del plan sobre la superficie clara del Design System (.dc-panel),

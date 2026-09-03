@@ -241,6 +241,43 @@ export async function actualizarComprobante(
 }
 
 
+// Borrado en masa desde la selección de la tabla. Espejo del de Time Tracking
+// —las dos son data tables y comparten patrón— con los mismos dos guards: un
+// cliente inactivo y un usuario bloqueado congelan su historia.
+export async function eliminarViaticos(ids: string[]): Promise<Resultado> {
+  const actor = await requireGuest();
+  const esAdmin = actor.rol === "admin";
+  if (ids.length === 0) return {};
+
+  // Se frena toda la selección y no solo las filas problemáticas: borrar la
+  // mitad de lo que se pidió, en silencio, es peor que no borrar nada.
+  const afectados = await prisma.viatico.findMany({
+    select: { id: true, clienteId: true, usuarioId: true },
+    where: {
+      id: { in: ids },
+      eliminadoEn: null,
+      ...(esAdmin ? {} : { usuarioId: actor.id }),
+    },
+  });
+  if (afectados.length === 0) return {};
+
+  const inactivo = await clienteInactivoDe(afectados.map((v) => v.clienteId));
+  if (inactivo) return { error: mensajeInactivo(inactivo) };
+
+  const bloqueado = await usuarioBloqueadoDe(afectados.map((v) => v.usuarioId));
+  if (bloqueado) return { error: mensajeBloqueado(bloqueado) };
+
+  // Borrado lógico: van a la papelera. El comprobante se conserva para poder
+  // restaurar, igual que en el borrado de a uno.
+  await prisma.viatico.updateMany({
+    where: { id: { in: afectados.map((v) => v.id) } },
+    data: { eliminadoEn: new Date() },
+  });
+
+  revalidar();
+  return {};
+}
+
 // Devuelve el error en vez de tirarlo: el boton de eliminar sabe mostrarlo.
 export async function eliminarViatico(id: string): Promise<Resultado> {
   const actor = await requireGuest();

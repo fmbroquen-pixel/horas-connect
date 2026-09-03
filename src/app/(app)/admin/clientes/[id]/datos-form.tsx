@@ -10,7 +10,7 @@ import {
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import { avisarOk } from "@/components/ui/avisos";
-import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
+import { BotonGuardarIcono } from "@/components/ui/acciones-fila";
 import { useSeccionGuardable } from "@/components/guardado-pagina";
 
 const INPUT =

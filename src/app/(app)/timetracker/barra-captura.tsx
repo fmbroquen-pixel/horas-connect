@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { crearRegistro, type CampoRegistro } from "./actions";
-import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
+import { BotonGuardarIcono } from "@/components/ui/acciones-fila";
 import { avisarOk } from "@/components/ui/avisos";
 import { parseHorasHsMin, reformatEntradaHoras } from "@/lib/horas";
 import { formatMonto, hoyISO } from "@/lib/formato";

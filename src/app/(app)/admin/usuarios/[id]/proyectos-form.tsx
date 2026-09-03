@@ -10,7 +10,7 @@ import {
 import { avisarOk } from "@/components/ui/avisos";
 import { Modal } from "@/components/ui/modal";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
-import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
+import { BotonGuardarIcono } from "@/components/ui/acciones-fila";
 import { useSeccionGuardable } from "@/components/guardado-pagina";
 
 const SOLAPAS: { rol: RolAsignacion; label: string }[] = [

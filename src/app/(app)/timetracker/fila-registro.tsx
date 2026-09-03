@@ -3,31 +3,27 @@
 import { useRef, useState } from "react";
 import { actualizarCampoRegistro, eliminarRegistro } from "./actions";
 import { formatMonto, hoyISO } from "@/lib/formato";
-import {
-  COLUMNAS_TIMETRACKER,
-  ESTILO_GRID_TIMETRACKER,
-  GRID_TIMETRACKER,
-  type ColumnaId,
-} from "./columnas";
+import { COLUMNAS_TIMETRACKER, type ColumnaId } from "./columnas";
+import { FilaDatos } from "@/components/data-table/tabla-datos";
 import {
   CeldaFecha,
   CeldaHoras,
   CeldaOpciones,
   CeldaSoloLectura,
-} from "@/components/tabla/celda-editable";
+} from "@/components/campos/celda-editable";
 import type { OpcionConcepto, OpcionSelect, RegistroFila } from "./tipos";
 import {
   BotonEditarIcono,
   BotonEliminarIcono,
   BotonListoIcono,
-} from "@/components/tabla/acciones-fila";
-import { MarcaEdicion } from "@/components/tabla/marca-edicion";
-import { CarrilAcciones } from "@/components/tabla/carril-acciones";
+} from "@/components/ui/acciones-fila";
+import { MarcaEdicion } from "@/components/data-table/marca-edicion";
+import { CarrilAcciones } from "@/components/data-table/carril-acciones";
 import { Modal } from "@/components/ui/modal";
 import { avisarError } from "@/components/ui/avisos";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
 import type { PreguntaAsignacion } from "./actions";
-import { IconoSoloLectura } from "@/components/tabla/icono-solo-lectura";
+import { IconoSoloLectura } from "@/components/data-table/icono-solo-lectura";
 // El mismo texto que en Home CORE y en la vista del proyecto: la celda, el
 // checkbox y el candado de esta fila dicen lo mismo que el semáforo de allá
 // porque es la misma condición, no tres bloqueos distintos.
@@ -275,19 +271,17 @@ export function FilaRegistro({
   };
 
   return (
-    <div
-      ref={filaRef}
-      className={`border-b border-dc-line px-4 py-2 last:border-0 ${
-        editando ? "bg-dc-peri/[0.06] shadow-[inset_3px_0_0_0_var(--color-dc-peri)]" : ""
-      }`}
-    >
-      <div className={GRID_TIMETRACKER} style={ESTILO_GRID_TIMETRACKER}>
-        {COLUMNAS_TIMETRACKER.map((c) => (
-          <div key={c.id} className="min-w-0">
-            {celdas[c.id]}
-          </div>
-        ))}
-      </div>
+    <>
+      <FilaDatos
+        contenedorRef={filaRef}
+        columnas={COLUMNAS_TIMETRACKER}
+        celdas={celdas}
+        className={
+          editando
+            ? "bg-dc-peri/[0.06] shadow-[inset_3px_0_0_0_var(--color-dc-peri)]"
+            : ""
+        }
+      />
 
       {/* El proyecto no es de quien va a quedar como dueño. No se rechaza: se
           ofrece asignárselo como Backup, que es el rol que no desplaza a nadie
@@ -330,6 +324,6 @@ export function FilaRegistro({
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }

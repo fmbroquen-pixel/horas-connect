@@ -15,9 +15,9 @@ import { RecalculoProvider, BloqueRecalculable } from "@/components/recalculo";
 import { createAdminClient, BUCKET_COMPROBANTES } from "@/lib/supabase/admin";
 import { InfoButton } from "@/components/info-button";
 import { SelectorUsuario } from "@/components/selector-usuario";
-import { GRID_VIATICOS, type ViaticoFila } from "./tipos";
+import { type ViaticoFila } from "./tipos";
 import { BarraCapturaViatico } from "./barra-captura";
-import { FilaViatico } from "./fila-viatico";
+import { TablaViaticos } from "./tabla-viaticos";
 import { AccionesViaticos } from "./menu-acciones";
 
 // Expenses comparte el patrón de Time Tracking: selector de usuario (solo
@@ -195,41 +195,7 @@ export default async function ViaticosPage({
         className="mt-3 flex min-h-0 flex-1 flex-col"
         claseContenido="flex min-h-0 flex-1 flex-col"
       >
-      <div className="flex min-h-0 flex-1 overflow-x-auto dc-panel">
-        <div className="flex min-h-0 min-w-[860px] flex-1 flex-col">
-          <div className={`dc-thead ${GRID_VIATICOS} shrink-0 border-b border-dc-line px-3`}>
-            <span>Fecha</span>
-            <span>Cliente</span>
-            <span>Concepto</span>
-            <span>Moneda</span>
-            <span>Monto</span>
-            <span
-              className="flex justify-center"
-              data-tooltip="Comprobante"
-              aria-label="Comprobante"
-            >
-              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3.5 3.5 0 0 1 4.95 4.95l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-              </svg>
-            </span>
-            <span />
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {filas.map((f) => (
-              <FilaViatico key={f.id} viatico={f} proyectos={opcionesProyecto} />
-            ))}
-
-            {filas.length === 0 && (
-              <p className="px-4 py-6 text-center text-sm text-dc-muted">
-                {esOtroUsuario
-                  ? `${destino.nombre} no tiene viáticos en este período.`
-                  : "Todavía no cargaste viáticos."}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
+      <TablaViaticos filas={filas} proyectos={opcionesProyecto} />
       </BloqueRecalculable>
     </div>
     </RecalculoProvider>

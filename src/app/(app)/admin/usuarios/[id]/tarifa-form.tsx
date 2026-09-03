@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
-import { BotonGuardarIcono } from "@/components/tabla/acciones-fila";
+import { BotonGuardarIcono } from "@/components/ui/acciones-fila";
 import { useSeccionGuardable } from "@/components/guardado-pagina";
 import { DatePicker } from "@/components/date-picker";
 import { InfoButton } from "@/components/info-button";

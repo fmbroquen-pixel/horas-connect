@@ -23,11 +23,11 @@ import {
   CeldaHoras,
   CeldaOpciones,
   CeldaTexto,
-} from "@/components/tabla/celda-editable";
-import { RangoFechas } from "@/components/tabla/rango-fechas";
+} from "@/components/campos/celda-editable";
+import { RangoFechas } from "./rango-fechas";
 import { claseResaltado, useResaltado } from "./resaltado";
 import { TagEstado } from "@/components/ui/tag-estado";
-import { BotonEliminarIcono } from "@/components/tabla/acciones-fila";
+import { BotonEliminarIcono } from "@/components/ui/acciones-fila";
 import { SelectorPersonas } from "./selector-personas";
 import { useSoloLectura } from "./solo-lectura";
 

@@ -1,27 +1,28 @@
 "use client";
 
-import { useRef, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import {
   actualizarCampoViatico,
   actualizarComprobante,
   eliminarViatico,
 } from "./actions";
 import { formatMonto, hoyISO } from "@/lib/formato";
-import {
-  GRID_VIATICOS,
-  ETIQUETA_CONCEPTO,
-  type OpcionSelect,
-  type ViaticoFila,
-} from "./tipos";
+import { ETIQUETA_CONCEPTO, type OpcionSelect, type ViaticoFila } from "./tipos";
+import { COLUMNAS_VIATICOS, type ColumnaId } from "./columnas";
+import { FilaDatos } from "@/components/data-table/tabla-datos";
 import {
   CeldaFecha,
   CeldaOpciones,
   CeldaTexto,
-} from "@/components/tabla/celda-editable";
-import { BotonEditarIcono, BotonEliminarIcono } from "@/components/tabla/acciones-fila";
-import { MarcaEdicion } from "@/components/tabla/marca-edicion";
-import { CarrilAcciones } from "@/components/tabla/carril-acciones";
-import { IconoSoloLectura } from "@/components/tabla/icono-solo-lectura";
+} from "@/components/campos/celda-editable";
+import {
+  BotonEditarIcono,
+  BotonEliminarIcono,
+  BotonListoIcono,
+} from "@/components/ui/acciones-fila";
+import { MarcaEdicion } from "@/components/data-table/marca-edicion";
+import { CarrilAcciones } from "@/components/data-table/carril-acciones";
+import { IconoSoloLectura } from "@/components/data-table/icono-solo-lectura";
 import { MOTIVO_INACTIVO } from "@/lib/inactivo";
 import { avisarError } from "@/components/ui/avisos";
 
@@ -39,37 +40,43 @@ function mostrarFecha(iso: string): string {
   return `${d}/${m}/${a}`;
 }
 
-// Fila del historial con edición inline, igual que Time Tracking: cada celda
-// se edita en el lugar y se guarda sola al salir del campo o con Enter.
+// Fila del historial, con el mismo patrón que Time Tracking: la tabla se mira,
+// se entra a editar con el lápiz y se sale con el tilde.
 //
-// Antes esta fila era texto plano y editar abría un formulario que reemplazaba
-// la fila entera. Eso dejaba dos criterios distintos en la app para lo mismo:
-// en Time Tracking los datos editables se anunciaban solos al pasar por
-// encima, y acá no se distinguían de los que no lo son. Ahora las dos usan las
-// mismas celdas, así que la señal de "esto se puede tocar" es la misma.
+// Las dos son data tables y comparten cáscara, celdas, acciones y modo lectura
+// a propósito. Follow Up no: ahí las filas son pasos de un plan con secuencia y
+// dependencias, no registros intercambiables, y no usa nada de data-table.
 export function FilaViatico({
   viatico,
   proyectos,
+  seleccionado,
+  onToggle,
 }: {
   viatico: ViaticoFila;
   proyectos: OpcionSelect[];
+  seleccionado: boolean;
+  onToggle: (id: string) => void;
 }) {
   const filaRef = useRef<HTMLDivElement>(null);
   const archivoRef = useRef<HTMLInputElement>(null);
   const [subiendo, start] = useTransition();
 
-  // Ver si, tocar no: el comprobante se sigue abriendo, pero no se reemplaza.
+  // La tabla es de lectura. Mismo criterio que Time Tracking: en una tabla que
+  // se mira mucho más de lo que se corrige, el gesto barato tiene que ser mirar.
+  const [editando, setEditando] = useState(false);
+
+  // Ver sí, tocar no: el comprobante se sigue abriendo, pero no se reemplaza.
   const editable = viatico.clienteActivo;
+  const celdaEditable = editable && editando;
 
   const guardar = (campo: Parameters<typeof actualizarCampoViatico>[1]) =>
     async (valor: string) => actualizarCampoViatico(viatico.id, campo, valor);
 
-  // El lápiz entra a la primera celda editable, la misma acción que hacer clic
-  // en ella. En una tabla que se edita celda por celda no hay ningún "modo
-  // edición" que abrir; lo que aporta el botón es hacer visible que se puede.
-  const editarPrimeraCelda = () => {
-    const celda = filaRef.current?.querySelector<HTMLElement>("[data-celda-editable]");
-    celda?.click();
+  const abrirEdicion = () => {
+    setEditando(true);
+    setTimeout(() => {
+      filaRef.current?.querySelector<HTMLElement>("[data-celda-editable]")?.click();
+    }, 0);
   };
 
   const subirArchivo = (archivo: File) =>
@@ -81,68 +88,93 @@ export function FilaViatico({
       if (archivoRef.current) archivoRef.current.value = "";
     });
 
-  return (
-    <div ref={filaRef} className="border-b border-dc-line px-3 py-2 last:border-0">
-      <div className={GRID_VIATICOS}>
-        <CeldaFecha
-          valor={viatico.fecha}
-          onGuardar={guardar("fecha")}
-          ariaLabel="Fecha"
-          mostrar={mostrarFecha}
-          max={hoyISO()}
-         editable={editable}
-        />
+  // Una celda por columna, indexadas por id. El orden lo pone COLUMNAS al
+  // recorrerlas: poner una celda en la columna equivocada dejó de ser posible.
+  const celdas: Record<ColumnaId, React.ReactNode> = {
+    seleccion: (
+      <input
+        type="checkbox"
+        checked={seleccionado}
+        onChange={() => onToggle(viatico.id)}
+        disabled={!editable}
+        className="h-4 w-4 accent-dc-purple disabled:cursor-not-allowed disabled:opacity-30"
+        aria-label="Seleccionar fila"
+        data-tooltip={editable ? undefined : MOTIVO_INACTIVO}
+      />
+    ),
 
-        <CeldaOpciones
-          valor={viatico.clienteId}
-          opciones={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
-          onGuardar={guardar("clienteId")}
-          ariaLabel="Cliente"
-         editable={editable}
-        />
+    fecha: (
+      <CeldaFecha
+        valor={viatico.fecha}
+        onGuardar={guardar("fecha")}
+        ariaLabel="Fecha"
+        mostrar={mostrarFecha}
+        max={hoyISO()}
+        editable={celdaEditable}
+      />
+    ),
 
-        <CeldaOpciones
-          valor={viatico.concepto}
-          opciones={OPCIONES_CONCEPTO}
-          onGuardar={guardar("concepto")}
-          ariaLabel="Concepto"
-         editable={editable}
-        />
+    cliente: (
+      <CeldaOpciones
+        valor={viatico.clienteId}
+        opciones={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
+        onGuardar={guardar("clienteId")}
+        ariaLabel="Cliente"
+        alinear="izquierda"
+        editable={celdaEditable}
+      />
+    ),
 
-        <CeldaOpciones
-          valor={viatico.moneda}
-          opciones={OPCIONES_MONEDA}
-          onGuardar={guardar("moneda")}
-          ariaLabel="Moneda"
-         editable={editable}
-        />
+    concepto: (
+      <CeldaOpciones
+        valor={viatico.concepto}
+        opciones={OPCIONES_CONCEPTO}
+        onGuardar={guardar("concepto")}
+        ariaLabel="Concepto"
+        alinear="izquierda"
+        editable={celdaEditable}
+      />
+    ),
 
-        <CeldaTexto
-          valor={String(viatico.monto)}
-          onGuardar={guardar("monto")}
-          ariaLabel="Monto"
-          // Se muestra formateado y se edita en crudo: con el separador de
-          // miles puesto, el campo no se puede seguir escribiendo.
-          mostrar={(v) => formatMonto(Number(v))}
-         editable={editable}
-        />
+    moneda: (
+      <CeldaOpciones
+        valor={viatico.moneda}
+        opciones={OPCIONES_MONEDA}
+        onGuardar={guardar("moneda")}
+        ariaLabel="Moneda"
+        editable={celdaEditable}
+      />
+    ),
 
-        {/* El comprobante no entra en una celda de texto: se ve con el clip y
-            se reemplaza con el mismo gesto, eligiendo otro archivo. */}
-        <span className="flex items-center justify-center gap-1">
-          {viatico.archivoUrl && (
-            <a
-              href={viatico.archivoUrl}
-              target="_blank"
-              rel="noreferrer"
-              data-tooltip="Ver comprobante"
-              aria-label="Ver comprobante"
-              className="inline-flex text-dc-peri transition hover:text-dc-pink"
-            >
-              <IconoClip />
-            </a>
-          )}
-          {editable && (
+    monto: (
+      <CeldaTexto
+        valor={String(viatico.monto)}
+        onGuardar={guardar("monto")}
+        ariaLabel="Monto"
+        // Se muestra formateado y se edita en crudo: con el separador de
+        // miles puesto, el campo no se puede seguir escribiendo.
+        mostrar={(v) => formatMonto(Number(v))}
+        editable={celdaEditable}
+      />
+    ),
+
+    // El comprobante no entra en una celda de texto: se ve con el clip y se
+    // reemplaza con el mismo gesto, eligiendo otro archivo.
+    comprobante: (
+      <span className="flex items-center justify-center gap-1">
+        {viatico.archivoUrl && (
+          <a
+            href={viatico.archivoUrl}
+            target="_blank"
+            rel="noreferrer"
+            data-tooltip="Ver comprobante"
+            aria-label="Ver comprobante"
+            className="inline-flex text-dc-peri transition hover:text-dc-pink"
+          >
+            <IconoClip />
+          </a>
+        )}
+        {celdaEditable && (
           <button
             type="button"
             onClick={() => archivoRef.current?.click()}
@@ -153,41 +185,59 @@ export function FilaViatico({
           >
             {viatico.archivoUrl ? <IconoReemplazar /> : <IconoAdjuntar />}
           </button>
-          )}
-          {/* Sin comprobante y sin poder adjuntarlo no queda nada que mostrar:
-              un guion evita que la columna se lea como un dato faltante. */}
-          {!editable && !viatico.archivoUrl && (
-            <span className="text-dc-muted/60">—</span>
-          )}
-          <input
-            ref={archivoRef}
-            type="file"
-            accept="image/*,.pdf"
-            hidden
-            aria-hidden
-            tabIndex={-1}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) subirArchivo(f);
-            }}
-          />
-        </span>
+        )}
+        {/* Sin comprobante y sin poder adjuntarlo no queda nada que mostrar:
+            un guion evita que la columna se lea como un dato faltante. */}
+        {!celdaEditable && !viatico.archivoUrl && (
+          <span className="text-dc-muted/60">—</span>
+        )}
+        <input
+          ref={archivoRef}
+          type="file"
+          accept="image/*,.pdf"
+          hidden
+          aria-hidden
+          tabIndex={-1}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) subirArchivo(f);
+          }}
+        />
+      </span>
+    ),
 
-        <CarrilAcciones temporal={<MarcaEdicion detalle={viatico.edicion} />}>
-          {editable ? (
-            <>
-              <BotonEditarIcono onClick={editarPrimeraCelda} />
-              <BotonEliminarIcono
-                onConfirm={() => eliminarViatico(viatico.id)}
-                mensaje="Viático enviado a papelera"
-              />
-            </>
-          ) : (
-            <IconoSoloLectura motivo={MOTIVO_INACTIVO} />
-          )}
-        </CarrilAcciones>
-      </div>
-    </div>
+    acciones: (
+      <CarrilAcciones temporal={<MarcaEdicion detalle={viatico.edicion} />}>
+        {editable ? (
+          <>
+            {editando ? (
+              <BotonListoIcono onClick={() => setEditando(false)} />
+            ) : (
+              <BotonEditarIcono onClick={abrirEdicion} />
+            )}
+            <BotonEliminarIcono
+              onConfirm={() => eliminarViatico(viatico.id)}
+              mensaje="Viático enviado a papelera"
+            />
+          </>
+        ) : (
+          <IconoSoloLectura motivo={MOTIVO_INACTIVO} />
+        )}
+      </CarrilAcciones>
+    ),
+  };
+
+  return (
+    <FilaDatos
+      contenedorRef={filaRef}
+      columnas={COLUMNAS_VIATICOS}
+      celdas={celdas}
+      className={
+        editando
+          ? "bg-dc-peri/[0.06] shadow-[inset_3px_0_0_0_var(--color-dc-peri)]"
+          : ""
+      }
+    />
   );
 }
 
