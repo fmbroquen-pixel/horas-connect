@@ -1,22 +1,56 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { editarTareas, eliminarTareas, reordenarListas } from "./actions";
+import {
+  agruparTareas,
+  desagruparTareas,
+  editarTareas,
+  eliminarTareas,
+  reordenarListas,
+} from "./actions";
 import { OPCIONES_ESTADO, type ListaRoadmapVista } from "./constantes";
 import { ListaRoadmapCard } from "./lista-roadmap";
 import { NuevaListaBoton } from "./nueva-lista-boton";
 import { Dropdown } from "@/components/dropdown";
 import { useReordenable } from "./reordenable";
-import { avisarOk } from "@/components/ui/avisos";
+import { avisarError, avisarOk } from "@/components/ui/avisos";
 import { ResaltadoProvider, useResaltado } from "./resaltado";
 import { SoloLecturaProvider, useSoloLectura } from "./solo-lectura";
 import { reformatEntradaHoras } from "@/lib/horas";
-import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
+import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM, BTN_ICON_SM } from "@/lib/ui";
 
 type CampoMasivo = "estado" | "horasEstimadas";
 
 const INPUT =
   "w-28 rounded-lg border border-dc-line bg-dc-deeper px-2 py-1.5 text-sm text-dc-text outline-none focus:border-dc-peri";
+
+// Botón de solo ícono para la barra de selección. Mismo tamaño y hover que el
+// resto de los íconos de la app; lo que cambia es el dibujo.
+function BotonIcono({
+  label,
+  onClick,
+  path,
+}: {
+  label: string;
+  onClick: () => void;
+  path: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={BTN_ICON_SM}
+      data-tooltip={label}
+      aria-label={label}
+    >
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        {path.split(" M").map((d, i) => (
+          <path key={i} d={i === 0 ? d : `M${d}`} />
+        ))}
+      </svg>
+    </button>
+  );
+}
 
 // Dueño de la selección: vive por encima de las listas para que la barra de
 // acciones sea una sola aunque las tareas elegidas estén en listas distintas.
@@ -137,6 +171,37 @@ function Tablero({
     });
   };
 
+  // ¿Alguna de las elegidas está en un grupo? Decide si se ofrece Desagrupar:
+  // el botón no tiene sentido sobre una selección de tareas sueltas.
+  const idsSeleccionados = [...sel];
+  const hayAgrupadas = listas.some((l) =>
+    l.tareas.some((t) => sel.has(t.id) && t.grupoId),
+  );
+
+  const agrupar = () =>
+    start(async () => {
+      const r = await agruparTareas(idsSeleccionados);
+      if (r.error) {
+        avisarError(r.error);
+        return;
+      }
+      limpiar();
+      avisarOk(`${r.agrupadas} tareas agrupadas`);
+    });
+
+  const desagrupar = () =>
+    start(async () => {
+      const r = await desagruparTareas(idsSeleccionados);
+      if (r.error) {
+        avisarError(r.error);
+        return;
+      }
+      limpiar();
+      avisarOk(
+        r.desagrupadas === 1 ? "Tarea desagrupada" : `${r.desagrupadas} tareas desagrupadas`,
+      );
+    });
+
   const aplicar = () =>
     start(async () => {
       const v = campo === "horasEstimadas" ? reformatEntradaHoras(valor) || valor : valor;
@@ -171,6 +236,22 @@ function Tablero({
             >
               Editar en masa
             </button>
+            {/* Solo íconos: son dos acciones que se entienden por su forma y
+                que en una barra con tres botones de texto agregarían ruido. */}
+            {sel.size > 1 && (
+              <BotonIcono
+                label="Agrupar"
+                onClick={agrupar}
+                path="M3 7l9-4 9 4-9 4-9-4Z M3 12l9 4 9-4 M3 17l9 4 9-4"
+              />
+            )}
+            {hayAgrupadas && (
+              <BotonIcono
+                label="Desagrupar"
+                onClick={desagrupar}
+                path="M3 7l9-4 9 4-9 4-9-4Z M16 14l6 6 M22 14l-6 6"
+              />
+            )}
             <button type="button" onClick={limpiar} className={BTN_SECONDARY_SM}>
               Cancelar
             </button>

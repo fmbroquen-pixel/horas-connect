@@ -68,6 +68,7 @@ export default async function ProyectoRoadmapPage({
       horasEstimadas: formatHorasHsMin(Number(t.horasEstimadas)),
       estado: t.estado,
       personas: t.personas,
+      grupoId: t.grupoId,
     }));
     return { id: l.id, nombre: l.nombre, tareas };
   });

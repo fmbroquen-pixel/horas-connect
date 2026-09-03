@@ -42,7 +42,11 @@ export type TareaRoadmapFila = {
   fechaFin: string; // YYYY-MM-DD
   horasEstimadas: string; // hs:min
   estado: string;
-  personas: number; // 1 o 2 mentores
+  personas: number;
+  // Grupo al que pertenece, si pertenece a alguno. Las tareas de un grupo se
+  // mueven como una unidad al recalcular; la fila lo usa para mostrar el ícono
+  // y la barra de selección para saber si ofrecer Desagrupar.
+  grupoId: string | null; // 1 o 2 mentores
 };
 
 // Avance y estado de una lista. Ninguno de los dos se edita a mano: son

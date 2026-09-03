@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { enCursoQueEstorba, esCierreValido } from "@/lib/secuencia-tareas";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
@@ -538,6 +539,81 @@ export async function actualizarRangoTarea(
   };
 }
 
+// ── Agrupar ───────────────────────────────────────────────────────────────
+
+// Agrupa las tareas elegidas: pasan a moverse como una unidad al recalcular la
+// secuencia, conservando la relación temporal que tengan en ese momento.
+//
+// No recalcula nada al agrupar. Agrupar declara cómo se van a mover de ahora en
+// más, no las mueve: si moviera, la acción de "juntarlas" les cambiaría las
+// fechas de entrada y nadie pidió eso.
+export async function agruparTareas(
+  ids: string[],
+): Promise<{ error?: string; agrupadas?: number }> {
+  if (ids.length < 2) return { error: "Elegí al menos dos tareas para agrupar." };
+
+  const { tareas, actor } = await tareasConAcceso(ids);
+  if (!actor || tareas.length < 2) {
+    return { error: "No se encontraron las tareas para agrupar." };
+  }
+
+  // Si alguna ya estaba en un grupo, se reusa ese id y las demás se suman. Es
+  // lo que espera quien selecciona un grupo existente más una tarea suelta:
+  // agrandar el grupo, no armar uno nuevo que deje a las viejas afuera.
+  const grupoExistente = tareas.find((t) => t.grupoId)?.grupoId;
+  const grupoId = grupoExistente ?? randomUUID();
+
+  await prisma.tareaRoadmap.updateMany({
+    where: { id: { in: tareas.map((t) => t.id) } },
+    data: { grupoId },
+  });
+
+  revalidar();
+  return { agrupadas: tareas.length };
+}
+
+// Saca del grupo a las tareas elegidas. Las fechas no se tocan y no se
+// recalcula: desagrupar deshace una relación futura, no reacomoda el pasado.
+export async function desagruparTareas(
+  ids: string[],
+): Promise<{ error?: string; desagrupadas?: number }> {
+  if (ids.length === 0) return { desagrupadas: 0 };
+
+  const { tareas, actor } = await tareasConAcceso(ids);
+  if (!actor) return { error: "No se encontraron las tareas." };
+
+  const conGrupo = tareas.filter((t) => t.grupoId);
+  if (conGrupo.length === 0) return { desagrupadas: 0 };
+
+  const gruposTocados = [...new Set(conGrupo.map((t) => t.grupoId!))];
+
+  await enSecuencia(async (tx) => {
+    await tx.tareaRoadmap.updateMany({
+      where: { id: { in: conGrupo.map((t) => t.id) } },
+      data: { grupoId: null },
+    });
+
+    // Un grupo de una sola tarea no es un grupo. Si al sacar a estas queda un
+    // solo miembro, se lo limpia también: dejarlo marcado mostraría el ícono
+    // de "agrupada" en una tarea que ya no está agrupada con nadie.
+    for (const g of gruposTocados) {
+      const quedan = await tx.tareaRoadmap.findMany({
+        where: { ...SOLO_TAREAS_VIVAS, grupoId: g },
+        select: { id: true },
+      });
+      if (quedan.length === 1) {
+        await tx.tareaRoadmap.update({
+          where: { id: quedan[0].id },
+          data: { grupoId: null },
+        });
+      }
+    }
+  });
+
+  revalidar();
+  return { desagrupadas: conGrupo.length };
+}
+
 // ── Reordenar ─────────────────────────────────────────────────────────────
 
 // Reencadena sobre un orden que TODAVÍA no está en la base. calcularSecuencia
@@ -558,18 +634,7 @@ async function calcularSecuenciaConOrden(
   const inicio =
     indice >= 0 ? plan[desde].fechaInicio : await inicioDelPlan(clienteId);
 
-  // Un grupo solo vale si las dos tareas YA estaban juntas antes de reordenar.
-  // Las fechas guardadas son las del orden viejo: dicen con quién se superponía
-  // cada tarea entonces, no con quién quedó ahora. Sin este filtro, mover una
-  // tarea de octubre al medio de julio dejaba a la de julio de atrás pareciendo
-  // superpuesta con ella, y la secuencia la plantaba encima.
-  const anteriorViejo = new Map<string, string | undefined>();
-  tareas.forEach((t, i) => anteriorViejo.set(t.id, i > 0 ? tareas[i - 1].id : undefined));
-  const agrupables = plan.map(
-    (t, i) => anteriorViejo.get(t.id) === (i > 0 ? plan[i - 1].id : undefined),
-  );
-
-  const fechas = planificar(plan, desde, inicio, agrupables);
+  const fechas = planificar(plan, desde, inicio);
   return fechas.flatMap(({ fechaInicio, fechaFin }, i) => {
     const t = plan[desde + i];
     const igual =

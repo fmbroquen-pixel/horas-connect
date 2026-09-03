@@ -204,6 +204,23 @@ model TareaRoadmap {
   // sin tener que revisarlas una por una.
   personas Int @default(1)
 
+  // Grupo al que pertenece la tarea. Las tareas de un mismo grupo se mueven
+  // como una unidad: al recalcular la secuencia conservan su relacion temporal
+  // en vez de volver a encadenarse una detras de la otra.
+  //
+  // Es una marca EXPLICITA y no algo que se deduzca de las fechas. Antes se
+  // infería: dos tareas superpuestas se leían como agrupadas, porque la
+  // secuencia nunca produce superposiciones y entonces una guardada solo podía
+  // haberla hecho una persona. Funcionaba, pero ataba la regla a una propiedad
+  // del codigo y no del dato: bastaba con que apareciera cualquier otro camino
+  // que escribiera fechas -una importacion, una correccion masiva- para que dos
+  // tareas quedaran agrupadas sin que nadie lo hubiera pedido.
+  //
+  // Nullable: la enorme mayoria de las tareas no estan agrupadas, y null es
+  // "no pertenece a ningun grupo". Un grupo de una sola tarea no existe: al
+  // sacar la anteultima, la que queda se limpia sola.
+  grupoId String? @map("grupo_id")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -218,6 +235,7 @@ model TareaRoadmap {
 
   @@index([listaId, orden])
   @@index([eliminadoEn])
+  @@index([grupoId])
   @@map("tareas_roadmap")
 }
 

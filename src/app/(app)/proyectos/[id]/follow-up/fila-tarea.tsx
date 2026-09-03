@@ -225,6 +225,22 @@ export function FilaTareaRoadmap({
               editable={!soloLectura}
             />
           </span>
+          {/* Marca de agrupada. Va junto al nombre y no en una columna propia:
+              es una propiedad de la tarea, como las personas, y una columna
+              vacía en el 95% de las filas costaría ancho para no decir nada. */}
+          {tarea.grupoId && (
+            <span
+              data-tooltip="Tarea agrupada"
+              aria-label="Tarea agrupada"
+              className="inline-flex shrink-0 text-dc-peri"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 7l9-4 9 4-9 4-9-4Z" />
+                <path d="M3 12l9 4 9-4" />
+                <path d="M3 17l9 4 9-4" />
+              </svg>
+            </span>
+          )}
           <SelectorPersonas
             tareaId={tarea.id}
             personas={tarea.personas}
