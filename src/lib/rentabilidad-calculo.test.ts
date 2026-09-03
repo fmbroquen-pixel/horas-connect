@@ -33,7 +33,6 @@ const cli = (clienteId: string, valorCuotaUsd: number): ClienteCobro => ({
   clienteId,
   valorCuotaUsd,
   fechaInicio: null,
-  duracionMeses: null,
   inactivadoEn: null,
 });
 
@@ -290,7 +289,6 @@ describe("cobradoDelMes", () => {
     clienteId: "acme",
     valorCuotaUsd: 1000,
     fechaInicio: new Date("2026-07-01T00:00:00Z"),
-    duracionMeses: 6, // julio a diciembre
     inactivadoEn: null as Date | null,
   };
 
@@ -306,8 +304,13 @@ describe("cobradoDelMes", () => {
     expect(cobradoDelMes(base, 2025, 12)).toBe(0);
   });
 
-  it("no cobra después de que termina el contrato", () => {
-    expect(cobradoDelMes(base, 2027, 1)).toBe(0);
+  it("un cliente activo sigue cobrando aunque su contrato figure vencido", () => {
+    // El caso de Cono Sur: dos meses cargados desde julio, y en septiembre
+    // seguía operando. duracionMeses define cuántos tableros trimestrales se
+    // siembran en el roadmap, no hasta cuándo se cobra, y nadie lo actualiza
+    // al renovar. Lo que corta el ingreso es la baja del cliente.
+    expect(cobradoDelMes(base, 2027, 1)).toBe(1000);
+    expect(cobradoDelMes(base, 2030, 6)).toBe(1000);
   });
 
   it("cuota en cero no es ingreso", () => {
@@ -329,14 +332,7 @@ describe("cobradoDelMes", () => {
     expect(cobradoDelMes(bajaEnAgosto, 2026, 9)).toBe(0);
   });
 
-  it("la baja manda aunque el contrato siguiera corriendo", () => {
-    const bajaTemprana = {
-      ...base,
-      duracionMeses: 12,
-      inactivadoEn: new Date("2026-08-31T00:00:00Z"),
-    };
-    expect(cobradoDelMes(bajaTemprana, 2026, 9)).toBe(0);
-  });
+
 
   it("sin fecha de inicio se cobra igual", () => {
     // Es preferible a esconder un ingreso real por un dato de contrato que
@@ -344,20 +340,13 @@ describe("cobradoDelMes", () => {
     expect(cobradoDelMes({ ...base, fechaInicio: null }, 2020, 1)).toBe(1000);
   });
 
-  it("sin duración cargada el contrato no tiene fin", () => {
-    expect(cobradoDelMes({ ...base, duracionMeses: null }, 2030, 5)).toBe(1000);
-  });
-
   it("cruza el año sin romperse", () => {
-    // Contrato de noviembre a febrero.
-    const cruzado = {
+    const arrancaEnNoviembre = {
       ...base,
       fechaInicio: new Date("2026-11-01T00:00:00Z"),
-      duracionMeses: 4,
     };
-    expect(cobradoDelMes(cruzado, 2026, 11)).toBe(1000);
-    expect(cobradoDelMes(cruzado, 2027, 2)).toBe(1000);
-    expect(cobradoDelMes(cruzado, 2027, 3)).toBe(0);
-    expect(cobradoDelMes(cruzado, 2026, 10)).toBe(0);
+    expect(cobradoDelMes(arrancaEnNoviembre, 2026, 10)).toBe(0);
+    expect(cobradoDelMes(arrancaEnNoviembre, 2026, 11)).toBe(1000);
+    expect(cobradoDelMes(arrancaEnNoviembre, 2027, 2)).toBe(1000);
   });
 });

@@ -26,12 +26,10 @@ export type RegistroDelMes = {
 export type ClienteCobro = {
   clienteId: string;
   valorCuotaUsd: number | null;
-  // Desde cuándo y por cuántos meses corre el contrato. Sin esto la cuota se
-  // cobraría en todos los meses de la historia, incluidos los anteriores al
-  // arranque del cliente: un cliente que empieza en agosto aparecería
-  // facturando en julio.
+  // Desde cuándo opera. Sin esto la cuota se cobraría en todos los meses de la
+  // historia, incluidos los anteriores al arranque: un cliente que empieza en
+  // agosto aparecería facturando en julio.
   fechaInicio: Date | null;
-  duracionMeses: number | null;
   // Si dejó de operar, desde cuándo. Un cliente apagado no cobra los meses
   // posteriores a su baja, aunque su contrato siguiera corriendo en el papel.
   inactivadoEn: Date | null;
@@ -46,8 +44,16 @@ function indiceDe(fecha: Date): number {
   return indiceMes(fecha.getUTCFullYear(), fecha.getUTCMonth() + 1);
 }
 
-// Cuánto cobra este cliente en este mes. Cero si el mes cae fuera de su
-// contrato o después de su baja.
+// Cuánto cobra este cliente en este mes. Cero antes de que arranque y después
+// de su baja.
+//
+// Lo que corta el ingreso es la BAJA del cliente, no el fin de su contrato.
+// `duracionMeses` existe para otra cosa -define cuántos tableros trimestrales
+// se siembran en el roadmap- y es un dato de planificación que nadie actualiza
+// cuando un contrato se renueva. Usarlo acá hacía que la facturación se apagara
+// sola: Cono Sur figuraba con dos meses desde julio y desaparecía del informe de
+// septiembre estando activo y operando. Un cliente que sigue activo sigue
+// cobrando; el día que deja de hacerlo, se lo da de baja.
 //
 // El corte de la baja es por MES y no por día: la cuota es mensual y no se
 // prorratea, así que un cliente dado de baja el 31 de agosto cobró agosto.
@@ -63,13 +69,7 @@ export function cobradoDelMes(
 
   // Sin fecha de inicio no hay ventana que verificar: se cobra. Es preferible
   // a esconder un ingreso real por un dato de contrato sin cargar.
-  if (c.fechaInicio) {
-    const inicio = indiceDe(c.fechaInicio);
-    if (objetivo < inicio) return 0;
-    if (c.duracionMeses && c.duracionMeses > 0) {
-      if (objetivo >= inicio + c.duracionMeses) return 0;
-    }
-  }
+  if (c.fechaInicio && objetivo < indiceDe(c.fechaInicio)) return 0;
 
   if (c.inactivadoEn && objetivo > indiceDe(c.inactivadoEn)) return 0;
 
