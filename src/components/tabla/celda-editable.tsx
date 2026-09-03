@@ -343,8 +343,12 @@ export function CeldaOpciones({
   const texto = opciones.find((o) => o.value === c.local)?.label ?? etiqueta ?? "";
 
   if (!editable) {
+    // Sin atenuar. Se atenuaba para distinguir una celda cerrada de una
+    // abierta, cuando "abierta" era el estado normal; desde que la tabla es de
+    // lectura por defecto, atenuarla sería pintar de gris todos los datos y
+    // dejar que resalten justo los que no se pueden tocar.
     return (
-      <CeldaSoloLectura alinear={alinear} titulo={texto} tenue>
+      <CeldaSoloLectura alinear={alinear} titulo={texto}>
         {texto || placeholder}
       </CeldaSoloLectura>
     );

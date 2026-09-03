@@ -3,7 +3,11 @@
 import { useState, useTransition } from "react";
 import { eliminarRegistros, editarRegistros, type CampoMasivo } from "./actions";
 import { FilaRegistro } from "./fila-registro";
-import { GRID_TIMETRACKER } from "./grid";
+import {
+  COLUMNAS_TIMETRACKER,
+  ESTILO_GRID_TIMETRACKER,
+  GRID_TIMETRACKER,
+} from "./columnas";
 import { BTN_DANGER_CONFIRM_SM, BTN_PRIMARY_SM, BTN_SECONDARY_SM } from "@/lib/ui";
 import { Dropdown } from "@/components/dropdown";
 import { avisarOk } from "@/components/ui/avisos";
@@ -173,28 +177,36 @@ export function TablaRegistros({
         </div>
       )}
 
+      {/* Sin ancho mínimo: las tres columnas de texto reparten lo que hay y
+          recortan con ellipsis, así que la tabla entra siempre. El overflow-x
+          queda como último recurso para anchos por debajo de la suma de las
+          columnas fijas (~660px), no como forma de convivir con el desborde. */}
       <div className="flex min-h-0 flex-1 overflow-x-auto dc-panel">
-        <div className="flex min-h-0 min-w-[940px] flex-1 flex-col">
-          {/* Encabezado fijo; solo el cuerpo scrollea. */}
-          <div className={`dc-thead ${GRID_TIMETRACKER} shrink-0 border-b border-dc-line px-4`}>
-            <input
-              type="checkbox"
-              checked={todasSel}
-              onChange={toggleTodas}
-              disabled={filas.length === 0}
-              className="h-4 w-4 accent-dc-purple"
-              aria-label="Seleccionar todo"
-            />
-            <span>Fecha</span>
-            <span>Usuario</span>
-            <span>Cliente</span>
-            <span>Concepto</span>
-            <span>Ownership</span>
-            <span>Horas</span>
-            <span>Modalidad</span>
-            <span>USD/hora</span>
-            <span>USD total</span>
-            <span />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {/* Encabezado fijo; solo el cuerpo scrollea. Los rótulos salen de la
+              misma lista que ordena las celdas: no hay dos órdenes que puedan
+              discrepar. */}
+          <div
+            className={`dc-thead ${GRID_TIMETRACKER} shrink-0 border-b border-dc-line px-4`}
+            style={ESTILO_GRID_TIMETRACKER}
+          >
+            {COLUMNAS_TIMETRACKER.map((c) =>
+              c.id === "seleccion" ? (
+                <input
+                  key={c.id}
+                  type="checkbox"
+                  checked={todasSel}
+                  onChange={toggleTodas}
+                  disabled={filas.length === 0}
+                  className="h-4 w-4 accent-dc-purple"
+                  aria-label="Seleccionar todo"
+                />
+              ) : (
+                <span key={c.id} className="truncate">
+                  {c.etiqueta}
+                </span>
+              ),
+            )}
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto">

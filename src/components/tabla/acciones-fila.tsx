@@ -75,6 +75,31 @@ export function BotonEditarIcono({
   );
 }
 
+// Cerrar el modo edición de una fila. Ocupa el mismo lugar que el lápiz —es
+// el par de un solo gesto: abrir y cerrar— así que el carril no cambia de
+// ancho al pasar de uno al otro.
+export function BotonListoIcono({
+  onClick,
+  label = "Terminar edición",
+}: {
+  onClick: () => void;
+  label?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`${BTN_ICON_SM} text-dc-green`}
+      data-tooltip={label}
+      aria-label={label}
+    >
+      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M20 6L9 17l-5-5" />
+      </svg>
+    </button>
+  );
+}
+
 // Eliminar en dos pasos: tacho → check de confirmación (rosa lleno). Solo
 // íconos, con tooltip en cada estado.
 export function BotonEliminarIcono({

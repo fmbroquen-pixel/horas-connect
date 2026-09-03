@@ -3,7 +3,12 @@
 import { useRef, useState } from "react";
 import { actualizarCampoRegistro, eliminarRegistro } from "./actions";
 import { formatMonto, hoyISO } from "@/lib/formato";
-import { GRID_TIMETRACKER } from "./grid";
+import {
+  COLUMNAS_TIMETRACKER,
+  ESTILO_GRID_TIMETRACKER,
+  GRID_TIMETRACKER,
+  type ColumnaId,
+} from "./columnas";
 import {
   CeldaFecha,
   CeldaHoras,
@@ -11,7 +16,11 @@ import {
   CeldaSoloLectura,
 } from "@/components/tabla/celda-editable";
 import type { OpcionConcepto, OpcionSelect, RegistroFila } from "./tipos";
-import { BotonEditarIcono, BotonEliminarIcono } from "@/components/tabla/acciones-fila";
+import {
+  BotonEditarIcono,
+  BotonEliminarIcono,
+  BotonListoIcono,
+} from "@/components/tabla/acciones-fila";
 import { MarcaEdicion } from "@/components/tabla/marca-edicion";
 import { CarrilAcciones } from "@/components/tabla/carril-acciones";
 import { Modal } from "@/components/ui/modal";
@@ -69,6 +78,15 @@ export function FilaRegistro({
   } | null>(null);
   const [asignando, setAsignando] = useState(false);
 
+  // La tabla es de lectura. Se entra a editar con el lápiz y se sale con el
+  // tilde; hasta entonces ninguna celda responde al clic.
+  //
+  // Antes cada celda se editaba sola al tocarla, y eso convertía cualquier
+  // clic —para leer un nombre recortado, para seleccionar una fila, para
+  // copiar un monto— en el principio de una edición. En una tabla que se mira
+  // mucho más de lo que se corrige, el gesto barato tiene que ser mirar.
+  const [editando, setEditando] = useState(false);
+
   // La historia se mira cuando el cliente está inactivo O cuando el dueño de
   // las horas está bloqueado. El servidor ya rechaza las dos; acá se deja de
   // ofrecer, que es lo que evita el intento inútil: una celda que invita a
@@ -109,17 +127,23 @@ export function FilaRegistro({
     if (r.error) avisarError(r.error);
   };
 
-  // El lápiz no abre un modo de edición —acá no existe— sino que entra a la
-  // primera celda editable de la fila. Es la misma acción que hacer clic en
-  // ella, con la ventaja de que se ve: la edición inline no se anuncia sola.
-  const editarPrimeraCelda = () => {
-    const celda = filaRef.current?.querySelector<HTMLElement>("[data-celda-editable]");
-    celda?.click();
+  // Abrir la fila y entrar directo a la primera celda: si hubo que pedir la
+  // edición explícitamente, lo que sigue es escribir.
+  const abrirEdicion = () => {
+    setEditando(true);
+    setTimeout(() => {
+      filaRef.current?.querySelector<HTMLElement>("[data-celda-editable]")?.click();
+    }, 0);
   };
 
-  return (
-    <div ref={filaRef} className="border-b border-dc-line px-4 py-2 last:border-0">
-      <div className={GRID_TIMETRACKER}>
+  // Las celdas responden al clic solo con la fila abierta. Se combina con los
+  // dos motivos que congelan un registro: cliente inactivo y usuario bloqueado.
+  const celdaEditable = editable && editando;
+
+  // Una celda por columna, indexadas por id. El orden lo pone COLUMNAS al
+  // recorrerlas: es lo que hace imposible repetir el cruce de Fecha y Usuario.
+  const celdas: Record<ColumnaId, React.ReactNode> = {
+    seleccion: (
         <input
           type="checkbox"
           checked={seleccionado}
@@ -129,95 +153,140 @@ export function FilaRegistro({
           aria-label="Seleccionar fila"
           data-tooltip={editable ? undefined : motivo}
         />
+    ),
 
-        {/* Cambiar el dueño revalúa el registro con la tarifa de esa persona
-            en la fecha del registro: no es mover una etiqueta. Por eso lo hace
-            solo un admin, y por eso el servidor puede frenar y preguntar. */}
-        <CeldaOpciones
-          valor={registro.usuarioId}
-          opciones={usuarios.map((u) => ({ value: u.id, label: u.nombre }))}
-          onGuardar={guardarUsuario}
-          ariaLabel="Usuario dueño de las horas"
-          etiqueta={registro.usuarioNombre}
-          alinear="izquierda"
-          editable={editable && usuarios.length > 1}
-        />
+    fecha: (
+      <CeldaFecha
+        valor={registro.fecha}
+        onGuardar={guardar("fecha")}
+        ariaLabel="Fecha"
+        mostrar={mostrarFecha}
+        max={hoyISO()}
+        editable={celdaEditable}
+      />
+    ),
 
-        <CeldaFecha
-          valor={registro.fecha}
-          onGuardar={guardar("fecha")}
-          ariaLabel="Fecha"
-          mostrar={mostrarFecha}
-          max={hoyISO()}
-         editable={editable}
-        />
+    // Cambiar el dueño revalúa el registro con la tarifa de esa persona en la
+    // fecha del registro: no es mover una etiqueta. Por eso lo hace solo un
+    // admin, y por eso el servidor puede frenar y preguntar.
+    usuario: (
+      <CeldaOpciones
+        valor={registro.usuarioId}
+        opciones={usuarios.map((u) => ({ value: u.id, label: u.nombre }))}
+        onGuardar={guardarUsuario}
+        ariaLabel="Usuario dueño de las horas"
+        etiqueta={registro.usuarioNombre}
+        alinear="izquierda"
+        editable={celdaEditable && usuarios.length > 1}
+      />
+    ),
 
-        <CeldaOpciones
-          valor={registro.clienteId}
-          opciones={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
-          onGuardar={guardar("clienteId")}
-          ariaLabel="Cliente"
-         editable={editable}
-        />
+    cliente: (
+      <CeldaOpciones
+        valor={registro.clienteId}
+        opciones={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
+        onGuardar={guardar("clienteId")}
+        ariaLabel="Cliente"
+        alinear="izquierda"
+        editable={celdaEditable}
+      />
+    ),
 
-        <CeldaOpciones
-          valor={registro.conceptoId}
-          opciones={conceptos.map((c) => ({ value: c.id, label: c.nombre }))}
-          onGuardar={guardar("conceptoId")}
-          ariaLabel="Concepto"
-          // Cubre dos casos: registros anteriores al catálogo (sin concepto) y
-          // conceptos dados de baja, que ya no están entre las opciones pero
-          // siguen etiquetando su historial.
-          etiqueta={registro.conceptoNombre}
-          placeholder="Elegí un concepto"
-         editable={editable}
-        />
+    concepto: (
+      <CeldaOpciones
+        valor={registro.conceptoId}
+        opciones={conceptos.map((c) => ({ value: c.id, label: c.nombre }))}
+        onGuardar={guardar("conceptoId")}
+        ariaLabel="Concepto"
+        alinear="izquierda"
+        // Cubre dos casos: registros anteriores al catálogo (sin concepto) y
+        // conceptos dados de baja, que ya no están entre las opciones pero
+        // siguen etiquetando su historial.
+        etiqueta={registro.conceptoNombre}
+        placeholder="Elegí un concepto"
+        editable={celdaEditable}
+      />
+    ),
 
-        <CeldaOpciones
-          valor={registro.ownership}
-          opciones={OPCIONES_OWNERSHIP}
-          onGuardar={guardar("ownership")}
-          ariaLabel="Ownership"
-         editable={editable}
-        />
+    ownership: (
+      <CeldaOpciones
+        valor={registro.ownership}
+        opciones={OPCIONES_OWNERSHIP}
+        onGuardar={guardar("ownership")}
+        ariaLabel="Ownership"
+        editable={celdaEditable}
+      />
+    ),
 
-        <CeldaHoras
-          valor={registro.horas}
-          onGuardar={guardar("horas")}
-          ariaLabel="Horas"
-         editable={editable}
-        />
+    horas: (
+      <CeldaHoras
+        valor={registro.horas}
+        onGuardar={guardar("horas")}
+        ariaLabel="Horas"
+        editable={celdaEditable}
+      />
+    ),
 
-        <CeldaOpciones
-          valor={registro.modalidad}
-          opciones={OPCIONES_MODALIDAD}
-          onGuardar={guardar("modalidad")}
-          ariaLabel="Modalidad"
-         editable={editable}
-        />
+    modalidad: (
+      <CeldaOpciones
+        valor={registro.modalidad}
+        opciones={OPCIONES_MODALIDAD}
+        onGuardar={guardar("modalidad")}
+        ariaLabel="Modalidad"
+        editable={celdaEditable}
+      />
+    ),
 
-        {/* Calculados a partir de la tarifa vigente: no se editan. */}
-        <CeldaSoloLectura tenue>
-          <span className="tabular-nums">{formatMonto(registro.tarifaUsd)}</span>
-        </CeldaSoloLectura>
-        <CeldaSoloLectura>
-          <span className="tabular-nums">{formatMonto(registro.montoUsd)}</span>
-        </CeldaSoloLectura>
+    // Calculados a partir de la tarifa vigente: no se editan nunca, ni con la
+    // fila abierta.
+    usdHora: (
+      <CeldaSoloLectura tenue>
+        <span className="tabular-nums">{formatMonto(registro.tarifaUsd)}</span>
+      </CeldaSoloLectura>
+    ),
+    usdTotal: (
+      <CeldaSoloLectura>
+        <span className="tabular-nums">{formatMonto(registro.montoUsd)}</span>
+      </CeldaSoloLectura>
+    ),
 
-        {/* Editar → Eliminar, el mismo par y el mismo orden que Expenses. */}
-        <CarrilAcciones temporal={<MarcaEdicion detalle={registro.edicion} />}>
-          {editable ? (
-            <>
-              <BotonEditarIcono onClick={editarPrimeraCelda} />
-              <BotonEliminarIcono
-                onConfirm={() => eliminarRegistro(registro.id)}
-                mensaje="Hora enviada a papelera"
-              />
-            </>
-          ) : (
-            <IconoSoloLectura motivo={motivo} />
-          )}
-        </CarrilAcciones>
+    // Editar → Eliminar, el mismo par y el mismo orden que Expenses. Con la
+    // fila abierta el lápiz se vuelve un tilde: es el mismo lugar, y lo que
+    // cambia es si la fila responde o no.
+    acciones: (
+      <CarrilAcciones temporal={<MarcaEdicion detalle={registro.edicion} />}>
+        {editable ? (
+          <>
+            {editando ? (
+              <BotonListoIcono onClick={() => setEditando(false)} />
+            ) : (
+              <BotonEditarIcono onClick={abrirEdicion} />
+            )}
+            <BotonEliminarIcono
+              onConfirm={() => eliminarRegistro(registro.id)}
+              mensaje="Hora enviada a papelera"
+            />
+          </>
+        ) : (
+          <IconoSoloLectura motivo={motivo} />
+        )}
+      </CarrilAcciones>
+    ),
+  };
+
+  return (
+    <div
+      ref={filaRef}
+      className={`border-b border-dc-line px-4 py-2 last:border-0 ${
+        editando ? "bg-dc-peri/[0.06] shadow-[inset_3px_0_0_0_var(--color-dc-peri)]" : ""
+      }`}
+    >
+      <div className={GRID_TIMETRACKER} style={ESTILO_GRID_TIMETRACKER}>
+        {COLUMNAS_TIMETRACKER.map((c) => (
+          <div key={c.id} className="min-w-0">
+            {celdas[c.id]}
+          </div>
+        ))}
       </div>
 
       {/* El proyecto no es de quien va a quedar como dueño. No se rechaza: se
