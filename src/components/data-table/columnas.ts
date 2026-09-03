@@ -15,6 +15,8 @@
 // usuario bajo el rótulo "Fecha". Los dos archivos eran válidos por separado,
 // así que ninguna herramienta lo podía ver.
 
+import type { Alineacion } from "@/components/campos/alineacion";
+
 export type Columna<Id extends string> = {
   id: Id;
   // Vacío = sin rótulo (la columna de selección y la de acciones).
@@ -30,6 +32,15 @@ export type Columna<Id extends string> = {
   // Los anchos fijos los decide el RÓTULO y no el dato: en el encabezado van
   // en mayúscula y semibold, así que "Ownership" mide más que "Presencial".
   ancho: string;
+  // Cómo se alinea la columna, rótulo y dato por igual. Por defecto centrado,
+  // que es lo que ya hacía el encabezado (.dc-thead los centra) y lo que la
+  // tabla usa para todo: texto, números, íconos y el checkbox.
+  //
+  // Está acá y no en cada celda porque antes se decidía dos veces —el rótulo
+  // por CSS y el dato en el JSX de la fila— y tres columnas terminaron con el
+  // título centrado sobre un dato alineado a la izquierda. Declarada una vez,
+  // el encabezado y la celda no pueden discrepar.
+  alineacion?: Alineacion;
 };
 
 // Las clases van aparte del ancho porque Tailwind no puede compilar una clase
@@ -39,4 +50,9 @@ export const GRID_DATA_TABLE = "grid items-center gap-2";
 
 export function estiloGrid<Id extends string>(columnas: Columna<Id>[]) {
   return { gridTemplateColumns: columnas.map((c) => c.ancho).join(" ") };
+}
+
+// La alineación efectiva de una columna. Centrado si no dice otra cosa.
+export function alineacionDe<Id extends string>(c: Columna<Id>): Alineacion {
+  return c.alineacion ?? "centro";
 }

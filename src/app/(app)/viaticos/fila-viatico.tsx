@@ -168,7 +168,6 @@ export function FilaViatico({
         onGuardar={guardarUsuario}
         ariaLabel="Usuario dueño del gasto"
         etiqueta={viatico.usuarioNombre}
-        alinear="izquierda"
         editable={celdaEditable && usuarios.length > 1}
       />
     ),
@@ -179,7 +178,6 @@ export function FilaViatico({
         opciones={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
         onGuardar={guardar("clienteId")}
         ariaLabel="Cliente"
-        alinear="izquierda"
         editable={celdaEditable}
       />
     ),
@@ -190,7 +188,6 @@ export function FilaViatico({
         opciones={OPCIONES_CONCEPTO}
         onGuardar={guardar("concepto")}
         ariaLabel="Concepto"
-        alinear="izquierda"
         editable={celdaEditable}
       />
     ),

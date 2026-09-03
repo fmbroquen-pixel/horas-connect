@@ -172,7 +172,6 @@ export function FilaRegistro({
         onGuardar={guardarUsuario}
         ariaLabel="Usuario dueño de las horas"
         etiqueta={registro.usuarioNombre}
-        alinear="izquierda"
         editable={celdaEditable && usuarios.length > 1}
       />
     ),
@@ -183,7 +182,6 @@ export function FilaRegistro({
         opciones={proyectos.map((p) => ({ value: p.id, label: p.nombre }))}
         onGuardar={guardar("clienteId")}
         ariaLabel="Cliente"
-        alinear="izquierda"
         editable={celdaEditable}
       />
     ),
@@ -194,7 +192,6 @@ export function FilaRegistro({
         opciones={conceptos.map((c) => ({ value: c.id, label: c.nombre }))}
         onGuardar={guardar("conceptoId")}
         ariaLabel="Concepto"
-        alinear="izquierda"
         // Cubre dos casos: registros anteriores al catálogo (sin concepto) y
         // conceptos dados de baja, que ya no están entre las opciones pero
         // siguen etiquetando su historial.

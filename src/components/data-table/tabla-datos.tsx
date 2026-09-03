@@ -1,10 +1,11 @@
 "use client";
 
+import { GRID_DATA_TABLE, alineacionDe, estiloGrid, type Columna } from "./columnas";
 import {
-  GRID_DATA_TABLE,
-  estiloGrid,
-  type Columna,
-} from "./columnas";
+  AlineacionColumna,
+  claseFlex,
+  claseTexto,
+} from "@/components/campos/alineacion";
 
 // La cáscara de una data table: encabezado fijo, cuerpo con scroll propio y
 // estado vacío. Lo que cambia entre Time Tracking y Expenses son las columnas
@@ -39,11 +40,18 @@ export function TablaDatos<Id extends string>({
           className={`dc-thead ${GRID_DATA_TABLE} shrink-0 border-b border-dc-line px-4`}
           style={estiloGrid(columnas)}
         >
+          {/* El rótulo se alinea con lo que diga SU columna, la misma que usa
+              la celda de abajo. Antes los centraba .dc-thead por su cuenta y
+              el dato se alineaba en el JSX de la fila: dos decisiones para una
+              sola cosa, y por eso el título y su dato no caían sobre el mismo
+              eje. */}
           {columnas.map((c) =>
             c.id === "seleccion" && encabezadoSeleccion ? (
-              <span key={c.id}>{encabezadoSeleccion}</span>
+              <span key={c.id} className={`flex ${claseFlex(alineacionDe(c))}`}>
+                {encabezadoSeleccion}
+              </span>
             ) : (
-              <span key={c.id} className="truncate">
+              <span key={c.id} className={`block truncate ${claseTexto(alineacionDe(c))}`}>
                 {c.etiqueta}
               </span>
             ),
@@ -87,9 +95,20 @@ export function FilaDatos<Id extends string>({
     >
       <div className={GRID_DATA_TABLE} style={estiloGrid(columnas)}>
         {columnas.map((c) => (
-          <div key={c.id} className="min-w-0">
-            {celdas[c.id]}
-          </div>
+          // La celda hereda la alineación de su columna. Lo que renderice
+          // adentro se alinea solo: no hay que repetirla en cada celda del JSX,
+          // que es donde se desincronizaba del rótulo.
+          <AlineacionColumna key={c.id} valor={alineacionDe(c)}>
+            {/* Bloque con text-align, no flex. Con `flex flex-col` los hijos
+                se estiran y text-align deja de alinearlos: el checkbox quedaba
+                pegado a la izquierda mientras su rótulo iba centrado. Medido:
+                9px de desvío. Como bloque, el texto se alinea por herencia y
+                lo inline —el checkbox— por text-align, que es lo mismo que
+                hace el encabezado. */}
+            <div className={`min-w-0 ${claseTexto(alineacionDe(c))}`}>
+              {celdas[c.id]}
+            </div>
+          </AlineacionColumna>
         ))}
       </div>
     </div>

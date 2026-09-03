@@ -4,6 +4,12 @@ import { useRef, useState } from "react";
 import { Dropdown, type OpcionDropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import { reformatEntradaHoras } from "@/lib/horas";
+import {
+  claseFlex,
+  claseTexto,
+  useAlineacion,
+  type Alineacion,
+} from "./alineacion";
 
 // Celdas con edición inline y autoguardado, compartidas por Time Tracking y
 // Roadmap. El contrato es siempre el mismo:
@@ -119,10 +125,11 @@ function Lectura({
   children,
 }: {
   onEditar: () => void;
-  alinear: "izquierda" | "centro";
+  alinear?: Alineacion;
   titulo?: string;
   children: React.ReactNode;
 }) {
+  const a = useAlineacion(alinear);
   return (
     <button
       type="button"
@@ -133,7 +140,7 @@ function Lectura({
       // en una tabla que se edita celda por celda, ese botón no abre ningún
       // modo aparte, lleva al primer campo.
       data-celda-editable
-      className={`${BASE_LECTURA} ${alinear === "centro" ? "justify-center text-center" : "justify-start text-left"}`}
+      className={`${BASE_LECTURA} ${claseFlex(a)}`}
     >
       <span className="truncate">{children}</span>
     </button>
@@ -143,21 +150,20 @@ function Lectura({
 // Texto plano para celdas no editables (fila cerrada, campo calculado).
 export function CeldaSoloLectura({
   children,
-  alinear = "centro",
+  alinear,
   titulo,
   tenue = false,
 }: {
   children: React.ReactNode;
-  alinear?: "izquierda" | "centro";
+  alinear?: Alineacion;
   titulo?: string;
   tenue?: boolean;
 }) {
+  const a = useAlineacion(alinear);
   return (
     <span
       data-tooltip={titulo}
-      className={`block truncate px-1.5 py-1 text-sm ${tenue ? "text-dc-muted" : "text-dc-text"} ${
-        alinear === "centro" ? "text-center" : "text-left"
-      }`}
+      className={`block truncate px-1.5 py-1 text-sm ${tenue ? "text-dc-muted" : "text-dc-text"} ${claseTexto(a)}`}
     >
       {children}
     </span>
@@ -170,7 +176,7 @@ export function CeldaTexto({
   valor,
   onGuardar,
   ariaLabel,
-  alinear = "centro",
+  alinear,
   editable = true,
   formatearAlGuardar,
   placeholder = "—",
@@ -179,7 +185,7 @@ export function CeldaTexto({
   valor: string;
   onGuardar: GuardarCampo;
   ariaLabel: string;
-  alinear?: "izquierda" | "centro";
+  alinear?: Alineacion;
   editable?: boolean;
   // Normaliza lo tipeado antes de mandarlo (por ejemplo, horas "1,5" → "1:30").
   formatearAlGuardar?: (v: string) => string;
@@ -190,6 +196,7 @@ export function CeldaTexto({
   mostrar?: (v: string) => string;
 }) {
   const c = useCelda(valor, onGuardar);
+  const alineacionTexto = useAlineacion(alinear);
   // Escape desmonta el input y eso dispara un blur: sin esta marca, el blur
   // guardaría justo lo que se acaba de cancelar.
   const cancelado = useRef(false);
@@ -231,7 +238,7 @@ export function CeldaTexto({
             const v = e.target.value.trim();
             c.confirmar(formatearAlGuardar ? formatearAlGuardar(v) : v);
           }}
-          className={`${INPUT} ${alinear === "centro" ? "text-center" : "text-left"}`}
+          className={`${INPUT} ${claseTexto(alineacionTexto)}`}
         />
       ) : (
         <Lectura
@@ -318,7 +325,7 @@ export function CeldaOpciones({
   opciones,
   onGuardar,
   ariaLabel,
-  alinear = "centro",
+  alinear,
   editable = true,
   placeholder = "—",
   etiqueta,
@@ -328,7 +335,7 @@ export function CeldaOpciones({
   opciones: OpcionDropdown[];
   onGuardar: GuardarCampo;
   ariaLabel: string;
-  alinear?: "izquierda" | "centro";
+  alinear?: Alineacion;
   editable?: boolean;
   placeholder?: string;
   // Etiqueta a mostrar cuando el valor no está entre las opciones (por
