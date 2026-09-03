@@ -22,7 +22,7 @@ import { CarrilAcciones } from "@/components/data-table/carril-acciones";
 import { Modal } from "@/components/ui/modal";
 import { avisarError } from "@/components/ui/avisos";
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
-import type { PreguntaAsignacion } from "./actions";
+import type { PreguntaAsignacion } from "@/lib/asignacion-proyecto";
 import { IconoSoloLectura } from "@/components/data-table/icono-solo-lectura";
 // El mismo texto que en Home CORE y en la vista del proyecto: la celda, el
 // checkbox y el candado de esta fila dicen lo mismo que el semáforo de allá

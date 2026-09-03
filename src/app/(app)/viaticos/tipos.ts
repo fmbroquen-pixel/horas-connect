@@ -7,6 +7,14 @@ export type OpcionSelect = { id: string; nombre: string };
 export type ViaticoFila = {
   id: string;
   fecha: string; // YYYY-MM-DD
+  // Dueño del gasto (worked_by). Editable solo por un admin: a diferencia de
+  // una hora, un viático no se revalúa al cambiar de dueño -el monto se carga
+  // a mano, no sale de una tarifa- pero sí tiene que ser un cliente suyo.
+  usuarioId: string;
+  usuarioNombre: string;
+  // Si el dueño sigue habilitado. Un bloqueado conserva su historia a la vista
+  // pero congelada, igual que un cliente inactivo.
+  usuarioActivo: boolean;
   clienteId: string;
   // Si el cliente sigue activo. Un inactivo no admite carga ni edicion: su
   // historia se mira. Mismo criterio que en Time Tracking.

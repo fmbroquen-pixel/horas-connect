@@ -25,6 +25,9 @@ import { CarrilAcciones } from "@/components/data-table/carril-acciones";
 import { IconoSoloLectura } from "@/components/data-table/icono-solo-lectura";
 import { MOTIVO_INACTIVO } from "@/lib/inactivo";
 import { avisarError } from "@/components/ui/avisos";
+import { Modal } from "@/components/ui/modal";
+import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
+import type { PreguntaAsignacion } from "@/lib/asignacion-proyecto";
 
 const OPCIONES_CONCEPTO = Object.entries(ETIQUETA_CONCEPTO).map(
   ([value, label]) => ({ value, label }),
@@ -49,11 +52,15 @@ function mostrarFecha(iso: string): string {
 export function FilaViatico({
   viatico,
   proyectos,
+  usuarios,
   seleccionado,
   onToggle,
 }: {
   viatico: ViaticoFila;
   proyectos: OpcionSelect[];
+  // A quiénes se puede reasignar. Vacío para un mentor: la celda se ve y no se
+  // toca.
+  usuarios: OpcionSelect[];
   seleccionado: boolean;
   onToggle: (id: string) => void;
 }) {
@@ -65,9 +72,47 @@ export function FilaViatico({
   // se mira mucho más de lo que se corrige, el gesto barato tiene que ser mirar.
   const [editando, setEditando] = useState(false);
 
+  // Reasignar cuando el nuevo dueño no tiene el proyecto: el servidor devuelve
+  // la pregunta en vez de rechazar. Misma mecánica que en Time Tracking.
+  const [pregunta, setPregunta] = useState<{
+    datos: PreguntaAsignacion;
+    usuarioId: string;
+  } | null>(null);
+  const [asignando, setAsignando] = useState(false);
+
   // Ver sí, tocar no: el comprobante se sigue abriendo, pero no se reemplaza.
-  const editable = viatico.clienteActivo;
+  // Los dos motivos que congelan una fila: cliente inactivo y dueño bloqueado.
+  const editable = viatico.clienteActivo && viatico.usuarioActivo;
   const celdaEditable = editable && editando;
+  const motivo = !viatico.clienteActivo
+    ? MOTIVO_INACTIVO
+    : `${viatico.usuarioNombre} está bloqueado · Solo lectura`;
+
+  // El dueño va aparte: su respuesta puede ser una pregunta, no un error. Un
+  // viático no se revalúa al cambiar de dueño -su monto se carga a mano- pero
+  // el cliente sí tiene que ser suyo.
+  const guardarUsuario = async (valor: string) => {
+    const r = await actualizarCampoViatico(viatico.id, "usuarioId", valor);
+    if (r.asignacion) {
+      setPregunta({ datos: r.asignacion, usuarioId: valor });
+      return { revertir: true };
+    }
+    return r;
+  };
+
+  const confirmarAsignacion = async () => {
+    if (!pregunta) return;
+    setAsignando(true);
+    const r = await actualizarCampoViatico(
+      viatico.id,
+      "usuarioId",
+      pregunta.usuarioId,
+      true,
+    );
+    setAsignando(false);
+    setPregunta(null);
+    if (r.error) avisarError(r.error);
+  };
 
   const guardar = (campo: Parameters<typeof actualizarCampoViatico>[1]) =>
     async (valor: string) => actualizarCampoViatico(viatico.id, campo, valor);
@@ -99,7 +144,7 @@ export function FilaViatico({
         disabled={!editable}
         className="h-4 w-4 accent-dc-purple disabled:cursor-not-allowed disabled:opacity-30"
         aria-label="Seleccionar fila"
-        data-tooltip={editable ? undefined : MOTIVO_INACTIVO}
+        data-tooltip={editable ? undefined : motivo}
       />
     ),
 
@@ -111,6 +156,20 @@ export function FilaViatico({
         mostrar={mostrarFecha}
         max={hoyISO()}
         editable={celdaEditable}
+      />
+    ),
+
+    // Cambiar el dueño no revalúa nada -el monto es un dato cargado a mano-
+    // pero el cliente tiene que ser suyo, así que el servidor puede preguntar.
+    usuario: (
+      <CeldaOpciones
+        valor={viatico.usuarioId}
+        opciones={usuarios.map((u) => ({ value: u.id, label: u.nombre }))}
+        onGuardar={guardarUsuario}
+        ariaLabel="Usuario dueño del gasto"
+        etiqueta={viatico.usuarioNombre}
+        alinear="izquierda"
+        editable={celdaEditable && usuarios.length > 1}
       />
     ),
 
@@ -221,23 +280,65 @@ export function FilaViatico({
             />
           </>
         ) : (
-          <IconoSoloLectura motivo={MOTIVO_INACTIVO} />
+          <IconoSoloLectura motivo={motivo} />
         )}
       </CarrilAcciones>
     ),
   };
 
   return (
-    <FilaDatos
-      contenedorRef={filaRef}
-      columnas={COLUMNAS_VIATICOS}
-      celdas={celdas}
-      className={
-        editando
-          ? "bg-dc-peri/[0.06] shadow-[inset_3px_0_0_0_var(--color-dc-peri)]"
-          : ""
-      }
-    />
+    <>
+      <FilaDatos
+        contenedorRef={filaRef}
+        columnas={COLUMNAS_VIATICOS}
+        celdas={celdas}
+        className={
+          editando
+            ? "bg-dc-peri/[0.06] shadow-[inset_3px_0_0_0_var(--color-dc-peri)]"
+            : ""
+        }
+      />
+
+      {/* El proyecto no es de quien va a quedar como dueño. No se rechaza: se
+          ofrece asignárselo como Backup. Cancelar no toca nada. */}
+      <Modal
+        open={pregunta !== null}
+        onClose={() => setPregunta(null)}
+        labelledBy="titulo-asignar-proyecto-viatico"
+      >
+        <div className="w-full max-w-lg rounded-2xl border border-dc-line bg-dc-deep p-6 shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
+          <h2
+            id="titulo-asignar-proyecto-viatico"
+            className="font-display text-sm uppercase text-white"
+          >
+            Proyecto no asignado
+          </h2>
+          <p className="mt-3 text-sm text-dc-text">
+            <strong className="text-white">{pregunta?.datos.usuarioNombre}</strong>{" "}
+            no tiene asignado{" "}
+            <strong className="text-white">{pregunta?.datos.clienteNombre}</strong>.
+            ¿Asignarlo como Backup?
+          </p>
+          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setPregunta(null)}
+              className={BTN_SECONDARY}
+            >
+              No
+            </button>
+            <button
+              type="button"
+              onClick={confirmarAsignacion}
+              disabled={asignando}
+              className={BTN_PRIMARY}
+            >
+              {asignando ? "Asignando…" : "Sí, asignar"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </>
   );
 }
 

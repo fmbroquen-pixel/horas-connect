@@ -6,6 +6,10 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { clienteInactivoDe, mensajeInactivo } from "@/lib/cliente-activo";
 import { mensajeBloqueado, usuarioBloqueadoDe } from "@/lib/usuario-activo";
+import {
+  asegurarAsignacion,
+  type PreguntaAsignacion,
+} from "@/lib/asignacion-proyecto";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
 import { fechaDesdeISO, hoyUTC } from "@/lib/dias-habiles";
@@ -26,6 +30,9 @@ const ViaticoSchema = z.object({
 });
 
 export type CampoViatico =
+  // El dueño del gasto. Es un campo del formulario desde que la carga es
+  // multiusuario: el servidor puede rechazarlo y señalarlo como cualquier otro.
+  | "usuarioId"
   | "fecha"
   | "clienteId"
   | "moneda"
@@ -33,6 +40,8 @@ export type CampoViatico =
   | "concepto";
 
 type Resultado = { error?: string; campo?: CampoViatico };
+
+type ResultadoViatico = Resultado & { asignacion?: PreguntaAsignacion };
 
 function revalidar() {
   revalidatePath("/viaticos");
@@ -161,7 +170,9 @@ export async function actualizarCampoViatico(
   id: string,
   campo: CampoViatico,
   valor: string,
-): Promise<Resultado> {
+  // Respuesta del popup: el admin aceptó asignarle el proyecto al nuevo dueño.
+  asignarComoBackup = false,
+): Promise<ResultadoViatico> {
   const actor = await requireGuest();
   const esAdmin = actor.rol === "admin";
 
@@ -177,6 +188,25 @@ export async function actualizarCampoViatico(
   const bloqueado = await usuarioBloqueadoDe([existente.usuarioId]);
   if (bloqueado) return { error: mensajeBloqueado(bloqueado) };
 
+  // ── Cambio de dueño ──────────────────────────────────────────────────────
+  // A diferencia de una hora, un viático NO se revalúa: su monto se carga a
+  // mano y no sale de una tarifa. Lo que sí sigue valiendo es que el cliente
+  // tiene que ser del nuevo dueño, así que se pregunta antes de escribir.
+  let duenioId = existente.usuarioId;
+  if (campo === "usuarioId") {
+    const destinoRes = await resolverUsuarioDestino(actor, valor, "viáticos");
+    if (!destinoRes.ok) return { error: destinoRes.error, campo: "usuarioId" };
+    duenioId = destinoRes.destino.id;
+
+    const asign = await asegurarAsignacion(
+      { id: duenioId, nombre: destinoRes.destino.nombre },
+      existente.clienteId,
+      asignarComoBackup,
+    );
+    if ("error" in asign) return { error: asign.error, campo: "usuarioId" };
+    if ("asignacion" in asign) return { asignacion: asign.asignacion };
+  }
+
   const fd = new FormData();
   fd.set("fecha", campo === "fecha" ? valor : existente.fecha.toISOString().slice(0, 10));
   fd.set("clienteId", campo === "clienteId" ? valor : existente.clienteId);
@@ -184,12 +214,13 @@ export async function actualizarCampoViatico(
   fd.set("moneda", campo === "moneda" ? valor : existente.moneda);
   fd.set("monto", campo === "monto" ? valor : String(existente.monto));
 
-  const r = await validarEntrada(existente.usuarioId, fd);
+  const r = await validarEntrada(duenioId, fd);
   if (r.error || !r.datos) return { error: r.error, campo: r.campo };
 
   await prisma.viatico.update({
     where: { id },
     data: {
+      usuarioId: duenioId, // worked_by
       editadoPorId: actor.id,
       fecha: r.datos.fecha,
       clienteId: r.datos.clienteId,
@@ -240,6 +271,73 @@ export async function actualizarComprobante(
   return {};
 }
 
+
+// Campos que tiene sentido cambiar en masa. La fecha, el monto y el
+// comprobante quedan afuera a propósito: son propios de cada gasto, y aplicar
+// el mismo valor a veinte filas no arregla nada, las rompe todas juntas.
+export type CampoMasivoViatico = "clienteId" | "concepto" | "moneda";
+
+export async function editarViaticos(
+  ids: string[],
+  campo: CampoMasivoViatico,
+  valor: string,
+): Promise<{ error?: string; actualizados?: number }> {
+  const actor = await requireGuest();
+  const esAdmin = actor.rol === "admin";
+  if (ids.length === 0) return { actualizados: 0 };
+
+  const filas = await prisma.viatico.findMany({
+    where: {
+      id: { in: ids },
+      eliminadoEn: null,
+      ...(esAdmin ? {} : { usuarioId: actor.id }),
+    },
+  });
+  if (filas.length === 0) return { actualizados: 0 };
+
+  const inactivo = await clienteInactivoDe(filas.map((f) => f.clienteId));
+  if (inactivo) return { error: mensajeInactivo(inactivo) };
+
+  const bloqueado = await usuarioBloqueadoDe(filas.map((f) => f.usuarioId));
+  if (bloqueado) return { error: mensajeBloqueado(bloqueado) };
+
+  // Cada fila se revalida entera con validarEntrada, contra SU dueño: el
+  // cliente tiene que estar asignado a quien hizo el gasto, y en una selección
+  // de varias personas eso cambia fila por fila.
+  //
+  // Se valida todo primero y se escribe después: aplicar la mitad de lo pedido
+  // y avisar del resto deja al usuario sin saber qué quedó hecho.
+  const cambios: { id: string; datos: Record<string, unknown> }[] = [];
+  for (const f of filas) {
+    const fd = new FormData();
+    fd.set("fecha", f.fecha.toISOString().slice(0, 10));
+    fd.set("clienteId", campo === "clienteId" ? valor : f.clienteId);
+    fd.set("concepto", campo === "concepto" ? valor : f.concepto);
+    fd.set("moneda", campo === "moneda" ? valor : f.moneda);
+    fd.set("monto", String(f.monto));
+
+    const r = await validarEntrada(f.usuarioId, fd);
+    if (r.error || !r.datos) return { error: r.error };
+    cambios.push({
+      id: f.id,
+      datos: {
+        clienteId: r.datos.clienteId,
+        concepto: r.datos.concepto,
+        moneda: r.datos.moneda,
+        editadoPorId: actor.id,
+      },
+    });
+  }
+
+  await prisma.$transaction(
+    cambios.map((c) =>
+      prisma.viatico.update({ where: { id: c.id }, data: c.datos }),
+    ),
+  );
+
+  revalidar();
+  return { actualizados: cambios.length };
+}
 
 // Borrado en masa desde la selección de la tabla. Espejo del de Time Tracking
 // —las dos son data tables y comparten patrón— con los mismos dos guards: un

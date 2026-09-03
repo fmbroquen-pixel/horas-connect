@@ -4,6 +4,7 @@ import { useState } from "react";
 import { PapeleraModal } from "../papelera/papelera";
 import { ItemMenu, MenuAcciones, SeparadorMenu } from "@/components/ui/menu-acciones";
 import { SubmenuProyectos } from "@/components/submenu-proyectos";
+import { SubmenuUsuarios } from "@/components/submenu-usuarios";
 import type { OpcionFiltro } from "@/components/lista-proyectos";
 
 // El mismo menú que Time Tracking, con lo que Expenses tiene: filtrar por
@@ -14,13 +15,16 @@ export function AccionesViaticos({
   mes,
   proyectosOpciones,
   proyectosSeleccionados,
-  usuarioId = "",
+  usuariosOpciones,
+  usuariosSeleccionados,
 }: {
   anio: number;
   mes: number;
   proyectosOpciones: OpcionFiltro[];
   proyectosSeleccionados: string[];
-  usuarioId?: string;
+  // Vacío para un mentor: se ve a sí mismo y no hay nada que filtrar.
+  usuariosOpciones: OpcionFiltro[];
+  usuariosSeleccionados: string[];
 }) {
   const [papeleraOpen, setPapeleraOpen] = useState(false);
 
@@ -33,8 +37,33 @@ export function AccionesViaticos({
           basePath="/viaticos"
           opciones={proyectosOpciones}
           seleccionados={proyectosSeleccionados}
-          extra={{ usuario: usuarioId || undefined }}
+          extra={{
+            usuarios:
+              usuariosSeleccionados.length > 0 &&
+              usuariosSeleccionados.length < usuariosOpciones.length
+                ? usuariosSeleccionados.join(",")
+                : undefined,
+          }}
         />
+
+        {/* Solo para quien ve a más de uno: a un mentor no le sirve un filtro
+            con una única opción que además es él. */}
+        {usuariosOpciones.length > 1 && (
+          <SubmenuUsuarios
+            basePath="/viaticos"
+            parametros={{
+              anio: String(anio),
+              mes: String(mes),
+              proyectos:
+                proyectosSeleccionados.length > 0 &&
+                proyectosSeleccionados.length < proyectosOpciones.length
+                  ? proyectosSeleccionados.join(",")
+                  : undefined,
+            }}
+            opciones={usuariosOpciones}
+            seleccionados={usuariosSeleccionados}
+          />
+        )}
 
         <SeparadorMenu />
 

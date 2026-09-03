@@ -4,7 +4,10 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { clienteInactivoDe, mensajeInactivo } from "@/lib/cliente-activo";
 import { mensajeBloqueado, usuarioBloqueadoDe } from "@/lib/usuario-activo";
-import { MAX_BACKUPS } from "@/app/(app)/admin/usuarios/constantes";
+import {
+  asegurarAsignacion,
+  type PreguntaAsignacion,
+} from "@/lib/asignacion-proyecto";
 import { tarifaVigenteA } from "@/lib/tarifas";
 import { requireGuest, getProyectosPermitidos } from "@/lib/require-guest";
 import { resolverUsuarioDestino } from "@/lib/registrar-para";
@@ -37,59 +40,8 @@ export type CampoRegistro =
 
 type Resultado = { error?: string; campo?: CampoRegistro };
 
-// Cuando la edición es válida salvo por un permiso que el admin puede otorgar
-// en el momento, el servidor no decide solo: devuelve la pregunta y espera.
-// Mismo patrón que el conflicto de "En curso" en el Follow Up.
-export type PreguntaAsignacion = {
-  usuarioNombre: string;
-  clienteNombre: string;
-};
+// Resultado de una edición que puede devolver una pregunta en vez de un error.
 type ResultadoRegistro = Resultado & { asignacion?: PreguntaAsignacion };
-
-// ¿El dueño puede trabajar en ese cliente? Y si no, ¿se le asigna?
-//
-// Tres respuestas: ya lo tiene, hay que preguntar, o se acaba de asignar. La
-// del medio es la que hace falta: rechazar sin más obligaba a salir de Time
-// Tracking, ir a Settings, asignar y volver a buscar la fila.
-async function asegurarAsignacion(
-  duenio: { id: string; nombre: string },
-  clienteId: string,
-  asignar: boolean,
-): Promise<{ ok: true } | { asignacion: PreguntaAsignacion } | { error: string }> {
-  const yaLoTiene = await prisma.proyectoAsignado.findUnique({
-    where: { usuarioId_clienteId: { usuarioId: duenio.id, clienteId } },
-    select: { id: true },
-  });
-  if (yaLoTiene) return { ok: true };
-
-  const cliente = await prisma.cliente.findUnique({
-    where: { id: clienteId },
-    select: { nombre: true, activo: true },
-  });
-  if (!cliente) return { error: "Cliente inexistente." };
-  // Un cliente inactivo no se asigna: no admite carga nueva de nadie, así que
-  // ofrecer asignarlo sería ofrecer algo que después se rechaza igual.
-  if (!cliente.activo) return { error: mensajeInactivo(cliente.nombre) };
-
-  if (!asignar) {
-    return { asignacion: { usuarioNombre: duenio.nombre, clienteNombre: cliente.nombre } };
-  }
-
-  // Entra como Backup, que es el rol que no desplaza a nadie: el Owner es uno
-  // solo y ya tiene dueño.
-  const backupsAjenos = await prisma.proyectoAsignado.count({
-    where: { clienteId, rol: "backup", usuarioId: { not: duenio.id } },
-  });
-  if (backupsAjenos >= MAX_BACKUPS) {
-    return {
-      error: `"${cliente.nombre}" ya tiene ${MAX_BACKUPS} Mentores Backup. Liberá un lugar en Settings → Usuarios.`,
-    };
-  }
-  await prisma.proyectoAsignado.create({
-    data: { usuarioId: duenio.id, clienteId, rol: "backup" },
-  });
-  return { ok: true };
-}
 
 // Todo en UTC, como el resto del sistema: la columna es @db.Date y Prisma la
 // lee y escribe a medianoche UTC. Construir la fecha con la hora local del

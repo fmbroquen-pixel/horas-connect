@@ -2,12 +2,10 @@
 // esto viven en components/data-table/columnas: acá solo la lista.
 import type { Columna } from "@/components/data-table/columnas";
 
-// Sin columna Usuario a propósito: Expenses sigue con el selector global de
-// "Registrar viático para", que es otro trabajo. Compartir el patrón de tabla
-// no significa compartir el modelo de datos.
 export type ColumnaId =
   | "seleccion"
   | "fecha"
+  | "usuario"
   | "cliente"
   | "concepto"
   | "moneda"
@@ -18,7 +16,8 @@ export type ColumnaId =
 export const COLUMNAS_VIATICOS: Columna<ColumnaId>[] = [
   { id: "seleccion", etiqueta: "", ancho: "34px" },
   { id: "fecha", etiqueta: "Fecha", ancho: "92px" },
-  { id: "cliente", etiqueta: "Cliente", ancho: "minmax(0,1.4fr)" },
+  { id: "usuario", etiqueta: "Usuario", ancho: "minmax(0,1fr)" },
+  { id: "cliente", etiqueta: "Cliente", ancho: "minmax(0,1.2fr)" },
   { id: "concepto", etiqueta: "Concepto", ancho: "minmax(0,1fr)" },
   { id: "moneda", etiqueta: "Moneda", ancho: "86px" },
   { id: "monto", etiqueta: "Monto", ancho: "104px" },

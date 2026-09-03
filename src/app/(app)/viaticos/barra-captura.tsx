@@ -16,6 +16,7 @@ const INPUT_ERROR = "border-dc-pink ring-1 ring-dc-pink";
 const LABEL = "mb-1 block text-[11px] uppercase tracking-wide text-dc-muted";
 
 const VALORES_INICIALES = {
+  usuarioId: "",
   fecha: "",
   clienteId: "",
   concepto: "",
@@ -43,15 +44,25 @@ const OPCIONES_CONCEPTO = Object.entries(ETIQUETA_CONCEPTO).map(
 // comprobante en vez de horas y modalidad); la estructura, las alturas, el
 // manejo de errores y el foco son los mismos.
 export function BarraCapturaViatico({
-  proyectos,
-  usuarioId = "",
+  usuarios,
+  usuarioPorDefecto,
+  puedeElegirUsuario,
+  proyectosPorUsuario,
 }: {
-  proyectos: OpcionSelect[];
-  // Dueño del gasto cuando un admin carga en nombre de otro. Vacío = el
-  // propio usuario. El servidor revalida el permiso igual.
-  usuarioId?: string;
+  // Para quiénes se puede cargar. Un mentor recibe una lista de uno.
+  usuarios: OpcionSelect[];
+  usuarioPorDefecto: string;
+  // Solo el admin elige; para el resto el campo se muestra fijo. Es una regla
+  // de UI: el servidor la revalida igual y ata a un no-admin a sí mismo.
+  puedeElegirUsuario: boolean;
+  // El cliente depende de quién sea el dueño del gasto, así que llega indexado
+  // por usuario y se elige al vuelo.
+  proyectosPorUsuario: Record<string, OpcionSelect[]>;
 }) {
-  const [valores, setValores] = useState(VALORES_INICIALES);
+  const [valores, setValores] = useState({
+    ...VALORES_INICIALES,
+    usuarioId: usuarioPorDefecto,
+  });
   const [estado, setEstado] = useState<{ error?: string; campo?: CampoViatico }>();
   const [pending, start] = useTransition();
   const [abierto, setAbierto] = useState(false);
@@ -60,9 +71,21 @@ export function BarraCapturaViatico({
   const archivoRef = useRef<HTMLInputElement>(null);
 
   const set = (campo: keyof typeof valores, valor: string) => {
-    setValores((v) => ({ ...v, [campo]: valor }));
+    setValores((v) => {
+      const siguiente = { ...v, [campo]: valor };
+      // Cambiar de dueño cambia sus clientes. Si el que estaba elegido no es
+      // suyo se limpia: dejarlo puesto guardaba una fila que el servidor iba a
+      // rechazar por un motivo que no se ve en pantalla.
+      if (campo === "usuarioId") {
+        const suyos = proyectosPorUsuario[valor] ?? [];
+        if (!suyos.some((p) => p.id === siguiente.clienteId)) siguiente.clienteId = "";
+      }
+      return siguiente;
+    });
     setEstado((e) => (e?.campo === campo ? { error: e.error } : e));
   };
+
+  const proyectos = proyectosPorUsuario[valores.usuarioId] ?? [];
 
   const enfocar = (campo: string) => {
     const cont = formRef.current?.querySelector(`[data-campo="${campo}"]`);
@@ -144,12 +167,40 @@ export function BarraCapturaViatico({
       className="shrink-0 rounded-xl border border-dc-peri/25 bg-dc-card px-3 py-2"
       aria-label="Barra de captura de viáticos"
     >
-      {/* Dueño del gasto cuando un admin carga para otra persona. */}
-      {usuarioId && <input type="hidden" name="usuarioId" value={usuarioId} />}
       {/* Una sola fila, igual que Time Tracking: sin flex-wrap los campos se
           comprimen en vez de mandar el botón a un segundo renglón. El min-w-0
           de cada campo es lo que les permite achicarse. */}
       <div className="flex items-end gap-2">
+        {/* Primero en la fila porque define el resto: de quién sea el gasto
+            decide qué clientes se ofrecen. */}
+        <div className="w-40 min-w-0" data-campo="usuarioId">
+          <span className={LABEL}>Usuario</span>
+          {puedeElegirUsuario && usuarios.length > 1 ? (
+            <Dropdown
+              name="usuarioId"
+              value={valores.usuarioId}
+              onChange={(v) => set("usuarioId", v)}
+              options={usuarios.map((u) => ({ value: u.id, label: u.nombre }))}
+              placeholder="Usuario"
+              invalido={estado?.campo === "usuarioId"}
+              className="w-full"
+              ariaLabel="Usuario dueño del gasto"
+            />
+          ) : (
+            // Un mentor carga siempre para sí: se muestra quién es en vez de un
+            // desplegable de una sola opción, y el valor viaja igual.
+            <>
+              <input type="hidden" name="usuarioId" value={valores.usuarioId} />
+              <p
+                className={`${INPUT} truncate text-dc-muted`}
+                data-tooltip={usuarios.find((u) => u.id === valores.usuarioId)?.nombre}
+              >
+                {usuarios.find((u) => u.id === valores.usuarioId)?.nombre ?? "—"}
+              </p>
+            </>
+          )}
+        </div>
+
         <div className="w-36 min-w-0" data-campo="fecha">
           <span className={LABEL}>Fecha</span>
           <DatePicker
