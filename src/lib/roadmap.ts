@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import {
   DIA_MS,
   diasHabilesEntre,
+  esDiaHabil,
   fechaDesdeISO,
   finTrasDiasHabiles,
   hoyUTC,
@@ -112,24 +113,107 @@ export function listasPorDefecto(duracionMeses: number | null): Plantilla[] {
 
 // ── Planificación secuencial ──────────────────────────────────────────────
 
-export type TareaPlanificable = { duracionDias: number };
+export type TareaPlanificable = {
+  duracionDias: number;
+  // Las fechas que la tarea tiene HOY. Son opcionales porque quien planifica
+  // desde cero -el sembrado del roadmap- todavía no las tiene; cuando están,
+  // son lo que permite reconocer los grupos armados a mano.
+  fechaInicio?: Date;
+  fechaFin?: Date;
+};
+
+// ¿`b` fue puesta a mano encima de `a`?
+//
+// No hay una marca de "agrupadas" en la base, y no hace falta: planificar()
+// nunca produce dos tareas superpuestas, así que una superposición guardada
+// solo pudo haberla creado una persona arrastrando una tarea sobre otra. El
+// dato ya dice la intención.
+//
+// Devuelve la separación en días hábiles entre los dos inicios, o null si no
+// forman grupo. Cero es una respuesta válida y frecuente -las dos el mismo
+// día- así que no se puede usar el 0 como "no hay grupo".
+function separacionDeGrupo(
+  a: TareaPlanificable,
+  b: TareaPlanificable,
+): number | null {
+  if (!a.fechaInicio || !a.fechaFin || !b.fechaInicio) return null;
+  // Sin solapamiento son consecutivas, no un grupo.
+  if (b.fechaInicio > a.fechaFin) return null;
+  // Si `b` arranca antes que `a`, el orden visual no coincide con el de la
+  // secuencia. Se toma como que empiezan juntas en vez de inventar un offset
+  // negativo, que empujaría al grupo hacia atrás en cada recálculo.
+  if (b.fechaInicio <= a.fechaInicio) return 0;
+  return Math.max(0, diasHabilesEntre(a.fechaInicio, b.fechaInicio) - 1);
+}
+
+// Avanza `n` días hábiles desde una fecha. n = 0 devuelve el mismo día si es
+// hábil, o el siguiente que lo sea.
+function sumarDiasHabiles(desde: Date, n: number): Date {
+  const cur = siguienteDiaHabil(desde);
+  let restantes = Math.max(0, n);
+  while (restantes > 0) {
+    cur.setUTCDate(cur.getUTCDate() + 1);
+    if (esDiaHabil(cur)) restantes--;
+  }
+  return cur;
+}
 
 // Encadena las tareas desde el índice `desde` (inclusive): esa arranca en
 // `inicioDesde` y cada siguiente el día hábil posterior al fin de la anterior.
-// Nunca hay dos tareas en paralelo. Las anteriores a `desde` no se tocan, que
-// es lo que hace que mover una fecha empuje solo hacia adelante.
+// Las anteriores a `desde` no se tocan, que es lo que hace que mover una fecha
+// empuje solo hacia adelante.
+//
+// Con una excepción: los grupos armados a mano. Si dos tareas fueron puestas
+// deliberadamente sobre la misma fecha o la misma semana, se mueven juntas y
+// conservan su separación. Volver a repartirlas en semanas distintas cada vez
+// que se toca una tarea anterior deshacía, sin avisar, una decisión explícita
+// de quien armó el plan.
+//
+// La tarea que sigue a un grupo arranca después del fin MÁS TARDÍO del grupo,
+// no del de la última en orden: si la primera del grupo dura más, encadenar
+// contra la última la dejaría empezando encima de una tarea todavía abierta,
+// que es justo lo que la secuencia existe para evitar.
 export function planificar(
   tareas: TareaPlanificable[],
   desde: number,
   inicioDesde: Date,
+  // Para qué índices vale mirar si forman grupo con su anterior. Por defecto
+  // todos.
+  //
+  // Existe por el reordenamiento: ahí las fechas guardadas son las del orden
+  // VIEJO, y dicen algo sobre los vecinos que la tarea tenía entonces, no
+  // sobre los que acaba de recibir. Sin esto, arrastrar una tarea de octubre
+  // al medio de julio hacía que la de julio que quedaba detrás pareciera
+  // superpuesta con ella y se plantara encima: un grupo que nadie armó.
+  agrupables?: boolean[],
 ): { fechaInicio: Date; fechaFin: Date }[] {
   const plan: { fechaInicio: Date; fechaFin: Date }[] = [];
-  let inicio = siguienteDiaHabil(inicioDesde);
+  // El inicio NUEVO de la tarea anterior: es contra este que se mide la
+  // separación de un grupo, no contra el que tenía antes.
+  let inicioPrevio: Date | null = null;
+  // El fin más tardío ya planificado, en milisegundos. Con grupos deja de ser
+  // el de la última tarea en orden.
+  let finMaximoMs = 0;
 
   for (let i = desde; i < tareas.length; i++) {
+    let inicio: Date;
+    if (i === desde || inicioPrevio === null) {
+      inicio = siguienteDiaHabil(inicioDesde);
+    } else {
+      const separacion =
+        agrupables && !agrupables[i]
+          ? null
+          : separacionDeGrupo(tareas[i - 1], tareas[i]);
+      inicio =
+        separacion === null
+          ? siguienteDiaHabil(new Date(finMaximoMs + DIA_MS))
+          : sumarDiasHabiles(inicioPrevio, separacion);
+    }
+
     const fin = finTrasDiasHabiles(inicio, tareas[i].duracionDias);
     plan.push({ fechaInicio: inicio, fechaFin: fin });
-    inicio = siguienteDiaHabil(new Date(fin.getTime() + DIA_MS));
+    inicioPrevio = inicio;
+    finMaximoMs = Math.max(finMaximoMs, fin.getTime());
   }
   return plan;
 }

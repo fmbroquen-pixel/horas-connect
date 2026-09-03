@@ -558,7 +558,18 @@ async function calcularSecuenciaConOrden(
   const inicio =
     indice >= 0 ? plan[desde].fechaInicio : await inicioDelPlan(clienteId);
 
-  const fechas = planificar(plan, desde, inicio);
+  // Un grupo solo vale si las dos tareas YA estaban juntas antes de reordenar.
+  // Las fechas guardadas son las del orden viejo: dicen con quién se superponía
+  // cada tarea entonces, no con quién quedó ahora. Sin este filtro, mover una
+  // tarea de octubre al medio de julio dejaba a la de julio de atrás pareciendo
+  // superpuesta con ella, y la secuencia la plantaba encima.
+  const anteriorViejo = new Map<string, string | undefined>();
+  tareas.forEach((t, i) => anteriorViejo.set(t.id, i > 0 ? tareas[i - 1].id : undefined));
+  const agrupables = plan.map(
+    (t, i) => anteriorViejo.get(t.id) === (i > 0 ? plan[i - 1].id : undefined),
+  );
+
+  const fechas = planificar(plan, desde, inicio, agrupables);
   return fechas.flatMap(({ fechaInicio, fechaFin }, i) => {
     const t = plan[desde + i];
     const igual =
