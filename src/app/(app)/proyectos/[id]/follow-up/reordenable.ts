@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Reordenar por arrastre, con el drag-and-drop nativo del navegador.
 //
@@ -30,54 +30,94 @@ import { useState } from "react";
 //
 // Con dirección, cualquier lugar del ítem apuntado produce un movimiento
 // real, y la línea indicadora aparece del lado por el que venís.
-// La imagen que sigue al cursor mientras se arrastra.
+// La card que se lleva el cursor mientras se arrastra.
 //
-// Por defecto el navegador usa como fantasma el elemento del que se agarró —la
-// celda del checkbox— y lo que se veía moverse era un cuadradito suelto, sin
-// relación con la fila que en realidad se estaba moviendo. Acá se le pasa una
-// copia de la FILA entera.
+// Antes esto era un setDragImage: una FOTO que saca el navegador y despues
+// dibuja con su propia transparencia y sus propias reglas. Por mas solido que
+// se pusiera el original, lo que se veia moverse era un calco desvaido, y no
+// hay forma de pedirle otra cosa: el estilo de esa imagen no es nuestro.
 //
-// Se usa setDragImage y no un div siguiendo al mouse: el navegador ya mueve
-// esa imagen con el cursor, a 60fps y fuera del hilo de JavaScript. Un
-// seguidor propio sería una segunda implementación del arrastre, con su
-// listener de mousemove y sus saltos, para llegar a lo mismo.
-function prepararFantasma(e: React.DragEvent) {
+// Asi que la imagen nativa se apaga -un pixel transparente- y en su lugar va un
+// nodo de verdad, en el <body>, que se mueve con el cursor. Es la misma fila
+// clonada, con fondo solido, esquinas redondeadas, la sombra de CORE y un
+// pelin de escala: se lee como el objeto que se agarro, no como su fantasma.
+//
+// Es DOM imperativo a proposito. El arrastre emite eventos decenas de veces por
+// segundo; pasarlos por estado de React seria rerenderizar la lista entera en
+// cada uno para mover un solo nodo. Acá se toca el transform de ese nodo y
+// nada mas, que es lo que el navegador puede componer sin tocar el layout.
+//
+// La logica de reordenamiento no se entera: sigue siendo el mismo dragstart,
+// dragover y drop de siempre.
+
+// Un pixel transparente para apagar la imagen nativa. Se crea una sola vez.
+let pixelVacio: HTMLImageElement | null = null;
+function imagenVacia(): HTMLImageElement {
+  if (!pixelVacio) {
+    pixelVacio = new Image();
+    pixelVacio.src =
+      "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+  }
+  return pixelVacio;
+}
+
+type Capa = { nodo: HTMLElement; offsetX: number; offsetY: number };
+
+function crearCapa(e: React.DragEvent): Capa | null {
   const fila = (e.currentTarget as HTMLElement).closest<HTMLElement>(
     "[data-fila-arrastrable]",
   );
-  if (!fila) return;
+  if (!fila) return null;
 
   const rect = fila.getBoundingClientRect();
-  const copia = fila.cloneNode(true) as HTMLElement;
+  const nodo = fila.cloneNode(true) as HTMLElement;
 
-  // Ancho fijo: la copia sale del flujo y sin esto colapsaría al ancho de su
-  // contenido, que es justo lo que la haría dejar de parecerse a la fila.
-  copia.style.width = `${rect.width}px`;
-  copia.style.height = `${rect.height}px`;
-  copia.style.opacity = "0.85";
-  copia.style.borderRadius = "0.75rem";
-  copia.style.background = "var(--dc-card)";
-  copia.style.boxShadow =
-    "0 12px 32px rgba(0,0,0,0.45), 0 0 0 1px var(--color-dc-peri)";
-  copia.style.pointerEvents = "none";
-  // Fuera de la pantalla: el navegador la fotografía igual, y si estuviera a la
-  // vista se vería un instante antes de que arranque el arrastre.
-  copia.style.position = "fixed";
-  copia.style.top = "-10000px";
-  copia.style.left = "-10000px";
-  document.body.appendChild(copia);
+  // Ancho y alto fijos: el clon sale del flujo y sin esto colapsaria al ancho
+  // de su contenido, que es justo lo que lo haria dejar de parecerse a la fila.
+  nodo.style.width = `${rect.width}px`;
+  nodo.style.height = `${rect.height}px`;
+  nodo.style.position = "fixed";
+  nodo.style.left = "0";
+  nodo.style.top = "0";
+  nodo.style.zIndex = "9999";
+  // Sin esto la capa se comeria los dragover de lo que hay debajo y no se
+  // podria elegir destino: el cursor estaria siempre sobre ella.
+  nodo.style.pointerEvents = "none";
+  nodo.style.borderRadius = "0.75rem";
+  // La clase del panel viaja con el clon. Al colgarlo del <body> sale del
+  // .dc-panel y pierde TODOS sus tokens -texto, bordes, acentos, superficie-,
+  // que ahi adentro estan redefinidos en su version "sobre claro". Sin esto la
+  // card quedaba con el fondo translucido del tema oscuro y el texto del panel
+  // encima: ilegible, y ademas nada solido.
+  nodo.classList.add("dc-panel");
+  // Blanco, como las filas dentro del panel. `--dc-deeper` es blanco ahi
+  // adentro, pero se pone literal: es una card suelta, no una fila, y su fondo
+  // no deberia moverse si manana cambia el de las filas.
+  nodo.style.background = "#ffffff";
+  nodo.style.border = "none";
+  nodo.style.boxShadow =
+    "0 18px 40px rgba(0,0,0,0.5), 0 0 0 1px var(--color-dc-peri), 0 0 22px rgba(139,140,255,0.35)";
+  // 1.02: apenas despegada de la lista. Mas escala la desalinea de las filas y
+  // deja de parecer la misma tarea.
+  nodo.style.transform = `translate3d(${rect.left}px, ${rect.top}px, 0) scale(1.02)`;
+  // Corta el jitter cuando el navegador espacia los eventos, sin que se sienta
+  // que la card viene atrasada.
+  nodo.style.transition = "transform 40ms linear";
+  nodo.style.willChange = "transform";
 
-  // El agarre queda bajo el cursor en el mismo punto donde se apoyó: sin esto
-  // la fila salta a la esquina superior izquierda del puntero al empezar.
-  e.dataTransfer.setDragImage(
-    copia,
-    e.clientX - rect.left,
-    e.clientY - rect.top,
-  );
+  document.body.appendChild(nodo);
+  return {
+    nodo,
+    offsetX: e.clientX - rect.left,
+    offsetY: e.clientY - rect.top,
+  };
+}
 
-  // El navegador toma la foto de forma sincrónica al terminar dragstart, así
-  // que para el próximo tick la copia ya no hace falta.
-  setTimeout(() => copia.remove(), 0);
+function moverCapa(capa: Capa, x: number, y: number) {
+  // Los eventos de arrastre llegan con 0,0 al final en algunos navegadores:
+  // moverla ahi la mandaria a la esquina justo antes de desaparecer.
+  if (x === 0 && y === 0) return;
+  capa.nodo.style.transform = `translate3d(${x - capa.offsetX}px, ${y - capa.offsetY}px, 0) scale(1.02)`;
 }
 
 export type Reordenable = {
@@ -177,6 +217,21 @@ export function useReordenable(
   // volvía la respuesta y parecía que el arrastre no había hecho nada.
   const [optimista, setOptimista] = useState<string[] | null>(null);
 
+  // La card que sigue al cursor. En un ref y no en estado: se mueve decenas de
+  // veces por segundo y no tiene que provocar un render.
+  const capaRef = useRef<Capa | null>(null);
+  const seguirRef = useRef<((e: DragEvent) => void) | null>(null);
+
+  const soltarCapa = () => {
+    if (seguirRef.current) {
+      document.removeEventListener("dragover", seguirRef.current);
+      document.removeEventListener("drag", seguirRef.current);
+      seguirRef.current = null;
+    }
+    capaRef.current?.nodo.remove();
+    capaRef.current = null;
+  };
+
   // Cuando llega el orden del servidor, manda él: si coincide con lo que ya
   // se mostraba el usuario no ve ningún salto, y si el servidor rechazó el
   // movimiento la lista vuelve sola a la verdad.
@@ -188,7 +243,13 @@ export function useReordenable(
 
   const visibles = optimista ?? ids;
 
+  // Si el componente se va en medio de un arrastre -una navegación, una
+  // revalidación que reemplaza la lista- la card quedaría pegada a la pantalla
+  // sin nadie que la saque.
+  useEffect(() => soltarCapa, []);
+
   const limpiar = () => {
+    soltarCapa();
     setOrigen(null);
     setDestino(null);
     setApuntado(null);
@@ -224,7 +285,19 @@ export function useReordenable(
         e.dataTransfer.effectAllowed = "move";
         // Firefox no arranca el arrastre sin datos asociados.
         e.dataTransfer.setData("text/plain", id);
-        prepararFantasma(e);
+        // La imagen nativa se apaga y en su lugar va la card de verdad.
+        e.dataTransfer.setDragImage(imagenVacia(), 0, 0);
+        const capa = crearCapa(e);
+        if (capa) {
+          capaRef.current = capa;
+          const seguir = (ev: DragEvent) => moverCapa(capa, ev.clientX, ev.clientY);
+          seguirRef.current = seguir;
+          // Los dos: `drag` lo emite el origen y `dragover` el elemento de
+          // abajo. Con uno solo la card se queda quieta en los tramos donde ese
+          // evento no llega -sobre un hueco, o fuera de una zona de destino-.
+          document.addEventListener("dragover", seguir);
+          document.addEventListener("drag", seguir);
+        }
       },
       onDragEnd: limpiar,
     }),
