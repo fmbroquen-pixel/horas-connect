@@ -172,11 +172,13 @@ export function MargenChart({
     return <SinDatos />;
   }
 
-  // De menor a mayor margen: el que peor rinde queda arriba, que es lo que hay
-  // que mirar primero. Los que no tienen margen calculable -sin ingreso- van
-  // antes que todos: no son "los mejores", son a los que les falta la cuota o
-  // gastaron sin cobrar, y dejarlos al fondo los hacia leer como el extremo
-  // bueno de la lista. Entre ellos manda el costo.
+  // Dos grupos, y el ranking manda.
+  //
+  // Arriba los que tienen margen calculable, de menor a mayor: el que peor
+  // rinde primero, que es lo que hay que mirar. Abajo, separados, los que no
+  // tienen margen -sin cobrado cargado- porque no entran en ese ranking:
+  // mezclarlos corta la lectura creciente en cualquier punto donde caigan.
+  // Entre ellos manda el costo, que es el unico numero que sí tienen.
   const filas = proyectos
     .map((nombre, i) => ({
       nombre,
@@ -187,7 +189,7 @@ export function MargenChart({
     .sort((a, b) => {
       if (a.pct === null || b.pct === null) {
         if (a.pct === b.pct) return b.costo - a.costo;
-        return a.pct === null ? -1 : 1;
+        return a.pct === null ? 1 : -1;
       }
       return a.pct - b.pct;
     });
@@ -204,13 +206,15 @@ export function MargenChart({
     conMargen.length >= 2
       ? conMargen.reduce((a, v) => a + v, 0) / conMargen.length
       : null;
-  // Como las filas ya vienen ordenadas por margen, el promedio cae en un punto
-  // exacto de la lista: todo lo de arriba esta por debajo y todo lo de abajo
-  // por encima.
+  // Como el grupo con margen ya viene ordenado, el promedio cae en un punto
+  // exacto de la lista: todo lo de arriba rinde por debajo y todo lo de abajo
+  // por encima. Los que no tienen margen no cuentan para el corte -no estan
+  // ni de un lado ni del otro-, y como van al final, la linea les queda
+  // siempre por encima.
   const corte =
     promedio === null
       ? -1
-      : filas.filter((f) => f.pct === null || f.pct < promedio).length;
+      : filas.filter((f) => f.pct !== null && f.pct < promedio).length;
 
   return (
     <div>
@@ -256,11 +260,9 @@ export function MargenChart({
           />
         </div>
       ))}
-      {/* Si todos rinden por debajo del promedio -pasa cuando uno solo se va
-          muy arriba y tira la media- la linea cierra la lista. */}
-      {corte === filas.length && promedio !== null && (
-        <LineaPromedio pct={promedio} />
-      )}
+      {/* No hace falta cerrar la lista con la linea: el maximo nunca es menor
+          que el promedio, asi que el corte siempre cae antes de la ultima
+          fila con margen. */}
 
       <Eje marcas={marcas} formato={fmtUsd} />
       <Leyenda

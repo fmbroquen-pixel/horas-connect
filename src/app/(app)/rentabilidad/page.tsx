@@ -91,7 +91,7 @@ export default async function RentabilidadPage({
 
       {/* 01 Margen por proyecto */}
       <section>
-        <SecHead num="01" title="Margen por cliente" sub="Cobrado menos costo de mentores, en USD. De menor a mayor margen." />
+        <SecHead num="01" title="Margen por cliente" sub="Cobrado menos costo de mentores, en USD. De menor a mayor margen; los que no lo tienen, al final." />
         <BloqueRecalculable>
         <div className="mt-4 rounded-2xl border border-dc-line bg-dc-card p-5">
           <MargenChart
