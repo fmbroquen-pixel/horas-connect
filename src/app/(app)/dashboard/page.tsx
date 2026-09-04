@@ -82,28 +82,25 @@ export default async function DashboardPage({
   // Todo en un solo lote. Son consultas independientes y contra una base
   // remota lo que se paga es la ida y vuelta, no el trabajo: en serie, cada
   // una esperaba a la anterior sin necesitarla.
-  const [registros, tareas, plan, tareasProximas, eventosSemaforo, miembrosEquipo] =
+  const [registros, tareas, tareasProximas, eventosSemaforo, miembrosEquipo] =
     await Promise.all([
     // Sin filtro de usuario: el total incluye lo reportado por cualquiera.
     prisma.registroHoras.findMany({
       where: { clienteId: { in: ids }, ...SOLO_ACTIVOS, fecha: rangoFecha },
       select: { fecha: true, horas: true, usuarioId: true },
     }),
-    // Las tareas entran al rango por su fecha de fin: es cuando se considera
-    // entregado el presupuesto. Alimenta lo ENTREGADO y la curva, que son
-    // magnitudes de flujo y por eso sí siguen al filtro.
+    // Las tareas del mes. Entran al rango por su fecha de FIN: es cuando se
+    // considera entregado el presupuesto.
+    //
+    // De esta única lista salen los dos KPIs de horas estimadas y la curva. Lo
+    // ESTIMADO se calculaba aparte, con una consulta sin filtro de fecha que
+    // traía el plan completo de todos los tiempos: al lado de lo ENTREGADO
+    // -que sí miraba el mes- las dos cifras no eran comparables, y moverse de
+    // mes dejaba la primera clavada. Con una sola fuente, "entregadas" es
+    // literalmente el subconjunto finalizado de "estimadas".
     prisma.tareaRoadmap.findMany({
       where: { ...tareasVivas({ clienteId: { in: ids } }), fechaFin: rangoFecha },
       select: { horasEstimadas: true, estado: true, fechaFin: true },
-    }),
-    // Lo ESTIMADO es el plan completo y no se filtra por fecha: es el tamaño
-    // del compromiso, no algo que ocurra en un período. Con el filtro puesto
-    // el número daba casi siempre 0 —el rango por defecto mira 90 días hacia
-    // atrás y el Roadmap planifica hacia adelante— y encima significaba otra
-    // cosa que el KPI del mismo nombre en el Home de Proyecto.
-    prisma.tareaRoadmap.aggregate({
-      where: tareasVivas({ clienteId: { in: ids } }),
-      _sum: { horasEstimadas: true },
     }),
     // Etapas próximas: lo que arranca en los próximos 14 días y todavía no
     // empezó. No usa el rango del filtro —que mira hacia atrás— sino una
@@ -151,7 +148,8 @@ export default async function DashboardPage({
       : Promise.resolve([]),
   ]);
 
-  const presupuestadas = Number(plan._sum.horasEstimadas ?? 0);
+  // Las dos, de la misma lista: la segunda es la primera filtrada por estado.
+  const presupuestadas = tareas.reduce((a, t) => a + Number(t.horasEstimadas), 0);
   const entregadas = tareas.reduce(
     (a, t) => a + (t.estado === "finalizada" ? Number(t.horasEstimadas) : 0),
     0,
@@ -285,12 +283,12 @@ export default async function DashboardPage({
             <Kpi
               etiqueta="Hs estimadas de proyectos"
               valor={formatHorasHsMin(presupuestadas)}
-              info="Suma de horas estimadas de todas las tareas. Es el plan completo de los proyectos elegidos: el filtro de fechas no lo mueve."
+              info="Horas estimadas de las tareas que terminan dentro del mes elegido, estén finalizadas o no."
             />
             <Kpi
               etiqueta="Hs estimadas entregadas"
               valor={formatHorasHsMin(entregadas)}
-              info="Suma de horas estimadas de todas las tareas con estado Finalizado, tomando las que terminan dentro del rango elegido."
+              info="Las mismas tareas del mes, contando solo las que están en estado Finalizado."
             />
             <Kpi
               etiqueta="Hs Time Tracker Total"
