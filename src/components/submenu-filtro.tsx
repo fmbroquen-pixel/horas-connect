@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ListaProyectos, type OpcionFiltro } from "@/components/lista-proyectos";
 import { SubmenuMenu, useMenuAcciones } from "@/components/ui/menu-acciones";
 import { urlConFiltros, type FiltroUrl } from "@/lib/url-filtro";
+import { IconoListo } from "@/components/ui/iconos-filtro";
 
 export type { OpcionFiltro };
 
@@ -16,9 +17,10 @@ export type { OpcionFiltro };
 // diferenciaban en el nombre del parámetro. Con la tercera copia esa forma se
 // volvía insostenible, y cada arreglo había que hacerlo tres veces.
 //
-// Se aplica al cerrar, igual que el resto de los filtros de CORE. No hay
-// ningún cartel que lo diga: el resultado se ve en pantalla al instante y el
-// aviso ocupaba una línea para explicar algo que se entiende usándolo una vez.
+// Mientras el menú está abierto la selección es un BORRADOR: se toca sin que
+// pase nada. Recién se aplica al confirmar, y confirmar es cualquier forma de
+// cerrar que no sea Escape —clic afuera, el botón Listo, el propio ⋮—. Escape
+// y "Volver" tiran el borrador y dejan el filtro como estaba.
 export function SubmenuFiltro({
   nombre,
   icono,
@@ -50,14 +52,28 @@ export function SubmenuFiltro({
   const [, start] = useTransition();
   const navegar = navegarExterno ?? ((url: string) => start(() => router.push(url)));
   const [sel, setSel] = useState<Set<string>>(new Set(seleccionados));
-  const { vista, cerrar } = useMenuAcciones();
+  const { vista, descartar, registrarAplicar } = useMenuAcciones();
 
-  // Al salir del submenú se aplica lo elegido. Se compara contra lo que ya
-  // está aplicado para no navegar cuando no se cambió nada.
-  const aplicar = (ids: Set<string>) => {
+  const activo = vista === nombre;
+
+  // Salir del submenú tira el borrador.
+  //
+  // Se sincroniza en el render y no desde un efecto, que dibujaría el panel dos
+  // veces. Sin esto, alguien que elegía tres proyectos, apretaba Escape para
+  // volver y entraba de nuevo se encontraba con su selección descartada
+  // todavía marcada, y con el filtro real diciendo otra cosa.
+  const [eraActivo, setEraActivo] = useState(activo);
+  if (activo !== eraActivo) {
+    setEraActivo(activo);
+    if (!activo) setSel(new Set(seleccionados));
+  }
+
+  // Aplicar es navegar. Se compara contra lo que ya está aplicado para no
+  // navegar cuando no se cambió nada: sin esto, abrir el menú y cerrarlo sin
+  // tocar nada disparaba una consulta entera al servidor.
+  const aplicarIds = (ids: Set<string>) => {
     const iguales =
       ids.size === seleccionados.length && seleccionados.every((id) => ids.has(id));
-    cerrar();
     if (iguales) return;
     navegar(
       urlConFiltros({
@@ -68,6 +84,13 @@ export function SubmenuFiltro({
     );
   };
 
+  // Mientras este submenú está abierto, el menú sabe cómo confirmarlo. Sin
+  // array de dependencias: el efecto tiene que registrar el `sel` de ESTE
+  // render, no el del primero.
+  useEffect(() => {
+    registrarAplicar(nombre, activo ? () => aplicarIds(sel) : null);
+  });
+
   return (
     <SubmenuMenu nombre={nombre} icono={icono}>
       <ListaProyectos
@@ -76,14 +99,20 @@ export function SubmenuFiltro({
         seleccionados={sel}
         onCambiar={setSel}
       />
-      {/* El botón cierra el menú, y cerrar es lo que aplica. */}
-      {vista === nombre && (
+      {/* Listo cierra sin pasar por la confirmación del menú, porque aplica él
+          mismo: dejarlo confirmar además habría navegado dos veces. */}
+      {activo && (
         <button
           type="button"
-          onClick={() => aplicar(sel)}
-          className="mt-1 w-full rounded-lg bg-dc-peri/15 px-3 py-1.5 text-xs text-dc-peri transition hover:bg-dc-peri/25"
+          onClick={() => {
+            aplicarIds(sel);
+            descartar();
+          }}
+          data-tooltip="Listo"
+          aria-label="Listo"
+          className="mt-1 flex w-full items-center justify-center rounded-lg bg-dc-peri/15 px-3 py-1.5 text-dc-peri transition hover:bg-dc-peri/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40"
         >
-          Listo
+          <IconoListo />
         </button>
       )}
     </SubmenuMenu>

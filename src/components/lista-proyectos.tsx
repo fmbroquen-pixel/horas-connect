@@ -1,15 +1,16 @@
 "use client";
 
-import { BTN_SECONDARY_SM } from "@/lib/ui";
+import { BTN_ICON_SM } from "@/lib/ui";
+import { IconoTodos, IconoLimpiar } from "@/components/ui/iconos-filtro";
 
 export type OpcionFiltro = { id: string; nombre: string };
 
 // La multiselección de proyectos, sin decidir dónde vive.
 //
-// La usan el filtro del Home (en su propio popover) y el submenú "Proyectos"
-// de Time Tracking y Expenses. Es controlada a propósito: quién guarda la
-// selección y cuándo se aplica cambia según el lugar, pero la lista se ve y se
-// toca igual en los tres.
+// La usan los cuatro módulos que filtran -Time Tracking, Expenses, Home CORE
+// y Analytics- para Proyectos, Usuarios y Mentor Owner. Es controlada a
+// propósito: quién guarda la selección la mantiene como borrador mientras el
+// menú está abierto, pero la lista se ve y se toca igual en todos.
 //
 // Sin checkbox: cada fila se prende y apaga con un clic y el estado se lee del
 // fondo, el borde y un check. Ocupa menos ancho y se escanea mejor en una
@@ -42,22 +43,30 @@ export function ListaProyectos({
         <span className="text-xs uppercase tracking-wide text-dc-muted">
           {titulo}
         </span>
+        {/* Solo ícono. Los nombres siguen estando en el tooltip y en el
+            aria-label: en una lista angosta el texto se llevaba media fila del
+            encabezado, y con "Mentor Owner" de título los dos botones no
+            entraban en la misma línea. */}
         <span className="flex gap-1">
           <button
             type="button"
             onClick={() => onCambiar(new Set(opciones.map((o) => o.id)))}
             disabled={todos}
-            className={`${BTN_SECONDARY_SM} disabled:opacity-40`}
+            data-tooltip="Todos"
+            aria-label="Seleccionar todos"
+            className={`${BTN_ICON_SM} p-1 disabled:opacity-40`}
           >
-            Todos
+            <IconoTodos size={14} />
           </button>
           <button
             type="button"
             onClick={() => onCambiar(new Set())}
             disabled={seleccionados.size === 0}
-            className={`${BTN_SECONDARY_SM} disabled:opacity-40`}
+            data-tooltip="Limpiar"
+            aria-label="Limpiar la selección"
+            className={`${BTN_ICON_SM} p-1 disabled:opacity-40`}
           >
-            Limpiar
+            <IconoLimpiar size={14} />
           </button>
         </span>
       </div>

@@ -21,11 +21,28 @@ import {
 export const ITEM_MENU =
   "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-dc-muted transition hover:bg-dc-line/50 hover:text-dc-text focus:bg-dc-line/50 focus:text-dc-text focus:outline-none";
 
+// Cerrar el menú CONFIRMA; Escape descarta.
+//
+// Es la regla de todos los filtros de CORE y por eso vive acá y no en cada
+// submenú: clic afuera, o en el propio ⋮, aplica lo que se venía eligiendo;
+// Escape lo tira y deja el filtro como estaba. Le da a quien abrió el menú por
+// error una salida sin consecuencias, que es lo que Escape significa en
+// cualquier interfaz, sin obligar a confirmar cada vez.
 type Ctx = {
   vista: string | null;
   abrirSubmenu: (nombre: string) => void;
+  // Salir del submenú al menú raíz. Descarta: lo elegido adentro solo se
+  // aplica desde adentro.
   volver: () => void;
+  // Aplica lo pendiente y cierra.
   cerrar: () => void;
+  // Cierra sin aplicar. Lo usa Escape, y también el botón "Listo", que aplica
+  // por su cuenta y si no lo haría dos veces.
+  descartar: () => void;
+  // Un submenú anuncia acá cómo se aplica lo que tiene elegido, y lo retira al
+  // salir. Va por nombre para que dos submenús abiertos en el mismo panel no
+  // se pisen el registro: el que se va solo borra lo suyo.
+  registrarAplicar: (nombre: string, aplicar: (() => void) | null) => void;
 };
 
 const MenuCtx = createContext<Ctx>({
@@ -33,6 +50,8 @@ const MenuCtx = createContext<Ctx>({
   abrirSubmenu: () => {},
   volver: () => {},
   cerrar: () => {},
+  descartar: () => {},
+  registrarAplicar: () => {},
 });
 
 export function useMenuAcciones() {
@@ -52,23 +71,53 @@ export function MenuAcciones({
   const [abierto, setAbierto] = useState(false);
   const [vista, setVista] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  // Lo que hay que aplicar si el menú se cierra confirmando. En una ref y no
+  // en estado: cambia en cada tecleo del submenú y no tiene que redibujar
+  // nada.
+  const pendiente = useRef<{ nombre: string; aplicar: () => void } | null>(null);
+
+  const registrarAplicar = (nombre: string, aplicar: (() => void) | null) => {
+    if (aplicar) pendiente.current = { nombre, aplicar };
+    else if (pendiente.current?.nombre === nombre) pendiente.current = null;
+  };
+
+  const descartar = () => {
+    pendiente.current = null;
+    setAbierto(false);
+    setVista(null);
+  };
 
   const cerrar = () => {
+    const aplicar = pendiente.current?.aplicar;
+    // Se limpia ANTES de aplicar: aplicar navega, y dejarlo puesto abría la
+    // puerta a que un segundo cierre lo repitiera.
+    pendiente.current = null;
+    // Y se aplica ANTES de cerrar: la navegación va dentro de una transición
+    // del submenú, y cerrar primero lo desmonta -la transición se pierde y la
+    // pantalla deja de avisar que está recalculando-.
+    aplicar?.();
     setAbierto(false);
+    setVista(null);
+  };
+
+  const volver = () => {
+    pendiente.current = null;
     setVista(null);
   };
 
   useEffect(() => {
     if (!abierto) return;
     const alClic = (e: MouseEvent) => {
+      // Clic afuera: se confirma. Es lo que ya hacía el filtro del Home y lo
+      // que espera quien terminó de elegir y sigue con lo suyo.
       if (ref.current && !ref.current.contains(e.target as Node)) cerrar();
     };
     const alTeclado = (e: KeyboardEvent) => {
       // Escape sale del submenú primero y del menú después: es el orden en el
-      // que se entró.
+      // que se entró. En los dos pasos descarta.
       if (e.key !== "Escape") return;
-      if (vista) setVista(null);
-      else cerrar();
+      if (vista) volver();
+      else descartar();
     };
     document.addEventListener("mousedown", alClic);
     document.addEventListener("keydown", alTeclado);
@@ -105,8 +154,10 @@ export function MenuAcciones({
             value={{
               vista,
               abrirSubmenu: setVista,
-              volver: () => setVista(null),
+              volver,
               cerrar,
+              descartar,
+              registrarAplicar,
             }}
           >
             {children}
