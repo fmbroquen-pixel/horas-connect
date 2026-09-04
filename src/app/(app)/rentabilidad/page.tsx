@@ -1,19 +1,25 @@
 import { redirect } from "next/navigation";
 import { getSesionActual } from "@/lib/auth";
-import { mesDeParams } from "@/lib/mes";
 import { calcularReporte } from "@/lib/rentabilidad";
+import { resolverScope } from "@/lib/scope";
+import { getProyectosVisibles } from "@/lib/proyectos";
 import { formatMonto } from "@/lib/formato";
 import { InfoButton } from "@/components/info-button";
 import { formatHorasHsMin } from "@/lib/horas";
 import { MargenChart, HorasStackChart } from "./charts";
-import { SelectorMesAnalytics } from "./selector-mes";
+import { FiltrosModulo } from "@/components/filtros-modulo";
 import { RecalculoProvider, BloqueRecalculable } from "@/components/recalculo";
 import { NotaMesEditor } from "./nota-mes-editor";
 
 export default async function RentabilidadPage({
   searchParams,
 }: {
-  searchParams: Promise<{ anio?: string; mes?: string }>;
+  searchParams: Promise<{
+    anio?: string;
+    mes?: string;
+    proyectos?: string;
+    owners?: string;
+  }>;
 }) {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
@@ -21,12 +27,24 @@ export default async function RentabilidadPage({
   if (usuario.rol === "guest") redirect("/dashboard");
 
   const params = await searchParams;
+
+  // El scope de la pantalla: el mes, los proyectos elegidos y el Mentor Owner
+  // elegido, resueltos en un solo lugar. Los KPIs, el margen por cliente, las
+  // horas por mentor y las lecturas del mes salen todos de ese mismo recorte.
+  //
   // El mes por defecto es el que corre en Argentina. Con `getUTCMonth` sobre el
   // reloj del servidor, después de las 21:00 del último día del mes Analytics
   // abría ya en el mes siguiente, vacío.
-  const { anio, mes } = mesDeParams(params.anio, params.mes);
+  //
+  // Con el inicio del mes: Analytics es un informe de un mes cerrado, así que
+  // tiene que incluir a los clientes que operaron en ese mes aunque hoy estén
+  // apagados.
+  const scope = await resolverScope(params, (desde) =>
+    getProyectosVisibles(usuario, desde),
+  );
+  const { anio, mes } = scope;
 
-  const r = await calcularReporte(usuario, anio, mes);
+  const r = await calcularReporte(usuario, scope);
 
   return (
     // El provider envuelve a los dos lados: el selector de mes dispara la
@@ -48,7 +66,15 @@ export default async function RentabilidadPage({
               : "Tus clientes asignados"}
           </p>
         </div>
-        <SelectorMesAnalytics anio={anio} mes={mes} />
+        <FiltrosModulo
+          basePath="/rentabilidad"
+          anio={anio}
+          mes={mes}
+          proyectosOpciones={scope.proyectosOpciones}
+          proyectosSeleccionados={scope.proyectosSeleccionados}
+          ownersOpciones={scope.ownersOpciones}
+          ownersSeleccionados={scope.ownersSeleccionados}
+        />
       </div>
 
       {/* KPIs */}

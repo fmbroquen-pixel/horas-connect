@@ -2,18 +2,19 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
 import { getProyectosConRol } from "@/lib/proyecto-acceso";
+import { resolverScope } from "@/lib/scope";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
 import { tareasVivas } from "@/lib/roadmap-papelera";
 import { formatHorasHsMin } from "@/lib/horas";
 import { construirCurvaHoras } from "@/lib/curva-horas";
 import { hoyISO, semanaActualISO } from "@/lib/formato";
-import { esMesActual, mesDeParams, rangoDelMes } from "@/lib/mes";
+import { esMesActual } from "@/lib/mes";
 import { InfoButton } from "@/components/info-button";
 import { CurvaHoras } from "@/components/curva-horas";
 import { SemaforoEvolucion, NIVEL_SEMAFORO } from "@/components/semaforo-evolucion";
 import { lunesDe } from "@/lib/curva-horas";
 import { DIA_MS } from "@/lib/dias-habiles";
-import { FiltrosHome } from "./filtros-home";
+import { FiltrosModulo } from "@/components/filtros-modulo";
 import { MODULOS } from "@/lib/modulos";
 import { EstadoProyectos } from "./estado-proyectos";
 import { EtapasProximas, type EtapaProxima } from "./etapas-proximas";
@@ -22,13 +23,20 @@ import { BloqueRecalculable, RecalculoProvider, ZonaRecalculable } from "./recal
 const CARD = "rounded-2xl border border-dc-line bg-dc-card";
 
 // Home de CORE: el panorama del portafolio del usuario. Un mentor ve los
-// proyectos donde está asignado como Owner o Backup; un admin, todos. Un
-// único juego de filtros (fechas + proyectos) gobierna KPIs, gráfico y
-// semáforo.
+// proyectos donde está asignado como Owner o Backup; un admin, todos.
+//
+// Un único scope -mes, proyectos y Mentor Owner- gobierna KPIs, cards y
+// gráficos. Todo lo de abajo se arma con `scope.ids` y con nada más, así que
+// un componente nuevo hereda los filtros con solo recibir esa lista.
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ anio?: string; mes?: string; proyectos?: string }>;
+  searchParams: Promise<{
+    anio?: string;
+    mes?: string;
+    proyectos?: string;
+    owners?: string;
+  }>;
 }) {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
@@ -38,33 +46,26 @@ export default async function DashboardPage({
 
   const params = await searchParams;
 
-  // El período es un mes, igual que en Analytics: el mes en curso se corta en
-  // hoy y los anteriores van completos. Antes era un rango libre con un tope
-  // de 365 días; el tope se fue con el rango.
   const hoy = hoyISO();
-  const { anio, mes } = mesDeParams(params.anio, params.mes);
-  const { desde, hasta } = rangoDelMes(anio, mes);
+
+  // El scope de la pantalla: el mes, los proyectos elegidos y el Mentor Owner
+  // elegido, resueltos en un solo lugar. De acá salen `ids` -los proyectos que
+  // sobreviven a todos los filtros- y de esa lista comen los KPIs, las cards y
+  // los gráficos de abajo. Un componente nuevo que reciba `scope.ids` hereda
+  // los filtros sin lógica propia.
+  //
+  // El alcance se lo pasa el Home: con el inicio del mes, porque sus KPIs
+  // tienen que cuadrar con lo que se trabajó ese mes, incluidos los clientes
+  // que se apagaron después.
+  const scope = await resolverScope(params, (desde) =>
+    getProyectosConRol(usuario.id, desde),
+  );
+  const { anio, mes, desde, hasta, ids, idsAccesibles } = scope;
 
   // "Próximas dos semanas" cuenta desde HOY, no desde el mes elegido. Parada
   // en un mes anterior estaría respondiendo una pregunta que nadie hizo, así
   // que se apaga y ni siquiera se consulta la base.
   const mesEnCurso = esMesActual({ anio, mes });
-
-  // Con el inicio del mes: los KPIs del Home tienen que cuadrar con lo que se
-  // trabajo ese mes, incluidos los clientes que se apagaron despues.
-  const proyectos = await getProyectosConRol(usuario.id, desde);
-  const idsAccesibles = proyectos.map((p) => p.id);
-
-  // Sin parámetro se muestran todos los accesibles; con parámetro, solo los
-  // pedidos que además sean accesibles (un id ajeno en la URL no abre nada).
-  const pedidos = (params.proyectos ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const ids =
-    pedidos.length > 0
-      ? pedidos.filter((id) => idsAccesibles.includes(id))
-      : idsAccesibles;
 
   const rangoFecha = {
     gte: new Date(desde + "T00:00:00Z"),
@@ -245,11 +246,14 @@ export default async function DashboardPage({
         <h1 className="font-display text-xl uppercase text-white">
           Hola, {usuario.nombre.split(" ")[0]}
         </h1>
-        <FiltrosHome
+        <FiltrosModulo
+          basePath="/dashboard"
           anio={anio}
           mes={mes}
-          proyectos={proyectos.map((p) => ({ id: p.id, nombre: p.nombre }))}
-          seleccionados={ids}
+          proyectosOpciones={scope.proyectosOpciones}
+          proyectosSeleccionados={scope.proyectosSeleccionados}
+          ownersOpciones={scope.ownersOpciones}
+          ownersSeleccionados={scope.ownersSeleccionados}
         />
       </div>
 

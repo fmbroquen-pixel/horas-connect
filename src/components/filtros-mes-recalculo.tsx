@@ -2,13 +2,16 @@
 
 import { FiltrosMes, type OpcionFiltro } from "@/components/filtros-mes";
 import { useRecalculo } from "@/components/recalculo";
+import { IconoProyecto } from "@/components/ui/icono-proyecto";
 
-// El filtro de mes conectado al recálculo de la pantalla.
+// El mes de Time Tracking y Expenses, conectado al recálculo de la pantalla.
 //
 // Existe porque la página es un Server Component y el contexto es de cliente:
 // alguien tiene que leer `navegar` y `recalculando` y pasárselos al FiltrosMes.
-// Time Tracking y Expenses usan este; el Home tiene el suyo porque además le
-// pasa el menú de proyectos.
+// Acá el menú va aparte -esas dos pantallas juntan importar, exportar, filtros
+// y papelera en un único ⋮- así que este componente aporta el mes y el
+// contador de proyectos filtrados. Home y Analytics usan FiltrosModulo, que sí
+// trae su propio menú.
 export function FiltrosMesRecalculo({
   anio,
   mes,
@@ -33,8 +36,16 @@ export function FiltrosMesRecalculo({
       anio={anio}
       mes={mes}
       basePath={basePath}
-      opciones={opciones}
-      seleccionados={seleccionados}
+      filtros={[
+        {
+          clave: "proyectos",
+          nombre: "Proyectos",
+          plural: "proyectos",
+          icono: (size: number) => <IconoProyecto size={size} strokeWidth={2} />,
+          opciones,
+          seleccionados,
+        },
+      ]}
       extra={extra}
       conMenu={conMenu}
       navegar={navegar}

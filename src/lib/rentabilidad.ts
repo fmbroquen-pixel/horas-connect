@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { SOLO_ACTIVOS } from "@/lib/registros-horas";
-import { getProyectosVisibles } from "@/lib/proyectos";
 import { construirReporte } from "@/lib/rentabilidad-calculo";
+import type { Scope } from "@/lib/scope";
 import type { Usuario } from "@/generated/prisma/client";
 
 export type {
@@ -22,29 +22,32 @@ export type Reporte = Calculo & {
 // Trae lo del mes y delega el cálculo. La división es a propósito: acá van las
 // consultas y en rentabilidad-calculo las reglas de plata, que son las que
 // conviene poder probar sin base.
+//
+// Los proyectos NO se resuelven acá: llegan en el scope de la pantalla, ya
+// filtrados por mes, por proyectos elegidos y por Mentor Owner. Así los KPIs,
+// el margen y las horas miran exactamente el mismo recorte que el resto de
+// Analytics, y no hay dos lugares donde decidir qué entra.
 export async function calcularReporte(
   usuario: Usuario,
-  anio: number,
-  mes: number,
+  scope: Scope,
 ): Promise<Reporte> {
+  const { anio, mes } = scope;
+  // El mes ENTERO, aunque esté en curso: Analytics es un informe mensual y la
+  // cuota de un cliente no se prorratea por los días que van.
   const desde = new Date(Date.UTC(anio, mes - 1, 1));
   const hasta = new Date(Date.UTC(anio, mes, 1)); // exclusivo
 
-  // Con el inicio del mes: un cliente inactivado despues sigue siendo parte de
-  // este informe. Sin eso, apagarlo le borraba la facturacion y el margen de
-  // todos los meses en que si opero.
-  const proyectos = await getProyectosVisibles(
-    usuario,
-    desde.toISOString().slice(0, 10),
-  );
-  const proyectoIds = proyectos.map((p) => p.id);
-  const nombrePorProyecto = new Map(proyectos.map((p) => [p.id, p.nombre]));
-  const activoPorProyecto = new Map(proyectos.map((p) => [p.id, p.activo]));
+  const enScope = new Set(scope.ids);
+  // El scope trae la ficha completa de cada cliente -cuota, inicio y baja-, así
+  // que el informe no vuelve a consultarlos.
+  const clientes = scope.clientes.filter((c) => enScope.has(c.id));
+  const nombrePorProyecto = new Map(clientes.map((c) => [c.id, c.nombre]));
+  const activoPorProyecto = new Map(clientes.map((c) => [c.id, c.activo]));
 
-  const [registros, clientes, notaMes] = await Promise.all([
+  const [registros, notaMes] = await Promise.all([
     prisma.registroHoras.findMany({
       where: {
-        clienteId: { in: proyectoIds },
+        clienteId: { in: scope.ids },
         fecha: { gte: desde, lt: hasta },
         ...SOLO_ACTIVOS,
       },
@@ -54,19 +57,6 @@ export async function calcularReporte(
         horas: true,
         montoUsd: true,
         usuario: { select: { nombre: true } },
-      },
-    }),
-    // El ingreso sale de la CUOTA del cliente, no de una factura cargada
-    // aparte. La tabla de facturaciones existía para eso y quedó vacía: nadie
-    // cargó nunca un monto, así que el informe venía mostrando cero de ingreso
-    // y cero de margen en todos los meses.
-    prisma.cliente.findMany({
-      where: { id: { in: proyectoIds } },
-      select: {
-        id: true,
-        valorCuotaUsd: true,
-        fechaInicio: true,
-        inactivadoEn: true,
       },
     }),
     prisma.notaMes.findUnique({ where: { anio_mes: { anio, mes } } }),
@@ -80,6 +70,10 @@ export async function calcularReporte(
       horas: Number(r.horas),
       montoUsd: Number(r.montoUsd),
     })),
+    // El ingreso sale de la CUOTA del cliente, no de una factura cargada
+    // aparte. La tabla de facturaciones existía para eso y quedó vacía: nadie
+    // cargó nunca un monto, así que el informe venía mostrando cero de ingreso
+    // y cero de margen en todos los meses.
     clientes.map((c) => ({
       clienteId: c.id,
       valorCuotaUsd: c.valorCuotaUsd === null ? null : Number(c.valorCuotaUsd),
