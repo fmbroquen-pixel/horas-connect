@@ -2,6 +2,7 @@
 
 import { BTN_ICON_SM } from "@/lib/ui";
 import { IconoTodos, IconoLimpiar } from "@/components/ui/iconos-filtro";
+import { FILTRO_CABECERA, FILTRO_TITULO } from "@/components/ui/filtro-estilos";
 
 export type OpcionFiltro = { id: string; nombre: string };
 
@@ -39,10 +40,8 @@ export function ListaProyectos({
 
   return (
     <>
-      <div className="mb-1 flex items-center justify-between gap-2 px-1">
-        <span className="text-xs uppercase tracking-wide text-dc-muted">
-          {titulo}
-        </span>
+      <div className={FILTRO_CABECERA}>
+        <span className={FILTRO_TITULO}>{titulo}</span>
         {/* Solo ícono. Los nombres siguen estando en el tooltip y en el
             aria-label: en una lista angosta el texto se llevaba media fila del
             encabezado, y con "Mentor Owner" de título los dos botones no
@@ -54,7 +53,7 @@ export function ListaProyectos({
             disabled={todos}
             data-tooltip="Todos"
             aria-label="Seleccionar todos"
-            className={`${BTN_ICON_SM} p-1 disabled:opacity-40`}
+            className={`${BTN_ICON_SM} p-1`}
           >
             <IconoTodos size={14} />
           </button>
@@ -64,7 +63,7 @@ export function ListaProyectos({
             disabled={seleccionados.size === 0}
             data-tooltip="Limpiar"
             aria-label="Limpiar la selección"
-            className={`${BTN_ICON_SM} p-1 disabled:opacity-40`}
+            className={`${BTN_ICON_SM} p-1`}
           >
             <IconoLimpiar size={14} />
           </button>

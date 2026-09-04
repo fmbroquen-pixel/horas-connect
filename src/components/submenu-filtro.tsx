@@ -6,6 +6,7 @@ import { ListaProyectos, type OpcionFiltro } from "@/components/lista-proyectos"
 import { SubmenuMenu, useMenuAcciones } from "@/components/ui/menu-acciones";
 import { urlConFiltros, type FiltroUrl } from "@/lib/url-filtro";
 import { IconoListo } from "@/components/ui/iconos-filtro";
+import { FILTRO_CONFIRMAR } from "@/components/ui/filtro-estilos";
 
 export type { OpcionFiltro };
 
@@ -110,7 +111,7 @@ export function SubmenuFiltro({
           }}
           data-tooltip="Listo"
           aria-label="Listo"
-          className="mt-1 flex w-full items-center justify-center rounded-lg bg-dc-peri/15 px-3 py-1.5 text-dc-peri transition hover:bg-dc-peri/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40"
+          className={`${FILTRO_CONFIRMAR} flex w-full items-center justify-center rounded-lg bg-dc-peri/15 px-3 py-1.5 text-dc-peri transition hover:bg-dc-peri/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40`}
         >
           <IconoListo />
         </button>
