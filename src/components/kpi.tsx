@@ -2,10 +2,7 @@
 
 import { InfoButton } from "@/components/info-button";
 import { BloqueRecalculable } from "@/components/recalculo";
-
-// La fila de KPIs de una pantalla. Está acá para que Home y Analytics no la
-// escriban cada una: son el mismo objeto y tienen que romperse igual.
-export const GRID_KPIS = "grid grid-cols-2 gap-3 lg:grid-cols-4";
+import { KPI_ROTULO } from "@/components/ui/kpi-estilos";
 
 // Una card de KPI.
 //
@@ -43,7 +40,7 @@ export function Kpi({
   return (
     <BloqueRecalculable className="h-full" claseContenido="h-full">
       <div className="flex h-full flex-col rounded-2xl border border-dc-line bg-dc-card px-4 py-3.5">
-        <p className="flex min-h-[2.5em] items-start gap-1.5 text-[11px] uppercase leading-tight tracking-wider text-dc-muted">
+        <p className={KPI_ROTULO}>
           {etiqueta}
           {info && <InfoButton>{info}</InfoButton>}
         </p>

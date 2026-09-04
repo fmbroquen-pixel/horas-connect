@@ -6,6 +6,7 @@ import { tareasVivas } from "@/lib/roadmap-papelera";
 import { formatHorasHsMin } from "@/lib/horas";
 import { construirCurvaHoras } from "@/lib/curva-horas";
 import { InfoButton } from "@/components/info-button";
+import { KPI_ROTULO } from "@/components/ui/kpi-estilos";
 import { CurvaHoras } from "@/components/curva-horas";
 import { SemaforoKpi } from "./semaforo-kpi";
 import { ETIQUETA_SEMAFORO } from "../constantes";
@@ -99,9 +100,7 @@ export default async function ProyectoHomePage({
               izquierda, solo un punto, y con los dos al centro se lee como una
               unidad. El punto se queda en la fila de alto fijo de los valores,
               así que sigue sobre la misma línea óptica que las otras cinco. */}
-          <p className="flex h-8 items-start justify-center text-[11px] uppercase leading-tight tracking-wide text-dc-muted">
-            Semáforo
-          </p>
+          <p className={`${KPI_ROTULO} justify-center`}>Semáforo</p>
           <p className="mt-1 flex h-8 items-center justify-center">
             <SemaforoKpi
               clienteId={id}
@@ -257,7 +256,7 @@ function Kpi({
     // las dos líneas siempre, el valor empieza en la misma linea horizontal en
     // las cinco.
     <div className={`${CARD} flex flex-col`}>
-      <p className="flex h-8 items-start gap-1.5 text-[11px] uppercase leading-tight tracking-wide text-dc-muted">
+      <p className={KPI_ROTULO}>
         {titulo}
         {info && <InfoButton>{info}</InfoButton>}
       </p>
