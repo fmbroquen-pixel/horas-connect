@@ -1,4 +1,4 @@
-import { hoyISO, mesActual } from "@/lib/zona-horaria";
+import { mesActual } from "@/lib/zona-horaria";
 
 export { mesActual };
 
@@ -22,23 +22,29 @@ export function mesDeParams(
   return { anio: a, mes: m };
 }
 
-// El rango que cubre un mes, en ISO.
+// El rango que cubre un mes, en ISO: del 1 al último día. Siempre el mes
+// calendario completo, también el que está en curso.
 //
-// El mes en curso se corta en hoy: mostrar hasta el 31 cuando estamos a 12
-// sugiere que faltan cargar días que todavía no existen, y ensancha los
-// gráficos con un tramo vacío.
+// Antes el mes en curso se cortaba en hoy, y eso creaba dos ventanas
+// distintas conviviendo en la misma pantalla. Se notaba en las horas
+// estimadas: el KPI decía cuánto vence en el mes, pero solo contaba hasta hoy,
+// así que el número crecía solo con el correr de los días y el denominador se
+// movía bajo los pies de quien lo miraba.
+//
+// El recorte no hacía falta para lo demás: no se cargan horas ni viáticos con
+// fecha futura, y una tarea que termina la semana que viene no puede estar
+// finalizada. Donde el mes completo sí cambia algo es en el plan, que es
+// justamente lo que hay que poder ver entero.
 export function rangoDelMes(
   anio: number,
   mes: number,
-  // El "hoy" contra el que se recorta. Se inyecta para poder probarlo; en la
-  // app siempre es el día real.
-  hoy: string = hoyISO(),
 ): { desde: string; hasta: string } {
   const dd = (n: number) => String(n).padStart(2, "0");
-  const desde = `${anio}-${dd(mes)}-01`;
   const ultimo = new Date(Date.UTC(anio, mes, 0)).getUTCDate();
-  const finDelMes = `${anio}-${dd(mes)}-${dd(ultimo)}`;
-  return { desde, hasta: finDelMes > hoy ? hoy : finDelMes };
+  return {
+    desde: `${anio}-${dd(mes)}-01`,
+    hasta: `${anio}-${dd(mes)}-${dd(ultimo)}`,
+  };
 }
 
 export function mesAnterior({ anio, mes }: { anio: number; mes: number }) {

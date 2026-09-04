@@ -5,19 +5,23 @@ import { esMesActual, mesAnterior, rangoDelMes } from "./mes";
 const HOY = "2026-08-24";
 
 describe("rangoDelMes", () => {
-  it("el mes en curso se corta en hoy", () => {
-    expect(rangoDelMes(2026, 8, HOY)).toEqual({
+  it("el mes en curso también va completo", () => {
+    // La regla es una sola para las cuatro pantallas que filtran por mes: del
+    // 1 al último día. Antes el mes en curso se cortaba en hoy y eso dejaba
+    // dos ventanas distintas conviviendo, con el KPI del plan creciendo solo
+    // con el correr de los días.
+    expect(rangoDelMes(2026, 8)).toEqual({
       desde: "2026-08-01",
-      hasta: "2026-08-24",
+      hasta: "2026-08-31",
     });
   });
 
   it("los meses anteriores van completos", () => {
-    expect(rangoDelMes(2026, 7, HOY)).toEqual({
+    expect(rangoDelMes(2026, 7)).toEqual({
       desde: "2026-07-01",
       hasta: "2026-07-31",
     });
-    expect(rangoDelMes(2026, 6, HOY)).toEqual({
+    expect(rangoDelMes(2026, 6)).toEqual({
       desde: "2026-06-01",
       hasta: "2026-06-30",
     });
@@ -25,19 +29,24 @@ describe("rangoDelMes", () => {
 
   it("no hay tope hacia atrás: se puede pedir cualquier mes viejo", () => {
     // Lo que reemplaza a la ventana de 45 días.
-    expect(rangoDelMes(2024, 2, HOY)).toEqual({
+    expect(rangoDelMes(2024, 2)).toEqual({
       desde: "2024-02-01",
       hasta: "2024-02-29", // bisiesto
     });
   });
 
   it("febrero no bisiesto termina el 28", () => {
-    expect(rangoDelMes(2025, 2, HOY).hasta).toBe("2025-02-28");
+    expect(rangoDelMes(2025, 2).hasta).toBe("2025-02-28");
   });
 
-  it("un mes futuro no puede pasar de hoy", () => {
-    // No se navega hacia adelante, pero la URL es una entrada pública.
-    expect(rangoDelMes(2026, 12, HOY).hasta).toBe(HOY);
+  it("un mes futuro devuelve su mes entero", () => {
+    // No se navega hacia adelante -la flecha está deshabilitada- pero la URL
+    // es una entrada pública. Devuelve el mes pedido y la pantalla sale
+    // vacía, que es la respuesta honesta a preguntar por un mes que no pasó.
+    expect(rangoDelMes(2026, 12)).toEqual({
+      desde: "2026-12-01",
+      hasta: "2026-12-31",
+    });
   });
 });
 
