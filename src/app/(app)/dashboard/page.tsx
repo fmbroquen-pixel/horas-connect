@@ -10,6 +10,7 @@ import { construirCurvaHoras } from "@/lib/curva-horas";
 import { hoyISO, semanaActualISO } from "@/lib/formato";
 import { esMesActual } from "@/lib/mes";
 import { InfoButton } from "@/components/info-button";
+import { Kpi, GRID_KPIS } from "@/components/kpi";
 import { CurvaHoras } from "@/components/curva-horas";
 import { SemaforoEvolucion, NIVEL_SEMAFORO } from "@/components/semaforo-evolucion";
 import { lunesDe } from "@/lib/curva-horas";
@@ -279,34 +280,26 @@ export default async function DashboardPage({
           {/* Cada KPI avisa por su cuenta que está recalculando: el filtro no
               cambia todo, y un loader sobre la pantalla entera taparía
               justamente lo que hay que ver, que es cuáles números se mueven. */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <BloqueRecalculable>
-              <Kpi
-                etiqueta="Hs estimadas de proyectos"
-                valor={formatHorasHsMin(presupuestadas)}
-                info="Suma de horas estimadas de todas las tareas. Es el plan completo de los proyectos elegidos: el filtro de fechas no lo mueve."
-              />
-            </BloqueRecalculable>
-            <BloqueRecalculable>
-              <Kpi
-                etiqueta="Hs estimadas entregadas"
-                valor={formatHorasHsMin(entregadas)}
-                info="Suma de horas estimadas de todas las tareas con estado Finalizado, tomando las que terminan dentro del rango elegido."
-              />
-            </BloqueRecalculable>
-            <BloqueRecalculable>
-              <Kpi
-                etiqueta="Hs Time Tracker Total"
-                valor={formatHorasHsMin(horasTotal)}
-              />
-            </BloqueRecalculable>
-            <BloqueRecalculable>
-              <Kpi
-                etiqueta="Hs Time Tracker Usuario"
-                valor={formatHorasHsMin(horasUsuario)}
-                destacado
-              />
-            </BloqueRecalculable>
+          <div className={GRID_KPIS}>
+            <Kpi
+              etiqueta="Hs estimadas de proyectos"
+              valor={formatHorasHsMin(presupuestadas)}
+              info="Suma de horas estimadas de todas las tareas. Es el plan completo de los proyectos elegidos: el filtro de fechas no lo mueve."
+            />
+            <Kpi
+              etiqueta="Hs estimadas entregadas"
+              valor={formatHorasHsMin(entregadas)}
+              info="Suma de horas estimadas de todas las tareas con estado Finalizado, tomando las que terminan dentro del rango elegido."
+            />
+            <Kpi
+              etiqueta="Hs Time Tracker Total"
+              valor={formatHorasHsMin(horasTotal)}
+            />
+            <Kpi
+              etiqueta="Hs Time Tracker Usuario"
+              valor={formatHorasHsMin(horasUsuario)}
+              destacado
+            />
           </div>
 
           {/* Fila superior: el estado del portafolio a la izquierda y, a la
@@ -421,33 +414,3 @@ export default async function DashboardPage({
     </RecalculoProvider>
   );
 }
-
-function Kpi({
-  etiqueta,
-  valor,
-  destacado,
-  info,
-}: {
-  etiqueta: string;
-  valor: string;
-  destacado?: boolean;
-  // Los dos KPIs de horas del plan tienen criterios que no se adivinan
-  // (qué entra al filtro y qué hace una tarea no ejecutada): se explican acá
-  // en vez de dejar que se deduzcan comparando números.
-  info?: string;
-}) {
-  return (
-    <div className={`${CARD} px-4 py-3`}>
-      <p className="flex items-start gap-1.5 text-[11px] uppercase leading-tight tracking-wider text-dc-muted">
-        {etiqueta}
-        {info && <InfoButton>{info}</InfoButton>}
-      </p>
-      <p
-        className={`mt-1 font-display text-lg tabular-nums ${destacado ? "text-dc-pink" : "text-white"}`}
-      >
-        {valor}
-      </p>
-    </div>
-  );
-}
-

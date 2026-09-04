@@ -4,7 +4,7 @@ import { calcularReporte } from "@/lib/rentabilidad";
 import { resolverScope } from "@/lib/scope";
 import { getProyectosVisibles } from "@/lib/proyectos";
 import { formatMonto } from "@/lib/formato";
-import { InfoButton } from "@/components/info-button";
+import { Kpi, GRID_KPIS } from "@/components/kpi";
 import { formatHorasHsMin } from "@/lib/horas";
 import { MargenChart, HorasStackChart } from "./charts";
 import { FiltrosModulo } from "@/components/filtros-modulo";
@@ -78,26 +78,21 @@ export default async function RentabilidadPage({
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <BloqueRecalculable>
+      <div className={GRID_KPIS}>
         <Kpi
-          label="Clientes activos"
-          value={String(r.kpis.clientesActivos)}
+          etiqueta="Clientes activos"
+          valor={String(r.kpis.clientesActivos)}
           info="Los que operaban en el mes consultado, no los activos hoy."
         />
-        </BloqueRecalculable>
-        <BloqueRecalculable>
         <Kpi
-          label="Cobrado"
-          value={`$${formatMonto(r.kpis.cobrado)}`}
+          etiqueta="Cobrado"
+          valor={`$${formatMonto(r.kpis.cobrado)}`}
           sub="USD"
           info="Sin IVA"
         />
-        </BloqueRecalculable>
-        <BloqueRecalculable>
         <Kpi
-          label="Margen global"
-          value={`$${formatMonto(r.kpis.margen)}`}
+          etiqueta="Margen global"
+          valor={`$${formatMonto(r.kpis.margen)}`}
           sub={
             r.kpis.margenPct === null
               ? "sin cobrado"
@@ -105,14 +100,11 @@ export default async function RentabilidadPage({
           }
           destacado
         />
-        </BloqueRecalculable>
-        <BloqueRecalculable>
         <Kpi
-          label="Horas entregadas"
-          value={`${formatHorasHsMin(r.kpis.horas)} hs`}
+          etiqueta="Horas entregadas"
+          valor={`${formatHorasHsMin(r.kpis.horas)} hs`}
           sub={`${formatHorasHsMin(r.kpis.horasFacturables)} hs facturables`}
         />
-        </BloqueRecalculable>
       </div>
 
       {/* 01 Margen por proyecto */}
@@ -189,35 +181,6 @@ export default async function RentabilidadPage({
       </section>
     </div>
     </RecalculoProvider>
-  );
-}
-
-function Kpi({
-  label,
-  value,
-  sub,
-  destacado,
-  info,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  destacado?: boolean;
-  // Aclaración que el rótulo no puede llevar sin volverse una frase. La usa
-  // Cobrado, que va sin IVA.
-  info?: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-dc-line bg-dc-card px-5 py-4">
-      <p className="flex items-center gap-1.5 text-[10.5px] uppercase tracking-wider text-dc-muted">
-        {label}
-        {info && <InfoButton>{info}</InfoButton>}
-      </p>
-      <p className={`mt-1 font-display text-2xl ${destacado ? "text-dc-pink" : "text-white"}`}>
-        {value}
-      </p>
-      {sub && <p className="mt-0.5 text-xs text-dc-peri">{sub}</p>}
-    </div>
   );
 }
 
