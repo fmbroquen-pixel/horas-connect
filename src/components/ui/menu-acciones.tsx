@@ -75,6 +75,7 @@ export function MenuAcciones({
   // en estado: cambia en cada tecleo del submenú y no tiene que redibujar
   // nada.
   const pendiente = useRef<{ nombre: string; aplicar: () => void } | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const registrarAplicar = (nombre: string, aplicar: (() => void) | null) => {
     if (aplicar) pendiente.current = { nombre, aplicar };
@@ -127,6 +128,49 @@ export function MenuAcciones({
     };
   });
 
+  // La rueda no sale del panel.
+  //
+  // `overscroll-behavior: contain` -abajo, en el className- resuelve el caso
+  // facil: una lista que SI scrollea deja de empujar la pagina al llegar al
+  // final. No alcanza para el caso que rompia, que es el contrario: con pocas
+  // opciones no hay nada que scrollear adentro, y Chrome solo aplica la
+  // contencion a un contenedor que realmente pueda desplazarse. Ademas el menu
+  // tiene partes que nunca scrollean -Volver, el titulo, el boton de
+  // confirmar- y sobre ellas la rueda se iba derecho al body.
+  //
+  // Asi que abajo del CSS va esta red: se busca, desde donde cayo la rueda
+  // hasta el panel, algun contenedor que pueda absorber ESTE desplazamiento.
+  // Si no hay ninguno, el evento se cancela y la pagina no se entera. Es un
+  // listener manual, que es lo ultimo que uno quiere, pero es la unica forma
+  // de cubrir el caso sin overflow.
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!abierto || !panel) return;
+
+    const puedeAbsorber = (n: HTMLElement, dy: number) => {
+      if (n.scrollHeight <= n.clientHeight) return false;
+      const overflow = getComputedStyle(n).overflowY;
+      if (overflow !== "auto" && overflow !== "scroll") return false;
+      if (dy < 0) return n.scrollTop > 0;
+      if (dy > 0) return n.scrollTop + n.clientHeight < n.scrollHeight - 1;
+      return false;
+    };
+
+    const alRodar = (e: WheelEvent) => {
+      let n: Node | null = e.target as Node;
+      while (n instanceof HTMLElement) {
+        if (puedeAbsorber(n, e.deltaY)) return;
+        if (n === panel) break;
+        n = n.parentElement;
+      }
+      e.preventDefault();
+    };
+
+    // passive:false a proposito: sin eso el navegador ignora preventDefault.
+    panel.addEventListener("wheel", alRodar, { passive: false });
+    return () => panel.removeEventListener("wheel", alRodar);
+  }, [abierto]);
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -147,8 +191,21 @@ export function MenuAcciones({
 
       {abierto && (
         <div
+          ref={panelRef}
           role="menu"
-          className={`dc-menu dc-pop-in absolute right-0 top-full z-40 mt-2 ${ancho} rounded-xl border border-dc-line bg-dc-deep p-1 shadow-[0_12px_32px_rgba(0,0,0,0.45)]`}
+          // El panel atrapa la rueda: `overscroll-contain` corta el
+          // encadenamiento hacia la pagina de atras. Va acá y no solo en la
+          // lista de opciones porque el menu tiene partes que NO scrollean
+          // -Volver, el titulo, el boton de confirmar- y sobre ellas la rueda
+          // se iba derecho al body: medido, cinco clicks sobre el boton de
+          // confirmar corrian la pagina 500px con el filtro abierto.
+          //
+          // La contencion necesita un contenedor de scroll, aunque no tenga
+          // nada que scrollear: de ahi el `overflow-y-auto`. El tope de alto es
+          // util por su cuenta -un menu largo en una pantalla baja se salia de
+          // la vista- y no llega a activarse con los submenus de hoy, asi que
+          // no aparecen dos barras anidadas.
+          className={`dc-menu dc-pop-in absolute right-0 top-full z-40 mt-2 ${ancho} max-h-[min(70vh,28rem)] overflow-y-auto overscroll-contain rounded-xl border border-dc-line bg-dc-deep p-1 shadow-[0_12px_32px_rgba(0,0,0,0.45)]`}
         >
           <MenuCtx.Provider
             value={{

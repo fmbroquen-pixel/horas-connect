@@ -2,7 +2,11 @@
 
 import { BTN_ICON_SM } from "@/lib/ui";
 import { IconoTodos, IconoLimpiar } from "@/components/ui/iconos-filtro";
-import { FILTRO_CABECERA, FILTRO_TITULO } from "@/components/ui/filtro-estilos";
+import {
+  FILTRO_CABECERA,
+  FILTRO_LISTA,
+  FILTRO_TITULO,
+} from "@/components/ui/filtro-estilos";
 
 export type OpcionFiltro = { id: string; nombre: string };
 
@@ -70,7 +74,7 @@ export function ListaProyectos({
         </span>
       </div>
 
-      <div className="max-h-56 space-y-1 overflow-y-auto overflow-x-hidden">
+      <div className={FILTRO_LISTA}>
         {opciones.map((o) => {
           const activo = seleccionados.has(o.id);
           return (

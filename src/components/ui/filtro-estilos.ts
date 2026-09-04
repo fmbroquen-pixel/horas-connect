@@ -39,3 +39,10 @@ export const FILTRO_TITULO =
 // El botón de confirmar, al pie. Mismo aire que separa a la cabecera de la
 // lista, para que el panel tenga un solo ritmo de arriba a abajo.
 export const FILTRO_CONFIRMAR = "mt-2";
+
+// La lista de opciones. Es el unico scroll del submenu, y `overscroll-contain`
+// corta el encadenamiento: al llegar al final, la rueda deja de empujar la
+// pagina de atras. Sin eso, terminar de recorrer una lista larga movia el
+// listado que estaba debajo del menu.
+export const FILTRO_LISTA =
+  "max-h-56 space-y-1 overflow-y-auto overflow-x-hidden overscroll-contain";
