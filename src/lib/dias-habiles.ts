@@ -44,6 +44,54 @@ export function diasHabilesEntre(inicio: Date, fin: Date): number {
   return dias;
 }
 
+// ── Semanas hábiles ───────────────────────────────────────────────────────
+//
+// El Roadmap planifica por SEMANAS, no por días: cada tarea ocupa una semana
+// hábil completa -lunes a viernes- y la siguiente arranca el lunes posterior.
+// Una semana se identifica por su lunes, así que toda la aritmética del
+// scheduler se hace sobre lunes y estas tres funciones son todo lo que hace
+// falta.
+
+// Los días hábiles de una semana. Es la duración por defecto de una tarea del
+// Roadmap: una tarea, una semana.
+export const DIAS_SEMANA_HABIL = 5;
+
+// El lunes de la semana que ocuparía una tarea que arranca en `fecha`.
+//
+// Un sábado o un domingo caen en la semana SIGUIENTE y no en la que termina:
+// nadie planifica trabajo para una semana que ya cerró. Por eso primero se
+// corre al próximo día hábil y recién ahí se busca el lunes. (Es distinto de
+// `lunesDe` en curva-horas, que responde otra pregunta —en qué semana cayó
+// este dato— y ahí un domingo sí pertenece a la semana que termina.)
+export function semanaDe(fecha: Date): Date {
+  const habil = siguienteDiaHabil(fecha);
+  const cur = new Date(habil.getTime());
+  cur.setUTCDate(cur.getUTCDate() - (cur.getUTCDay() - 1)); // lunes = 1
+  cur.setUTCHours(0, 0, 0, 0);
+  return cur;
+}
+
+// El viernes de una semana dada por su lunes.
+export function finDeSemanaHabil(lunes: Date): Date {
+  const cur = new Date(lunes.getTime());
+  cur.setUTCDate(cur.getUTCDate() + 4);
+  return cur;
+}
+
+export function sumarSemanas(lunes: Date, semanas: number): Date {
+  const cur = new Date(lunes.getTime());
+  cur.setUTCDate(cur.getUTCDate() + semanas * 7);
+  return cur;
+}
+
+// Cuántas semanas hay entre dos lunes. Nunca negativa: si el segundo es
+// anterior, se los toma como la misma semana en vez de inventar un
+// desplazamiento hacia atrás que correría el grupo en cada recálculo.
+export function semanasEntre(desde: Date, hasta: Date): number {
+  const dif = Math.round((hasta.getTime() - desde.getTime()) / (7 * DIA_MS));
+  return Math.max(0, dif);
+}
+
 export function fechaDesdeISO(iso: string): Date {
   return new Date(iso + "T00:00:00Z");
 }

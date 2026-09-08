@@ -8,6 +8,7 @@ import { enCursoQueEstorba, esCierreValido } from "@/lib/secuencia-tareas";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
 import { parseHorasHsMin } from "@/lib/horas";
 import {
+  DIAS_SEMANA_HABIL,
   diasHabilesEntre,
   esDiaHabil,
   fechaDesdeISO,
@@ -18,10 +19,12 @@ import {
 } from "@/lib/dias-habiles";
 import {
   PLANTILLAS,
+  cambioDeFecha,
   escriturasDeSecuencia,
   getTareasEnOrden,
   planificar,
   resecuenciar,
+  type CambioDeFecha,
   type DB,
 } from "@/lib/roadmap";
 import { SOLO_TAREAS_VIVAS, listasVivas, tareasVivas } from "@/lib/roadmap-papelera";
@@ -178,7 +181,7 @@ export async function crearLista(
           listaId: lista.id,
           nombre: t.nombre,
           orden: i,
-          duracionDias: t.duracionDias,
+          duracionDias: DIAS_SEMANA_HABIL,
           horasEstimadas: t.horasEstimadas,
           fechaInicio: provisoria,
           fechaFin: provisoria,
@@ -320,9 +323,9 @@ function parseTarea(formData: FormData) {
   const parsed = TareaSchema.safeParse({
     nombre: formData.get("nombre"),
     fechaInicio: inicio,
-    // El alta tampoco pide duración: la tarea nace de un día hábil y se
-    // redimensiona corriendo su fecha de fin en la tabla.
-    duracionDias: formData.get("duracionDias") ?? "1",
+    // El alta tampoco pide duración: toda tarea nace ocupando una semana
+    // hábil, y se redimensiona corriendo sus fechas en la tabla.
+    duracionDias: formData.get("duracionDias") ?? String(DIAS_SEMANA_HABIL),
     horas: formData.get("horasEstimadas") ?? "0",
     estado: formData.get("estado") ?? "sin_iniciar",
   });
@@ -623,7 +626,7 @@ async function calcularSecuenciaConOrden(
   clienteId: string,
   idsEnOrden: string[],
   anclaId: string | undefined,
-): Promise<{ id: string; fechaInicio: Date; fechaFin: Date }[]> {
+): Promise<CambioDeFecha[]> {
   const tareas = await getTareasEnOrden(clienteId);
   const porId = new Map(tareas.map((t) => [t.id, t]));
   const plan = idsEnOrden.map((id) => porId.get(id)!).filter(Boolean);
@@ -634,14 +637,10 @@ async function calcularSecuenciaConOrden(
   const inicio =
     indice >= 0 ? plan[desde].fechaInicio : await inicioDelPlan(clienteId);
 
-  const fechas = planificar(plan, desde, inicio);
-  return fechas.flatMap(({ fechaInicio, fechaFin }, i) => {
-    const t = plan[desde + i];
-    const igual =
-      t.fechaInicio.getTime() === fechaInicio.getTime() &&
-      t.fechaFin.getTime() === fechaFin.getTime();
-    return igual ? [] : [{ id: t.id, fechaInicio, fechaFin }];
-  });
+  // El ancla es la última tarea que NO se movió: conserva sus fechas y lo que
+  // sigue toma las semanas siguientes.
+  const fechas = planificar(plan, desde, inicio, { conservarAncla: indice >= 0 });
+  return fechas.flatMap((p, i) => cambioDeFecha(plan[desde + i], p));
 }
 
 // Arranque del plan cuando no hay ancla: la fecha de inicio del contrato o el

@@ -1,12 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import {
-  DIA_MS,
   diasHabilesEntre,
-  esDiaHabil,
-  fechaDesdeISO,
-  finTrasDiasHabiles,
+  finDeSemanaHabil,
   hoyUTC,
+  semanaDe,
+  semanasEntre,
   siguienteDiaHabil,
+  sumarSemanas,
 } from "@/lib/dias-habiles";
 import { SOLO_TAREAS_VIVAS, listasVivas } from "@/lib/roadmap-papelera";
 import type { Cliente, Prisma } from "@/generated/prisma/client";
@@ -20,63 +20,55 @@ export type DB = Prisma.TransactionClient;
 
 // ── Plantillas por defecto ────────────────────────────────────────────────
 // Fuente: "Tareas CORE.xlsx" (una solapa por plantilla, una fila por tarea).
-// Las fechas del Excel se conservan solo como referencia para DERIVAR la
-// duración en días hábiles de cada tarea; al aplicar la plantilla a un
-// proyecto las fechas reales se recalculan desde el arranque de ese proyecto.
-// Por eso no se guardan en la base: un plan de 2026 no sirve para un cliente
-// que arranca en 2027, pero "esta tarea dura 3 días hábiles" sí.
+//
+// Solo el nombre y las horas estimadas. El Excel traía además fechas, de las
+// que se derivaba una duración en días hábiles por tarea; eso desapareció al
+// pasar a semanas: toda tarea ocupa una semana, así que no hay duración que
+// derivar. Un plan de 2026 tampoco servía para un cliente que arranca en 2027.
 //
 // Las plantillas viven en código, no en una tabla: son una sugerencia de
 // proceso de trabajo, y en cuanto se copian a un proyecto las listas pasan a
 // ser propias de ese proyecto y evolucionan por su cuenta.
 
-type FilaXlsx = [nombre: string, inicioISO: string, finISO: string, horas: number];
+type FilaXlsx = [nombre: string, horas: number];
 
 const ONBOARDING_XLSX: FilaXlsx[] = [
-  ["Kick off cliente", "2026-08-08", "2026-08-12", 1],
-  ["Reuniones 1:1", "2026-08-15", "2026-08-25", 6],
-  ["Entrega de Diagnóstico", "2026-08-28", "2026-08-28", 2],
-  ["Workshop 1 - OKRs", "2026-08-29", "2026-09-02", 6],
-  ["Workshop 2 - Mapeo de Negocio", "2026-09-05", "2026-09-09", 6],
-  ["Workshop 3 - Foco, Agilidad, Ejecución", "2026-09-12", "2026-09-16", 6],
-  ["Workshop 4 - Lanzamiento de Tablero", "2026-09-19", "2026-09-23", 6],
+  ["Kick off cliente", 1],
+  ["Reuniones 1:1", 6],
+  ["Entrega de Diagnóstico", 2],
+  ["Workshop 1 - OKRs", 6],
+  ["Workshop 2 - Mapeo de Negocio", 6],
+  ["Workshop 3 - Foco, Agilidad, Ejecución", 6],
+  ["Workshop 4 - Lanzamiento de Tablero", 6],
   // Hito sin estimación en el Excel: entra con 0 horas de presupuesto.
-  ["Go Live - Lanzamiento Tablero OKR", "2026-09-23", "2026-09-23", 0],
+  ["Go Live - Lanzamiento Tablero OKR", 0],
 ];
 
 const TABLERO_XLSX: FilaXlsx[] = [
-  ["Dinámica de Iniciativas", "2026-09-25", "2026-09-29", 6],
-  ["Primera Quincenal", "2026-10-01", "2026-10-05", 1.5],
-  ["Office Hours", "2026-10-08", "2026-10-12", 1.5],
-  ["Primera Mensual", "2026-10-15", "2026-10-19", 1.5],
-  ["Office Hours", "2026-10-22", "2026-10-26", 1.5],
-  ["Segunda Quincenal", "2026-10-29", "2026-11-02", 1.5],
-  ["Office Hours", "2026-11-05", "2026-11-09", 1.5],
-  ["Segunda Mensual", "2026-11-12", "2026-11-16", 1.5],
-  ["Office Hours", "2026-11-19", "2026-11-23", 1.5],
-  ["Tercera Quincenal", "2026-11-26", "2026-11-30", 1.5],
-  ["Office Hours", "2026-12-03", "2026-12-07", 1.5],
-  ["Tercera Mensual y Cierre Q", "2026-12-10", "2026-12-14", 1.5],
-  ["Retrospectiva del trimestre", "2026-12-17", "2026-12-21", 6],
+  ["Dinámica de Iniciativas", 6],
+  ["Primera Quincenal", 1.5],
+  ["Office Hours", 1.5],
+  ["Primera Mensual", 1.5],
+  ["Office Hours", 1.5],
+  ["Segunda Quincenal", 1.5],
+  ["Office Hours", 1.5],
+  ["Segunda Mensual", 1.5],
+  ["Office Hours", 1.5],
+  ["Tercera Quincenal", 1.5],
+  ["Office Hours", 1.5],
+  ["Tercera Mensual y Cierre Q", 1.5],
+  ["Retrospectiva del trimestre", 6],
 ];
 
 export type TareaPlantilla = {
   nombre: string;
-  duracionDias: number;
   horasEstimadas: number;
 };
 
 export type Plantilla = { nombre: string; tareas: TareaPlantilla[] };
 
 function desdeXlsx(filas: FilaXlsx[]): TareaPlantilla[] {
-  return filas.map(([nombre, inicioISO, finISO, horas]) => ({
-    nombre,
-    duracionDias: Math.max(
-      1,
-      diasHabilesEntre(fechaDesdeISO(inicioISO), fechaDesdeISO(finISO)),
-    ),
-    horasEstimadas: horas,
-  }));
+  return filas.map(([nombre, horas]) => ({ nombre, horasEstimadas: horas }));
 }
 
 export const PLANTILLA_ONBOARDING: Plantilla = {
@@ -114,7 +106,6 @@ export function listasPorDefecto(duracionMeses: number | null): Plantilla[] {
 // ── Planificación secuencial ──────────────────────────────────────────────
 
 export type TareaPlanificable = {
-  duracionDias: number;
   // Las fechas que la tarea tiene HOY. Son opcionales porque quien planifica
   // desde cero -el sembrado del roadmap- todavía no las tiene; cuando están,
   // son las que dan la relación temporal a conservar dentro de un grupo.
@@ -126,92 +117,100 @@ export type TareaPlanificable = {
   grupoId?: string | null;
 };
 
-// Avanza `n` días hábiles desde una fecha. n = 0 devuelve el mismo día si es
-// hábil, o el siguiente que lo sea.
-function sumarDiasHabiles(desde: Date, n: number): Date {
-  const cur = siguienteDiaHabil(desde);
-  let restantes = Math.max(0, n);
-  while (restantes > 0) {
-    cur.setUTCDate(cur.getUTCDate() + 1);
-    if (esDiaHabil(cur)) restantes--;
-  }
-  return cur;
-}
-
-// Separación en días hábiles entre dos inicios. Nunca negativa: si el segundo
-// arranca antes que el primero, se los toma como simultáneos en vez de
-// inventar un offset hacia atrás que empujaría al grupo en cada recálculo.
-function separacionHabil(desde: Date, hasta: Date): number {
-  if (hasta <= desde) return 0;
-  return Math.max(0, diasHabilesEntre(desde, hasta) - 1);
-}
-
-// Encadena las tareas desde el índice `desde` (inclusive): esa arranca en
-// `inicioDesde` y cada siguiente el día hábil posterior al fin de la anterior.
-// Las anteriores a `desde` no se tocan, que es lo que hace que mover una fecha
-// empuje solo hacia adelante.
+// ── El scheduler ──────────────────────────────────────────────────────────
 //
-// Con una excepción: los grupos. Las tareas que una persona agrupó
-// explícitamente se mueven como una unidad y conservan su relación temporal,
-// en vez de volver a repartirse una detrás de la otra cada vez que se toca algo
-// anterior.
+// UNA tarea, UNA semana hábil: lunes a viernes. La siguiente arranca el lunes
+// de la semana posterior.
 //
-// Cada miembro se ancla al PRIMERO de su grupo y no a su vecino inmediato. Es
-// lo que hace que el grupo aguante que le metan una tarea suelta en el medio al
-// reordenar: la relación es con el grupo, no con quien haya quedado al lado.
+// Antes cada tarea arrancaba el día hábil siguiente al fin de la anterior y
+// duraba lo que dijera `duracionDias`. Con eso, una lista de trece tareas
+// cortas entraba en tres semanas: el plan quedaba comprimido y no se parecía
+// al ritmo real de trabajo, que es una reunión o un entregable por semana.
 //
-// La tarea que sigue a un grupo arranca después del fin MÁS TARDÍO del grupo,
-// no del de la última en orden: si la primera del grupo dura más, encadenar
-// contra la última la dejaría empezando encima de una tarea todavía abierta,
-// que es justo lo que la secuencia existe para evitar.
+// Esta función es el ÚNICO lugar donde se deciden fechas del Roadmap. La usan
+// el sembrado de plantillas, el alta y la baja de tareas, el reordenamiento
+// por drag & drop y el calendario. Si mañana la regla cambia, cambia acá y en
+// ningún otro lado.
+//
+// Dos cosas se respetan por encima de la grilla semanal:
+//
+//   · El ANCLA, cuando el llamador pide conservarla. Es la tarea que una
+//     persona acaba de mover con el calendario: sus fechas son una decisión,
+//     no un cálculo, y aunque empiece un miércoles se quedan como están. Lo
+//     que se recalcula es lo que viene después.
+//
+//   · Los GRUPOS. Las tareas que alguien agrupó explícitamente se mueven como
+//     una unidad y conservan su separación EN SEMANAS. Cada miembro se ancla
+//     al primero del grupo y no a su vecino, que es lo que hace que el grupo
+//     aguante que le metan una tarea suelta en el medio al reordenar. La tarea
+//     que sigue a un grupo arranca después de la semana MÁS TARDÍA del grupo,
+//     no de la del último en orden.
 export function planificar(
   tareas: TareaPlanificable[],
   desde: number,
   inicioDesde: Date,
-): { fechaInicio: Date; fechaFin: Date }[] {
-  const plan: { fechaInicio: Date; fechaFin: Date }[] = [];
-  // El fin más tardío ya planificado, en milisegundos. Con grupos deja de ser
-  // el de la última tarea en orden.
-  let finMaximoMs = 0;
+  { conservarAncla = false }: { conservarAncla?: boolean } = {},
+): Programada[] {
+  const plan: Programada[] = [];
+  // La semana más tardía ya ocupada, como milisegundos de su lunes. Con grupos
+  // deja de ser la de la tarea anterior en orden.
+  let ultimaSemanaMs = 0;
 
-  // Dónde arranca cada grupo, antes y después de replanificar. Con las dos se
-  // traslada la separación original al lugar nuevo.
-  const anclaDeGrupo = new Map<string, { viejo: Date; nuevo: Date }>();
-  const recordarAncla = (t: TareaPlanificable, inicioNuevo: Date) => {
+  // En qué semana arranca cada grupo, antes y después de replanificar. Con las
+  // dos se traslada la separación original al lugar nuevo.
+  const anclaDeGrupo = new Map<string, { vieja: Date; nueva: Date }>();
+  const recordarAncla = (t: TareaPlanificable, semanaNueva: Date) => {
     if (!t.grupoId || !t.fechaInicio || anclaDeGrupo.has(t.grupoId)) return;
-    anclaDeGrupo.set(t.grupoId, { viejo: t.fechaInicio, nuevo: inicioNuevo });
+    anclaDeGrupo.set(t.grupoId, { vieja: semanaDe(t.fechaInicio), nueva: semanaNueva });
+  };
+
+  const ocupar = (semana: Date) => {
+    ultimaSemanaMs = Math.max(ultimaSemanaMs, semana.getTime());
   };
 
   // Las tareas anteriores al ancla no se replanifican, pero sí pueden ser el
-  // primer miembro de un grupo que sigue más adelante: su fecha actual es a la
-  // vez la vieja y la nueva.
+  // primer miembro de un grupo que sigue más adelante, y sí ocupan su semana.
   for (let i = 0; i < desde; i++) {
     const t = tareas[i];
-    if (t.fechaInicio) recordarAncla(t, t.fechaInicio);
-    if (t.fechaFin) finMaximoMs = Math.max(finMaximoMs, t.fechaFin.getTime());
+    if (t.fechaInicio) recordarAncla(t, semanaDe(t.fechaInicio));
+    if (t.fechaFin) ocupar(semanaDe(t.fechaFin));
   }
 
   for (let i = desde; i < tareas.length; i++) {
     const t = tareas[i];
-    let inicio: Date;
 
-    const ancla = t.grupoId ? anclaDeGrupo.get(t.grupoId) : undefined;
-    if (i === desde) {
-      // El ancla del recálculo manda: es la fecha que pidió la persona.
-      inicio = siguienteDiaHabil(inicioDesde);
-    } else if (ancla && t.fechaInicio) {
-      inicio = sumarDiasHabiles(
-        ancla.nuevo,
-        separacionHabil(ancla.viejo, t.fechaInicio),
-      );
-    } else {
-      inicio = siguienteDiaHabil(new Date(finMaximoMs + DIA_MS));
+    // El ancla conservada no se toca: se copia tal cual y solo aporta su
+    // semana a la cuenta, para que la siguiente sepa dónde arrancar.
+    if (i === desde && conservarAncla && t.fechaInicio && t.fechaFin) {
+      plan.push({
+        fechaInicio: t.fechaInicio,
+        fechaFin: t.fechaFin,
+        duracionDias: Math.max(1, diasHabilesEntre(t.fechaInicio, t.fechaFin)),
+      });
+      recordarAncla(t, semanaDe(t.fechaInicio));
+      ocupar(semanaDe(t.fechaFin));
+      continue;
     }
 
-    const fin = finTrasDiasHabiles(inicio, t.duracionDias);
-    plan.push({ fechaInicio: inicio, fechaFin: fin });
-    recordarAncla(t, inicio);
-    finMaximoMs = Math.max(finMaximoMs, fin.getTime());
+    let semana: Date;
+    const ancla = t.grupoId ? anclaDeGrupo.get(t.grupoId) : undefined;
+    if (i === desde) {
+      semana = semanaDe(inicioDesde);
+    } else if (ancla && t.fechaInicio) {
+      semana = sumarSemanas(
+        ancla.nueva,
+        semanasEntre(ancla.vieja, semanaDe(t.fechaInicio)),
+      );
+    } else {
+      semana = ultimaSemanaMs
+        ? sumarSemanas(new Date(ultimaSemanaMs), 1)
+        : semanaDe(inicioDesde);
+    }
+
+    const fin = finDeSemanaHabil(semana);
+    plan.push({ fechaInicio: semana, fechaFin: fin, duracionDias: 5 });
+    recordarAncla(t, semana);
+    ocupar(semana);
   }
   return plan;
 }
@@ -252,7 +251,7 @@ export async function calcularSecuencia(
   anclaId?: string,
   inicioForzado?: Date,
   db: DB = prisma,
-): Promise<{ id: string; fechaInicio: Date; fechaFin: Date }[]> {
+): Promise<CambioDeFecha[]> {
   const tareas = await getTareasEnOrden(clienteId, db);
   if (tareas.length === 0) return [];
 
@@ -262,26 +261,50 @@ export async function calcularSecuencia(
     inicioForzado ??
     (indice >= 0 ? tareas[desde].fechaInicio : await inicioProyecto(clienteId, db));
 
-  const plan = planificar(tareas, desde, inicio);
-
-  return plan.flatMap(({ fechaInicio, fechaFin }, i) => {
-    const tarea = tareas[desde + i];
-    const igual =
-      tarea.fechaInicio.getTime() === fechaInicio.getTime() &&
-      tarea.fechaFin.getTime() === fechaFin.getTime();
-    return igual ? [] : [{ id: tarea.id, fechaInicio, fechaFin }];
+  const plan = planificar(tareas, desde, inicio, {
+    conservarAncla: indice >= 0 && !inicioForzado,
   });
+
+  return plan.flatMap((p, i) => cambioDeFecha(tareas[desde + i], p));
+}
+
+export type CambioDeFecha = {
+  id: string;
+  fechaInicio: Date;
+  fechaFin: Date;
+  duracionDias: number;
+};
+
+export type Programada = {
+  fechaInicio: Date;
+  fechaFin: Date;
+  duracionDias: number;
+};
+
+// Una tarea entra en el lote de escritura solo si algo cambió. Sin esto, cada
+// recálculo reescribía las mismas fechas en todas las filas.
+export function cambioDeFecha(
+  tarea: { id: string } & Programada,
+  p: Programada,
+): CambioDeFecha[] {
+  const igual =
+    tarea.fechaInicio.getTime() === p.fechaInicio.getTime() &&
+    tarea.fechaFin.getTime() === p.fechaFin.getTime() &&
+    tarea.duracionDias === p.duracionDias;
+  return igual ? [] : [{ id: tarea.id, ...p }];
 }
 
 // Las escrituras del reencadenado como operaciones sueltas, para que el
 // llamador las mande junto con las suyas en un único $transaction([...]).
-export function escriturasDeSecuencia(
-  cambios: { id: string; fechaInicio: Date; fechaFin: Date }[],
-) {
+export function escriturasDeSecuencia(cambios: CambioDeFecha[]) {
   return cambios.map((c) =>
     prisma.tareaRoadmap.update({
       where: { id: c.id },
-      data: { fechaInicio: c.fechaInicio, fechaFin: c.fechaFin },
+      data: {
+        fechaInicio: c.fechaInicio,
+        fechaFin: c.fechaFin,
+        duracionDias: c.duracionDias,
+      },
     }),
   );
 }
@@ -304,22 +327,25 @@ export async function resecuenciar(
     inicioForzado ??
     (indice >= 0 ? tareas[desde].fechaInicio : await inicioProyecto(clienteId, db));
 
-  const plan = planificar(tareas, desde, inicio);
+  const plan = planificar(tareas, desde, inicio, {
+    conservarAncla: indice >= 0 && !inicioForzado,
+  });
 
   // En serie sobre `db` y no en un $transaction propio: cuando esto corre
   // dentro de una transacción abrir otra no está permitido, y cuando corre
   // suelto el llamador ya decidió que no la necesita.
   const cambiadas: string[] = [];
-  for (const [i, { fechaInicio, fechaFin }] of plan.entries()) {
-    const tarea = tareas[desde + i];
-    const igual =
-      tarea.fechaInicio.getTime() === fechaInicio.getTime() &&
-      tarea.fechaFin.getTime() === fechaFin.getTime();
-    if (igual) continue;
-    cambiadas.push(tarea.id);
+  for (const [i, p] of plan.entries()) {
+    const [c] = cambioDeFecha(tareas[desde + i], p);
+    if (!c) continue;
+    cambiadas.push(c.id);
     await db.tareaRoadmap.update({
-      where: { id: tarea.id },
-      data: { fechaInicio, fechaFin },
+      where: { id: c.id },
+      data: {
+        fechaInicio: c.fechaInicio,
+        fechaFin: c.fechaFin,
+        duracionDias: c.duracionDias,
+      },
     });
   }
   return cambiadas;
@@ -358,8 +384,10 @@ export async function asegurarRoadmap(
 
   // Las fechas se calculan de una sola pasada sobre la secuencia completa
   // (todas las listas encadenadas), no lista por lista.
+  // Al scheduler solo le importa CUÁNTAS tareas hay y en qué orden: una
+  // plantilla no trae fechas ni grupos, así que se le pasan tareas vacías.
   const todas = plantillas.flatMap((p) => p.tareas);
-  const plan = planificar(todas, 0, arranque);
+  const plan = planificar(todas.map(() => ({})), 0, arranque);
 
   let global = 0;
   await prisma.$transaction(async (tx) => {
@@ -380,8 +408,8 @@ export async function asegurarRoadmap(
           listaId: lista.id,
           nombre: t.nombre,
           orden: j,
-          duracionDias: t.duracionDias,
           horasEstimadas: t.horasEstimadas,
+          duracionDias: plan[global + j].duracionDias,
           fechaInicio: plan[global + j].fechaInicio,
           fechaFin: plan[global + j].fechaFin,
         })),
