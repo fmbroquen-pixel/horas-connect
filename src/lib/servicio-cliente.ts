@@ -34,24 +34,32 @@ export function finDeServicioISO(
   return sumarMesesISO(inicioISO, duracionMeses);
 }
 
-// Meses COMPLETOS que faltan para el fin del servicio.
+// Meses de CALENDARIO que faltan para el fin del servicio.
 //
-// Siempre hacia abajo: quedan 2 meses recién cuando pasaron los dos enteros.
-// Del 8 de septiembre al 5 de diciembre no son 3 meses, son 2 y monedas, y
-// redondear para arriba haría creer que hay un mes más de contrato del que
-// hay. Menos de un mes es 0, y un servicio ya vencido también: no existen los
-// meses negativos de servicio.
+// Cuenta casilleros de mes, no días: del 8 de septiembre al 1 de diciembre son
+// 3, aunque no lleguen a tres meses completos. La pregunta que responde el KPI
+// es "en cuántos meses se vence esto", y esa se contesta mirando el almanaque
+// -septiembre, octubre, noviembre, diciembre- y no el calendario de 30 días.
+//
+// El día solo decide una cosa: si la fecha de fin ya pasó, quedan 0. No
+// existen los meses negativos de servicio.
+//
+// Las dos fechas llegan en ISO (YYYY-MM-DD) y en la zona horaria de CORE, que
+// es quien define qué día es hoy en Mendoza. Comparar las cadenas alcanza:
+// en ISO el orden alfabético es el orden cronológico.
 export function mesesDeServicioRestantes(
   finISO: string | null,
   hoyISO: string,
 ): number | null {
-  if (!finISO || !/^\d{4}-\d{2}-\d{2}$/.test(hoyISO)) return null;
-  const [fa, fm, fd] = finISO.split("-").map(Number);
-  const [ha, hm, hd] = hoyISO.split("-").map(Number);
-  let meses = (fa * 12 + fm) - (ha * 12 + hm);
-  // El último mes no está completo si todavía no se llegó al día del corte.
-  if (fd < hd) meses -= 1;
-  return Math.max(0, meses);
+  if (!esISO(finISO) || !esISO(hoyISO)) return null;
+  if (finISO <= hoyISO) return 0;
+  const [fa, fm] = finISO.split("-").map(Number);
+  const [ha, hm] = hoyISO.split("-").map(Number);
+  return Math.max(0, (fa - ha) * 12 + (fm - hm));
+}
+
+function esISO(v: string | null | undefined): v is string {
+  return typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 }
 
 // El semáforo del contrato. Tres tramos, los mismos colores que el semáforo

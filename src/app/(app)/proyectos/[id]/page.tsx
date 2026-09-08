@@ -70,9 +70,10 @@ export default async function ProyectoHomePage({
   const backupsVisibles = backups.slice(0, BACKUPS_A_LA_VISTA);
   const backupsOcultos = backups.slice(BACKUPS_A_LA_VISTA);
 
-  // Meses de servicio que quedan. La fecha de fin no se guarda: sale de
-  // fechaInicio + duracionMeses, la misma cuenta que muestra Settings →
-  // Clientes como campo de solo lectura.
+  // Meses de servicio que quedan, contados por almanaque. La fecha de fin no
+  // se guarda: sale de fechaInicio + duracionMeses, la misma cuenta que
+  // muestra Settings → Clientes como campo de solo lectura. El "hoy" es el de
+  // Mendoza, no el del reloj del servidor.
   const finServicio = finDeServicioISO(
     acceso.cliente.fechaInicio?.toISOString().slice(0, 10) ?? null,
     acceso.cliente.duracionMeses,
@@ -161,7 +162,7 @@ export default async function ProyectoHomePage({
           color={mesesRestantes === null ? undefined : COLOR_SEMAFORO[nivelDeServicio(mesesRestantes)]}
           info={
             finServicio
-              ? `Meses completos hasta el ${formatFecha(new Date(finServicio + "T00:00:00Z"))}, el último día de servicio. Se redondea siempre hacia abajo.`
+              ? `Meses de calendario hasta ${formatFecha(new Date(finServicio + "T00:00:00Z"))}, el último día de servicio. Cuenta el mes en el que cae la fecha, no los días que faltan.`
               : "Falta la fecha de inicio o la duración del servicio. Se cargan en Settings → Clientes."
           }
         />

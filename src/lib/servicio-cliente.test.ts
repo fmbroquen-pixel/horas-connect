@@ -42,42 +42,70 @@ describe("finDeServicioISO", () => {
 describe("mesesDeServicioRestantes", () => {
   const HOY = "2026-09-08";
 
-  it("cuenta solo los meses completos", () => {
-    // Del 8/9 al 5/12 hay 2 meses y monedas, no 3.
-    expect(mesesDeServicioRestantes("2026-12-05", HOY)).toBe(2);
-    // Del 8/9 al 8/12 hay 3 justos.
+  it("cuenta meses de calendario, no de 30 días", () => {
+    // El caso del pedido: del 8/9 al 1/12 son 3 -septiembre, octubre,
+    // noviembre, diciembre-, aunque no lleguen a tres meses completos.
+    expect(mesesDeServicioRestantes("2026-12-01", HOY)).toBe(3);
+  });
+
+  it("el día no mueve el número", () => {
+    // Los tres caen en diciembre, así que los tres dan 3.
+    expect(mesesDeServicioRestantes("2026-12-01", HOY)).toBe(3);
     expect(mesesDeServicioRestantes("2026-12-08", HOY)).toBe(3);
-    // Un día más ya no agrega un mes.
-    expect(mesesDeServicioRestantes("2026-12-09", HOY)).toBe(3);
+    expect(mesesDeServicioRestantes("2026-12-31", HOY)).toBe(3);
   });
 
-  it("nunca redondea hacia arriba", () => {
-    // Faltan 29 días: es cero meses completos, no uno.
-    expect(mesesDeServicioRestantes("2026-10-07", HOY)).toBe(0);
-    expect(mesesDeServicioRestantes("2026-10-08", HOY)).toBe(1);
-  });
-
-  it("menos de un mes es 0", () => {
+  it("dentro del mismo mes es 0", () => {
     expect(mesesDeServicioRestantes("2026-09-30", HOY)).toBe(0);
-    expect(mesesDeServicioRestantes(HOY, HOY)).toBe(0);
+    expect(mesesDeServicioRestantes("2026-09-09", HOY)).toBe(0);
   });
 
-  it("un servicio ya vencido es 0 y no un negativo", () => {
-    expect(mesesDeServicioRestantes("2026-05-01", HOY)).toBe(0);
+  it("el mes que viene es 1, sea qué día sea", () => {
+    expect(mesesDeServicioRestantes("2026-10-01", HOY)).toBe(1);
+    expect(mesesDeServicioRestantes("2026-10-31", HOY)).toBe(1);
+  });
+
+  it("una fecha de fin ya pasada es 0, no un negativo", () => {
+    expect(mesesDeServicioRestantes(HOY, HOY)).toBe(0);
+    expect(mesesDeServicioRestantes("2026-09-07", HOY)).toBe(0);
+    expect(mesesDeServicioRestantes("2026-08-31", HOY)).toBe(0);
     expect(mesesDeServicioRestantes("2024-01-01", HOY)).toBe(0);
   });
 
+  // ── Cambio de año ────────────────────────────────────────────────────────
   it("cruza el año", () => {
-    expect(mesesDeServicioRestantes("2027-03-08", HOY)).toBe(6);
+    expect(mesesDeServicioRestantes("2027-01-01", HOY)).toBe(4);
+    expect(mesesDeServicioRestantes("2027-09-08", HOY)).toBe(12);
+    expect(mesesDeServicioRestantes("2028-03-01", HOY)).toBe(18);
   });
 
-  it("sin fecha de fin no hay número", () => {
+  it("de diciembre a enero es 1", () => {
+    expect(mesesDeServicioRestantes("2027-01-01", "2026-12-31")).toBe(1);
+    expect(mesesDeServicioRestantes("2027-01-31", "2026-12-01")).toBe(1);
+  });
+
+  it("de enero para atrás, a diciembre del año anterior, es 0", () => {
+    expect(mesesDeServicioRestantes("2026-12-31", "2027-01-01")).toBe(0);
+  });
+
+  // ── Límites de mes ───────────────────────────────────────────────────────
+  it("del último día de un mes al primero del siguiente es 1", () => {
+    expect(mesesDeServicioRestantes("2026-10-01", "2026-09-30")).toBe(1);
+  });
+
+  it("del primero al último día del mismo mes es 0", () => {
+    expect(mesesDeServicioRestantes("2026-09-30", "2026-09-01")).toBe(0);
+  });
+
+  it("febrero no es un caso especial", () => {
+    expect(mesesDeServicioRestantes("2026-03-01", "2026-02-28")).toBe(1);
+    expect(mesesDeServicioRestantes("2024-02-29", "2024-01-31")).toBe(1); // bisiesto
+  });
+
+  it("sin fecha de fin, o con una fecha que no es ISO, no hay número", () => {
     expect(mesesDeServicioRestantes(null, HOY)).toBeNull();
-  });
-
-  it("el fin de mes no inventa un mes de más", () => {
-    // Del 31/01 al 28/02 hay 28 días, no un mes.
-    expect(mesesDeServicioRestantes("2026-02-28", "2026-01-31")).toBe(0);
+    expect(mesesDeServicioRestantes("01/12/2026", HOY)).toBeNull();
+    expect(mesesDeServicioRestantes("2026-12-01", "hoy")).toBeNull();
   });
 });
 
