@@ -9,8 +9,13 @@ import { InfoButton } from "@/components/info-button";
 import { KPI_ROTULO } from "@/components/ui/kpi-estilos";
 import { CurvaHoras } from "@/components/curva-horas";
 import { SemaforoKpi } from "./semaforo-kpi";
-import { ETIQUETA_SEMAFORO } from "../constantes";
-import { formatFecha } from "@/lib/formato";
+import { COLOR_SEMAFORO, ETIQUETA_SEMAFORO } from "../constantes";
+import { formatFecha, hoyISO } from "@/lib/formato";
+import {
+  finDeServicioISO,
+  mesesDeServicioRestantes,
+  nivelDeServicio,
+} from "@/lib/servicio-cliente";
 
 const CARD = "rounded-2xl border border-dc-line bg-dc-card px-4 py-3";
 
@@ -65,6 +70,15 @@ export default async function ProyectoHomePage({
   const backupsVisibles = backups.slice(0, BACKUPS_A_LA_VISTA);
   const backupsOcultos = backups.slice(BACKUPS_A_LA_VISTA);
 
+  // Meses de servicio que quedan. La fecha de fin no se guarda: sale de
+  // fechaInicio + duracionMeses, la misma cuenta que muestra Settings →
+  // Clientes como campo de solo lectura.
+  const finServicio = finDeServicioISO(
+    acceso.cliente.fechaInicio?.toISOString().slice(0, 10) ?? null,
+    acceso.cliente.duracionMeses,
+  );
+  const mesesRestantes = mesesDeServicioRestantes(finServicio, hoyISO());
+
   const presupuestadas = tareas.reduce((a, t) => a + Number(t.horasEstimadas), 0);
   const entregadas = tareas.reduce(
     (a, t) => a + (t.estado === "finalizada" ? Number(t.horasEstimadas) : 0),
@@ -94,7 +108,7 @@ export default async function ProyectoHomePage({
       {/* El semáforo entra en la misma fila que los KPIs, con una pista propia
           más angosta: es un punto de color, no necesita el ancho de una card de
           texto, y darle una sexta columna igual apretaba a las otras cinco. */}
-      <div className="grid shrink-0 gap-3 sm:grid-cols-3 lg:grid-cols-[6.5rem_repeat(5,minmax(0,1fr))]">
+      <div className="grid shrink-0 gap-3 sm:grid-cols-3 lg:grid-cols-[6.5rem_minmax(0,1.5fr)_9rem_repeat(3,minmax(0,1fr))]">
         <div className={`${CARD} flex flex-col`}>
           {/* Rótulo y punto centrados: la card no tiene texto que alinear a la
               izquierda, solo un punto, y con los dos al centro se lee como una
@@ -116,17 +130,40 @@ export default async function ProyectoHomePage({
           </p>
         </div>
 
-        <Kpi titulo="Mentor Owner" valor={owner} texto />
-        {/* Hasta dos nombres a la vista y el resto en un "+N". Con el tope en
-            cinco, ponerlos los cinco en una línea de card no los hacía legibles
-            -se recortaban a la mitad de un nombre- y encima escondía cuántos
-            eran. Dos entran cómodos, y el contador dice de entrada si hay más
-            gente sin tener que pasar por encima. */}
+        {/* Owner y Backup en una sola card. Eran dos, y eso gastaba dos
+            columnas para decir lo mismo -quién lleva el proyecto- con la
+            mitad del rótulo repetido. Juntas caben en el alto de una card
+            normal: dos renglones de 11px entran en la misma caja de alto fijo
+            donde las otras ponen su número, así que la fila no crece.
+
+            Hasta dos backups a la vista y el resto en un "+N". Con el tope en
+            cinco, ponerlos los cinco en una línea no los hacía legibles -se
+            recortaban a la mitad de un nombre- y encima escondía cuántos eran.
+            El contador dice de entrada si hay más gente sin pasar por encima. */}
+        <div className={`${CARD} flex flex-col`}>
+          <p className={KPI_ROTULO}>Mentores</p>
+          <div className="mt-1 flex h-8 flex-col justify-center gap-0.5 text-[11px] leading-tight">
+            <LineaMentor rol="Owner" valor={owner} />
+            <LineaMentor
+              rol="Backup"
+              valor={backupsVisibles.join(", ") || "—"}
+              resto={backupsOcultos}
+            />
+          </div>
+        </div>
+
+        {/* Cuánto contrato queda. El color es el mismo verde/amarillo/rojo del
+            semáforo del proyecto: no hace falta un segundo vocabulario para
+            decir "esto se está por terminar". */}
         <Kpi
-          titulo="Mentor Backup"
-          valor={backupsVisibles.join(", ") || "-"}
-          resto={backupsOcultos}
-          texto
+          titulo="Meses de servicio"
+          valor={mesesRestantes === null ? "—" : String(mesesRestantes)}
+          color={mesesRestantes === null ? undefined : COLOR_SEMAFORO[nivelDeServicio(mesesRestantes)]}
+          info={
+            finServicio
+              ? `Meses completos hasta el ${formatFecha(new Date(finServicio + "T00:00:00Z"))}, el último día de servicio. Se redondea siempre hacia abajo.`
+              : "Falta la fecha de inicio o la duración del servicio. Se cargan en Settings → Clientes."
+          }
         />
         <Kpi
           titulo="Hs estimadas de proyecto"
@@ -226,15 +263,49 @@ function BarraProgreso({
   );
 }
 
+// Un renglón de la card de Mentores: el rol apagado y el nombre en primer
+// plano. El rol tiene ancho fijo para que los dos nombres arranquen alineados.
+function LineaMentor({
+  rol,
+  valor,
+  resto,
+}: {
+  rol: string;
+  valor: string;
+  resto?: string[];
+}) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="w-12 shrink-0 text-dc-muted">{rol}</span>
+      <span className="truncate font-medium text-white" data-tooltip={valor}>
+        {valor}
+      </span>
+      {resto && resto.length > 0 && (
+        <span
+          className="shrink-0 rounded-full bg-dc-peri/15 px-1.5 text-[10px] font-semibold tabular-nums text-dc-peri"
+          data-tooltip={`${resto.length} más: ${resto.join(", ")}`}
+          aria-label={`${resto.length} más: ${resto.join(", ")}`}
+        >
+          +{resto.length}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function Kpi({
   titulo,
   valor,
   info,
   texto = false,
   resto,
+  color,
 }: {
   titulo: string;
   valor: string;
+  // Color del número, cuando el valor tiene un estado y no solo una magnitud
+  // (los meses de servicio que quedan). Sin color va en blanco, como el resto.
+  color?: string;
   // Los KPIs de horas explican su criterio acá en vez de dejar que se deduzca
   // comparando números. Mismo componente que en el Home de CORE.
   info?: string;
@@ -267,7 +338,8 @@ function Kpi({
           arriba. Centrando cada uno en la misma caja, los centros ópticos
           coinciden y la fila se lee pareja, que es lo que se estaba pidiendo. */}
       <p
-        className={`mt-1 flex h-8 items-center text-white ${
+        style={color ? { color } : undefined}
+        className={`mt-1 flex h-8 items-center ${color ? "" : "text-white"} ${
           texto ? "text-sm font-medium" : "font-display text-lg tabular-nums"
         }`}
       >

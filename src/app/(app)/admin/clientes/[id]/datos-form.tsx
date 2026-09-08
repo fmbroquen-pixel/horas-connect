@@ -4,9 +4,9 @@ import { useActionState, useRef, useState } from "react";
 import { actualizarDatosCliente, type CampoCliente } from "../actions";
 import {
   OPCIONES_PRODUCTO,
-  sumarMesesISO,
   mostrarFechaISO,
 } from "../constantes";
+import { sumarMesesISO } from "@/lib/servicio-cliente";
 import { Dropdown } from "@/components/dropdown";
 import { DatePicker } from "@/components/date-picker";
 import { avisarOk } from "@/components/ui/avisos";

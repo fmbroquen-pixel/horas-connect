@@ -47,20 +47,6 @@ export type MiembroFila = {
   cumpleanos: string; // YYYY-MM-DD o "" si no está cargado
 };
 
-// Suma meses a una fecha ISO (YYYY-MM-DD) ajustando el día al último del mes
-// destino cuando no existe (31/01 + 1 mes → 28/02). Es el cálculo de la
-// "Fecha de finalización" (fecha de inicio + duración), que nunca se guarda.
-export function sumarMesesISO(iso: string, meses: number): string | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso) || !Number.isInteger(meses)) return null;
-  const [a, m, d] = iso.split("-").map(Number);
-  const total = a * 12 + (m - 1) + meses;
-  const anio = Math.floor(total / 12);
-  const mes = total % 12; // 0-11
-  const ultimoDia = new Date(anio, mes + 1, 0).getDate();
-  const dia = Math.min(d, ultimoDia);
-  return `${anio}-${String(mes + 1).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
-}
-
 export function mostrarFechaISO(iso: string): string {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "—";
   const [a, m, d] = iso.split("-");
