@@ -1,31 +1,28 @@
 "use client";
 
-import { useTransition } from "react";
-import { actualizarCampoTarea } from "./actions";
-import { avisarError, avisarOk } from "@/components/ui/avisos";
-import { formatHorasHsMin } from "@/lib/horas";
-
 // Cuántos mentores participan de la tarea. Solo hay dos valores posibles, así
 // que no vale un desplegable: el botón alterna 1 ↔ 2 de un clic y muestra el
 // valor con uno o dos monigotes, para leerlo sin abrir nada.
 //
-// El clic hace la cuenta completa: cambiar la cantidad de personas ajusta las
-// horas estimadas, porque lo estimado es el esfuerzo TOTAL de la tarea y un
-// workshop de 3 horas dado entre dos cuesta 6. Sin diálogo ni confirmación —es
-// un dato de una tarea, no una operación— pero con aviso, porque cambia un
-// número que la persona no tocó.
+// No guarda ni sabe guardar. El clic sube a la fila, que es quien tiene las
+// horas al lado y puede mover las dos cosas juntas antes de que el servidor
+// conteste. Acá adentro solo se podía cambiar el número propio, y las horas
+// llegaban tarde con toda la página detrás.
+//
+// Tampoco se deshabilita mientras se guarda: el valor que muestra ya es el
+// definitivo. Apagarlo esperando al servidor era justamente la demora que se
+// sentía.
 export function SelectorPersonas({
-  tareaId,
   personas,
+  onAlternar,
   soloLectura = false,
 }: {
-  tareaId: string;
   personas: number;
+  onAlternar: () => void;
   // Proyecto inactivo. El dato se sigue viendo -cuántas personas lleva la
   // tarea es parte de su historia-; lo que se apaga es el clic que lo alterna.
   soloLectura?: boolean;
 }) {
-  const [pending, start] = useTransition();
   const dos = personas === 2;
   const proximo = dos ? 1 : 2;
   const etiqueta = `${personas} ${personas === 1 ? "persona" : "personas"}`;
@@ -33,31 +30,16 @@ export function SelectorPersonas({
   return (
     <button
       type="button"
-      disabled={pending || soloLectura}
-      onClick={() =>
-        start(async () => {
-          const r = await actualizarCampoTarea(tareaId, "personas", String(proximo));
-          if (r.error) {
-            avisarError(r.error);
-            return;
-          }
-          if (r.horasAjustadas !== undefined) {
-            avisarOk(
-              `Horas estimadas actualizadas: ${formatHorasHsMin(r.horasAjustadas)}`,
-            );
-          }
-        })
-      }
+      disabled={soloLectura}
+      onClick={onAlternar}
       data-tooltip={etiqueta}
       aria-label={
         soloLectura
           ? etiqueta
           : `${etiqueta}. Cambiar a ${proximo} y ajustar las horas estimadas.`
       }
-      // Sin `disabled:opacity-50` en solo lectura: ahí el botón no está
-      // "ocupado", es un dato. Deslavarlo escondería el número.
       className={`flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 ${
-        soloLectura ? "cursor-default" : "hover:bg-dc-peri/10 disabled:opacity-50"
+        soloLectura ? "cursor-default" : "hover:bg-dc-peri/10"
       } ${dos ? "text-dc-peri" : "text-dc-muted"}`}
     >
       <svg

@@ -122,3 +122,30 @@ describe("escalarHorasPorPersonas", () => {
     expect(escalarHorasPorPersonas(4, 2, 0)).toBe(4);
   });
 });
+
+// El camino que recorre la pantalla al tocar el botón de personas: lee el
+// texto de la celda, escala y vuelve a formatear. Es la misma cuenta que hace
+// el servidor, y si dieran distinto el número saltaría al llegar la respuesta.
+describe("ajuste por personas, de texto a texto", () => {
+  const ajustar = (texto: string, de: number, a: number) =>
+    formatHorasHsMin(escalarHorasPorPersonas(parseHorasHsMin(texto) ?? 0, de, a));
+
+  it("duplica y vuelve", () => {
+    expect(ajustar("3:00", 1, 2)).toBe("6:00");
+    expect(ajustar("6:00", 2, 1)).toBe("3:00");
+  });
+
+  it("la ida y vuelta devuelve el mismo texto", () => {
+    for (const t of ["1:00", "1:30", "2:00", "4:00", "6:00", "0:30"]) {
+      expect(ajustar(ajustar(t, 2, 1), 1, 2)).toBe(t);
+    }
+  });
+
+  it("una hora y media entre dos son tres", () => {
+    expect(ajustar("1:30", 1, 2)).toBe("3:00");
+  });
+
+  it("un hito sin horas sigue sin horas", () => {
+    expect(ajustar("0:00", 1, 2)).toBe("0:00");
+  });
+});

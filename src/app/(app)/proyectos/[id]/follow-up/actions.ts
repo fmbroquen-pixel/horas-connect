@@ -482,7 +482,18 @@ export async function actualizarCampoTarea(
       where: { id: tareaId },
       data: { personas, horasEstimadas: horasAjustadas },
     });
-    revalidar();
+    // Sin revalidar, a diferencia del resto de los campos.
+    //
+    // `revalidar()` invalida todo /proyectos y el Home, y eso hace que la
+    // respuesta de la action traiga el Follow Up entero renderizado de nuevo
+    // -todas las listas, todas las tareas- antes de que la pantalla se dé por
+    // enterada. Para un número de una fila que la UI ya movió por su cuenta,
+    // es pagar una consulta del plan completo por cada clic.
+    //
+    // Las pantallas que muestran horas estimadas -el Home del proyecto, el
+    // Home de CORE- son dinámicas, y en esta versión de Next el cliente no
+    // cachea los segmentos dinámicos (`staleTimes.dynamic` es 0 desde la 15).
+    // Se vuelven a pedir al navegar, así que ven el número nuevo igual.
     return cambian ? { horasAjustadas } : {};
   }
 

@@ -29,6 +29,12 @@ import { claseResaltado, useResaltado } from "./resaltado";
 import { TagEstado } from "@/components/ui/tag-estado";
 import { BotonEliminarIcono } from "@/components/ui/acciones-fila";
 import { SelectorPersonas } from "./selector-personas";
+import {
+  escalarHorasPorPersonas,
+  formatHorasHsMin,
+  parseHorasHsMin,
+} from "@/lib/horas";
+import { avisarOk } from "@/components/ui/avisos";
 import { useSoloLectura } from "./solo-lectura";
 
 // El contenedor con scroll más cercano hacia arriba. El plan vive dentro del
@@ -166,6 +172,61 @@ export function FilaTareaRoadmap({
   // tarea: corre la cadena de todo lo que viene después. Así que se avisa
   // igual —esta tarea con el realce fuerte por ser la causa, las arrastradas
   // por dependencia con el tenue— y con el mismo toast.
+  // Personas y horas, mostradas antes de que el servidor conteste.
+  //
+  // Las dos viajan juntas -cambiar la cantidad de personas ajusta el
+  // presupuesto- y viven acá y no en el botón porque el botón no tiene al lado
+  // la celda de horas. Antes el clic esperaba a que volviera la página entera
+  // para recién ahí mover los dos números.
+  //
+  // El servidor sigue mandando: cuando llega un valor nuevo por props -otra
+  // acción revalidó, o alguien lo cambió desde otro lado- se descarta lo
+  // optimista. Se sincroniza en el render, que es el patrón del resto de las
+  // celdas y evita el parpadeo de un efecto.
+  const [optimista, setOptimista] = useState<{ personas: number; horas: string } | null>(
+    null,
+  );
+  const [delServidor, setDelServidor] = useState({
+    personas: tarea.personas,
+    horas: tarea.horasEstimadas,
+  });
+  if (
+    delServidor.personas !== tarea.personas ||
+    delServidor.horas !== tarea.horasEstimadas
+  ) {
+    setDelServidor({ personas: tarea.personas, horas: tarea.horasEstimadas });
+    setOptimista(null);
+  }
+  const personas = optimista?.personas ?? tarea.personas;
+  const horasEstimadas = optimista?.horas ?? tarea.horasEstimadas;
+
+  // La cuenta la hace la MISMA función que usa el servidor: no hay dos reglas,
+  // hay una en lib/horas que se aplica de los dos lados. Si dieran distinto, el
+  // número saltaría al llegar la respuesta.
+  const alternarPersonas = () => {
+    const proximo = personas === 2 ? 1 : 2;
+    const previo = optimista;
+    const horasNuevas = escalarHorasPorPersonas(
+      parseHorasHsMin(horasEstimadas) ?? 0,
+      personas,
+      proximo,
+    );
+    setOptimista({ personas: proximo, horas: formatHorasHsMin(horasNuevas) });
+
+    // Sin useTransition: no hay nada que esperar en pantalla, y el `pending`
+    // de la transición era justamente lo que apagaba el botón.
+    void actualizarCampoTarea(tarea.id, "personas", String(proximo)).then((r) => {
+      if (r.error) {
+        setOptimista(previo);
+        avisarError(r.error);
+        return;
+      }
+      if (r.horasAjustadas !== undefined) {
+        avisarOk(`Horas estimadas actualizadas: ${formatHorasHsMin(r.horasAjustadas)}`);
+      }
+    });
+  };
+
   const guardarRango = async (r: { inicio: string; fin: string }) => {
     const res = await actualizarRangoTarea(tarea.id, r.inicio, r.fin);
     if (res.error) return res;
@@ -270,8 +331,8 @@ export function FilaTareaRoadmap({
             </span>
           )}
           <SelectorPersonas
-            tareaId={tarea.id}
-            personas={tarea.personas}
+            personas={personas}
+            onAlternar={alternarPersonas}
             soloLectura={soloLectura}
           />
         </span>
@@ -286,7 +347,7 @@ export function FilaTareaRoadmap({
         />
 
         <CeldaHoras
-          valor={tarea.horasEstimadas}
+          valor={horasEstimadas}
           onGuardar={guardar("horasEstimadas")}
           ariaLabel="Horas estimadas"
           editable={!soloLectura}
