@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { enCursoQueEstorba, esCierreValido } from "@/lib/secuencia-tareas";
 import { getAccesoProyecto } from "@/lib/proyecto-acceso";
-import { parseHorasHsMin } from "@/lib/horas";
+import { escalarHorasPorPersonas, parseHorasHsMin } from "@/lib/horas";
 import {
   DIAS_SEMANA_HABIL,
   diasHabilesEntre,
@@ -38,7 +38,13 @@ type Resultado = { error?: string };
 // es una decisión que le falta al usuario, así que en vez de rechazar se le
 // devuelve quién estorba para que resuelva las dos cosas juntas.
 export type ConflictoEnCurso = { id: string; nombre: string };
-type ResultadoEstado = Resultado & { conflicto?: ConflictoEnCurso };
+type ResultadoEstado = Resultado & {
+  conflicto?: ConflictoEnCurso;
+  // Las horas que quedaron tras ajustarlas por la cantidad de personas. Solo
+  // viene cuando el número cambió: quien lo recibe avisa, y avisar de un
+  // cambio que no ocurrió es ruido.
+  horasAjustadas?: number;
+};
 
 // Toda escritura que mueva la secuencia va en una transacción junto con el
 // reencadenado de fechas: son un solo hecho. Si el resecuenciado fallara
@@ -458,9 +464,26 @@ export async function actualizarCampoTarea(
     if (personas !== 1 && personas !== 2) {
       return { error: "Las personas involucradas deben ser 1 o 2." };
     }
-    await prisma.tareaRoadmap.update({ where: { id: tareaId }, data: { personas } });
+
+    // Las horas siguen a la cantidad de personas. La regla vive en lib/horas,
+    // que es donde vive todo lo que sabe de horas en CORE.
+    const horasActuales = Number(tarea.horasEstimadas);
+    const horasAjustadas = escalarHorasPorPersonas(
+      horasActuales,
+      tarea.personas,
+      personas,
+    );
+    const cambian = horasAjustadas !== horasActuales;
+
+    // Las dos en una sola escritura: personas y horas son una sola decisión, y
+    // guardarlas por separado deja a la tarea, aunque sea un instante,
+    // diciendo que la hacen dos personas con el presupuesto de una.
+    await prisma.tareaRoadmap.update({
+      where: { id: tareaId },
+      data: { personas, horasEstimadas: horasAjustadas },
+    });
     revalidar();
-    return {};
+    return cambian ? { horasAjustadas } : {};
   }
 
   if (campo === "horasEstimadas") {

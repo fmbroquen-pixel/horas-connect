@@ -2,10 +2,18 @@
 
 import { useTransition } from "react";
 import { actualizarCampoTarea } from "./actions";
+import { avisarError, avisarOk } from "@/components/ui/avisos";
+import { formatHorasHsMin } from "@/lib/horas";
 
 // Cuántos mentores participan de la tarea. Solo hay dos valores posibles, así
 // que no vale un desplegable: el botón alterna 1 ↔ 2 de un clic y muestra el
 // valor con uno o dos monigotes, para leerlo sin abrir nada.
+//
+// El clic hace la cuenta completa: cambiar la cantidad de personas ajusta las
+// horas estimadas, porque lo estimado es el esfuerzo TOTAL de la tarea y un
+// workshop de 3 horas dado entre dos cuesta 6. Sin diálogo ni confirmación —es
+// un dato de una tarea, no una operación— pero con aviso, porque cambia un
+// número que la persona no tocó.
 export function SelectorPersonas({
   tareaId,
   personas,
@@ -19,6 +27,8 @@ export function SelectorPersonas({
 }) {
   const [pending, start] = useTransition();
   const dos = personas === 2;
+  const proximo = dos ? 1 : 2;
+  const etiqueta = `${personas} ${personas === 1 ? "persona" : "personas"}`;
 
   return (
     <button
@@ -26,14 +36,23 @@ export function SelectorPersonas({
       disabled={pending || soloLectura}
       onClick={() =>
         start(async () => {
-          await actualizarCampoTarea(tareaId, "personas", dos ? "1" : "2");
+          const r = await actualizarCampoTarea(tareaId, "personas", String(proximo));
+          if (r.error) {
+            avisarError(r.error);
+            return;
+          }
+          if (r.horasAjustadas !== undefined) {
+            avisarOk(
+              `Horas estimadas actualizadas: ${formatHorasHsMin(r.horasAjustadas)}`,
+            );
+          }
         })
       }
-      data-tooltip={`Personas involucradas: ${personas}`}
+      data-tooltip={etiqueta}
       aria-label={
         soloLectura
-          ? `Personas involucradas: ${personas}.`
-          : `Personas involucradas: ${personas}. Cambiar a ${dos ? 1 : 2}.`
+          ? etiqueta
+          : `${etiqueta}. Cambiar a ${proximo} y ajustar las horas estimadas.`
       }
       // Sin `disabled:opacity-50` en solo lectura: ahí el botón no está
       // "ocupado", es un dato. Deslavarlo escondería el número.

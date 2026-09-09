@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatHorasHsMin, parseHorasHsMin, reformatEntradaHoras } from "./horas";
+import {
+  escalarHorasPorPersonas,
+  formatHorasHsMin,
+  parseHorasHsMin,
+  reformatEntradaHoras,
+} from "./horas";
 
 describe("parseHorasHsMin", () => {
   it("lee el formato hs:min", () => {
@@ -71,5 +76,49 @@ describe("ida y vuelta", () => {
     for (const v of [0.25, 0.5, 1, 1.5, 3.75, 8, 24]) {
       expect(parseHorasHsMin(formatHorasHsMin(v))).toBeCloseTo(v, 10);
     }
+  });
+});
+
+describe("escalarHorasPorPersonas", () => {
+  it("sumar una persona duplica las horas", () => {
+    expect(escalarHorasPorPersonas(3, 1, 2)).toBe(6);
+  });
+
+  it("sacar una persona las parte al medio", () => {
+    expect(escalarHorasPorPersonas(6, 2, 1)).toBe(3);
+  });
+
+  it("el ejemplo del pedido: editar a mano no rompe la regla", () => {
+    // 2 personas / 4h → el usuario edita a 6h → a 1 persona da 3 → volver a 2
+    // devuelve las 6. La cuenta se hace sobre el valor actual, no sobre un
+    // "original" guardado aparte.
+    const editadas = 6;
+    const conUna = escalarHorasPorPersonas(editadas, 2, 1);
+    expect(conUna).toBe(3);
+    expect(escalarHorasPorPersonas(conUna, 1, 2)).toBe(6);
+  });
+
+  it("sin cambio de personas no cambia nada", () => {
+    expect(escalarHorasPorPersonas(1.5, 2, 2)).toBe(1.5);
+  });
+
+  it("cero horas siguen siendo cero", () => {
+    // Los hitos entran con 0 de presupuesto y no tienen que inventarse uno.
+    expect(escalarHorasPorPersonas(0, 1, 2)).toBe(0);
+  });
+
+  it("las medias horas se conservan", () => {
+    expect(escalarHorasPorPersonas(1.5, 1, 2)).toBe(3);
+    expect(escalarHorasPorPersonas(1.5, 2, 1)).toBe(0.75); // 45 minutos
+  });
+
+  it("redondea a dos decimales, que es lo que guarda la columna", () => {
+    // 0,25 h son 15 minutos; la mitad son 7,5 y la columna no los tiene.
+    expect(escalarHorasPorPersonas(0.25, 2, 1)).toBe(0.13);
+  });
+
+  it("una cantidad de personas inválida deja las horas como están", () => {
+    expect(escalarHorasPorPersonas(4, 0, 2)).toBe(4);
+    expect(escalarHorasPorPersonas(4, 2, 0)).toBe(4);
   });
 });
