@@ -24,6 +24,20 @@ const FILTROS = [
   { value: "2", label: "2 personas", personas: 2 },
 ];
 
+// El horizonte de la card, en semanas. La consulta del servidor trae SIEMPRE
+// las dos semanas -es el máximo- y acá se recorta a una. Por eso el cambio no
+// pide nada: lo que se muestra con 1 ya está en pantalla, es un subconjunto.
+const DIAS_POR_SEMANA = 7;
+
+function IconoSemana() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4.5" width="18" height="16" rx="2" />
+      <path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
+    </svg>
+  );
+}
+
 function IconoPersonas({ dos }: { dos: boolean }) {
   return (
     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -49,22 +63,29 @@ function IconoPersonas({ dos }: { dos: boolean }) {
 // marca el color de la fecha.
 export function EtapasProximas({
   etapas,
-  hasta,
+  cortes,
   activa,
 }: {
   etapas: EtapaProxima[];
-  hasta: string; // dd/mm de corte de la ventana
+  // El dd/mm de corte de cada horizonte. Los calcula el servidor, que es quien
+  // sabe qué día es hoy en Mendoza; acá solo se elige cuál mostrar.
+  cortes: { unaSemana: string; dosSemanas: string };
   // Solo tiene sentido parada en el mes actual: la ventana se cuenta desde
   // HOY, así que mirándola desde un mes anterior mostraría cosas que arrancan
   // después del mes que se está viendo. Ver el comentario de standby abajo.
   activa: boolean;
 }) {
   const [filtro, setFiltro] = useState("todas");
+  // Dos semanas por defecto: es el panorama, y achicarlo es la excepción.
+  const [semanas, setSemanas] = useState(2);
 
+  const dias = semanas * DIAS_POR_SEMANA;
+  const hasta = semanas === 1 ? cortes.unaSemana : cortes.dosSemanas;
+  const enHorizonte = etapas.filter((e) => e.diasRestantes <= dias);
   const visibles =
     filtro === "todas"
-      ? etapas
-      : etapas.filter((e) => String(e.personas) === filtro);
+      ? enHorizonte
+      : enHorizonte.filter((e) => String(e.personas) === filtro);
 
   return (
     // min-w-0 en la raíz: esta card es un grid item, y los grid items arrancan
@@ -87,17 +108,47 @@ export function EtapasProximas({
     >
       <div className="mb-3 flex shrink-0 flex-wrap items-center justify-between gap-2">
         <div className="flex items-baseline gap-1.5">
-          <h2 className="text-base font-semibold text-white">Próximas dos semanas</h2>
+          <h2 className="text-base font-semibold text-white">Próximas etapas</h2>
           {/* La fecha de corte no se muestra en standby: es exactamente la
               mezcla de tiempos que se quiere evitar (un corte futuro al pie de
               un mes pasado). */}
           {activa && <span className="text-xs text-dc-muted">hasta {hasta}</span>}
           <InfoButton>
-            Tareas sin iniciar que arrancan en los próximos 14 días, contados
-            desde hoy. Por eso solo está activa en el mes actual: en un mes
-            anterior queda en standby. El filtro de proyectos sí la modifica.
+            Tareas sin iniciar que arrancan en los próximos {dias} días,
+            contados desde hoy. El botón del calendario cambia el horizonte
+            entre una y dos semanas. Por eso solo está activa en el mes actual:
+            en un mes anterior queda en standby. El filtro de proyectos sí la
+            modifica.
           </InfoButton>
         </div>
+
+        <div className="flex items-center gap-2">
+        {/* Una semana o dos. Mismo gesto que el control de personas de Follow
+            Up: un botón que alterna de un clic, con el número al lado del
+            ícono para leerlo sin abrir nada. El cambio es instantáneo porque
+            no se pide nada -las dos semanas ya están en pantalla y una es un
+            subconjunto de la otra-. */}
+        <button
+          type="button"
+          onClick={() => setSemanas((s) => (s === 2 ? 1 : 2))}
+          disabled={!activa}
+          data-tooltip={
+            activa
+              ? `Mostrar ${semanas === 2 ? "1 semana" : "2 semanas"}`
+              : "Disponible en el mes actual"
+          }
+          aria-label={
+            activa
+              ? `Horizonte: ${semanas} ${semanas === 1 ? "semana" : "semanas"}. Mostrar ${semanas === 2 ? "1 semana" : "2 semanas"}.`
+              : `Horizonte: ${semanas} semanas. Disponible en el mes actual.`
+          }
+          className={`flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-xs tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 disabled:cursor-not-allowed ${
+            activa ? "hover:bg-dc-peri/10" : ""
+          } ${semanas === 2 ? "text-dc-peri" : "text-dc-muted"}`}
+        >
+          <IconoSemana />
+          {semanas}
+        </button>
 
         <div className="inline-flex items-center gap-0.5 rounded-lg border border-dc-line bg-dc-deeper p-0.5">
           {FILTROS.map((f) => (
@@ -126,6 +177,7 @@ export function EtapasProximas({
             </button>
           ))}
         </div>
+        </div>
       </div>
 
       {!activa ? (
@@ -137,8 +189,8 @@ export function EtapasProximas({
         </p>
       ) : visibles.length === 0 ? (
         <p className="text-sm text-dc-muted">
-          {etapas.length === 0
-            ? "No hay etapas que arranquen en los próximos 14 días."
+          {enHorizonte.length === 0
+            ? `No hay etapas que arranquen en los próximos ${dias} días.`
             : "Ninguna coincide con este filtro."}
         </p>
       ) : (

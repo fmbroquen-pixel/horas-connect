@@ -74,10 +74,18 @@ export default async function DashboardPage({
     lte: new Date(hasta + "T00:00:00Z"),
   };
 
-  // Ventana fija hacia adelante de "Próximas dos semanas". Se calcula acá
-  // arriba porque su consulta se une al mismo lote que el resto.
+  // Ventana fija hacia adelante de "Próximas etapas". Se calcula acá arriba
+  // porque su consulta se une al mismo lote que el resto.
+  //
+  // Se consultan SIEMPRE los 14 días, que es el horizonte máximo. La card
+  // ofrece verlos como una semana o como dos, y una semana es un subconjunto
+  // de dos: recortar en el cliente evita una consulta por cada vez que alguien
+  // toca el interruptor.
   const hoyUtc = new Date(hoy + "T00:00:00Z");
+  const en7dias = new Date(hoyUtc.getTime() + 7 * DIA_MS);
   const en14dias = new Date(hoyUtc.getTime() + 14 * DIA_MS);
+  const ddmm = (d: Date) =>
+    `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 
   // Todo en un solo lote. Son consultas independientes y contra una base
   // remota lo que se paga es la ida y vuelta, no el trabajo: en serie, cada
@@ -364,9 +372,7 @@ export default async function DashboardPage({
                 <EtapasProximas
                   etapas={etapasProximas}
                   activa={mesEnCurso}
-                  hasta={`${String(en14dias.getUTCDate()).padStart(2, "0")}/${String(
-                    en14dias.getUTCMonth() + 1,
-                  ).padStart(2, "0")}`}
+                  cortes={{ unaSemana: ddmm(en7dias), dosSemanas: ddmm(en14dias) }}
                 />
               </BloqueRecalculable>
             </div>
