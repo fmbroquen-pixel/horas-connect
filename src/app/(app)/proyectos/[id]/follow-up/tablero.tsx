@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { AgruparModal } from "./agrupar-modal";
 import {
   agruparTareas,
   desagruparTareas,
@@ -93,6 +94,9 @@ function Tablero({
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirmar, setConfirmar] = useState(false);
   const [editando, setEditando] = useState(false);
+  // El diálogo de agrupar. Agrupar pide fechas, así que no se resuelve en la
+  // barra: se abre, se elige el rango y recién ahí se confirma.
+  const [agrupando, setAgrupando] = useState(false);
   const [campo, setCampo] = useState<CampoMasivo>("estado");
   const [valor, setValor] = useState("sin_iniciar");
   const [pending, start] = useTransition();
@@ -101,7 +105,13 @@ function Tablero({
   // Aviso de reprogramación. Ya no hace falta llevar un contador para que dos
   // movimientos seguidos vuelvan a mostrarlo: cada llamada al emisor global es
   // un aviso nuevo, aunque diga exactamente lo mismo.
-  const avisar = (n: number) => {
+  const avisar = (n: number, enGrupo?: number) => {
+    // Mover una tarea agrupada mueve a todas: el aviso lo dice, porque se
+    // movió más de lo que la persona tocó.
+    if (enGrupo && enGrupo > 1) {
+      avisarOk(`Fechas actualizadas en ${enGrupo} tareas del grupo`);
+      return;
+    }
     if (n > 0) {
       avisarOk(`Fechas actualizadas en ${n} tarea${n === 1 ? "" : "s"}`);
     }
@@ -151,6 +161,7 @@ function Tablero({
     setSel(new Set());
     setConfirmar(false);
     setEditando(false);
+    setAgrupando(false);
   };
 
   const cambiarCampo = (c: CampoMasivo) => {
@@ -178,13 +189,25 @@ function Tablero({
     l.tareas.some((t) => sel.has(t.id) && t.grupoId),
   );
 
-  const agrupar = () =>
+  // Las seleccionadas en el orden del plan, para listarlas en el diálogo tal
+  // como se ven en la pantalla.
+  const seleccionadasEnOrden = listas.flatMap((l) =>
+    l.tareas
+      .filter((t) => sel.has(t.id))
+      .map((t) => ({ id: t.id, nombre: t.nombre, fechaInicio: t.fechaInicio })),
+  );
+
+  const agrupar = (inicio: string, fin: string) =>
     start(async () => {
-      const r = await agruparTareas(idsSeleccionados);
+      const r = await agruparTareas(idsSeleccionados, inicio, fin);
       if (r.error) {
         avisarError(r.error);
         return;
       }
+      // Mismo realce que cualquier reprogramación: fuerte en las que se
+      // agruparon -son la causa- y tenue en las que se corrieron detrás.
+      marcarReprogramacion(idsSeleccionados, r.recalculadas ?? []);
+      setAgrupando(false);
       limpiar();
       avisarOk(`${r.agrupadas} tareas agrupadas`);
     });
@@ -213,6 +236,15 @@ function Tablero({
     <div className="flex min-h-0 flex-1 flex-col">
       {/* La barra aparece solo con algo seleccionado; mismo patrón que Time
           Tracking, en el mismo lugar y con las mismas acciones. */}
+      {agrupando && seleccionadasEnOrden.length > 1 && (
+        <AgruparModal
+          tareas={seleccionadasEnOrden}
+          onCancelar={() => setAgrupando(false)}
+          onConfirmar={agrupar}
+          pendiente={pending}
+        />
+      )}
+
       {sel.size > 0 && (
         <div className="mb-3 shrink-0 space-y-2 rounded-xl border border-dc-peri/40 bg-dc-peri/10 px-4 py-2 text-sm">
           <div className="flex flex-wrap items-center gap-3">
@@ -241,7 +273,7 @@ function Tablero({
             {sel.size > 1 && (
               <BotonIcono
                 label="Agrupar"
-                onClick={agrupar}
+                onClick={() => setAgrupando(true)}
                 path="M3 7l9-4 9 4-9 4-9-4Z M3 12l9 4 9-4 M3 17l9 4 9-4"
               />
             )}

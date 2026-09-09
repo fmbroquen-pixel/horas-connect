@@ -11,6 +11,7 @@ import {
   DIAS_SEMANA_HABIL,
   diasHabilesEntre,
   esDiaHabil,
+  semanaDe,
   fechaDesdeISO,
   finTrasDiasHabiles,
   hoyUTC,
@@ -518,6 +519,26 @@ export async function actualizarRangoTarea(
   // hábiles es la que manda sobre la cadena.
   const finReal = finTrasDiasHabiles(fechaInicio, duracionDias);
 
+  // Una tarea agrupada no se mueve sola: el grupo comparte un solo rango, así
+  // que tocar la fecha de cualquier miembro es tocar la del grupo entero. Es
+  // la contracara de agrupar -"se mueven juntas"- y sin esto el grupo se
+  // partía en cuanto alguien corría una de sus tareas.
+  const clienteId = tarea.lista.clienteId;
+  const delGrupo = tarea.grupoId
+    ? (
+        await prisma.tareaRoadmap.findMany({
+          where: { ...tareasVivas(), grupoId: tarea.grupoId },
+          select: { id: true },
+        })
+      ).map((t) => t.id)
+    : [tareaId];
+
+  if (tarea.grupoId) {
+    // Al grupo se le exige lo mismo que al agruparlo: una sola semana.
+    const rango = validarRangoDeGrupo(inicioISO, finISO);
+    if ("error" in rango) return { error: rango.error, recalculadas: [] };
+  }
+
   // Si las fechas quedan iguales a las que ya tenía, esta tarea no entra en la
   // cuenta: el toast diría "1 tarea" sin que nada se haya movido.
   const cambioLaEditada =
@@ -525,21 +546,73 @@ export async function actualizarRangoTarea(
     tarea.fechaFin.getTime() !== finReal.getTime();
 
   const dependientes = await enSecuencia(async (tx) => {
-    await tx.tareaRoadmap.update({
-      where: { id: tareaId },
+    await tx.tareaRoadmap.updateMany({
+      where: { id: { in: delGrupo } },
       data: { fechaInicio, duracionDias, fechaFin: finReal },
     });
 
-    // Ancla en esta tarea: lo anterior queda quieto, lo posterior se
-    // reencadena. El ancla nunca vuelve entre las cambiadas —ya quedó con sus
-    // fechas nuevas y compara igual—, así que se suma aparte.
-    return resecuenciar(tarea.lista.clienteId, tareaId, undefined, tx);
+    // Ancla en la tarea editada, o en el primero del grupo si está agrupada:
+    // lo anterior queda quieto y lo posterior se reencadena. El ancla nunca
+    // vuelve entre las cambiadas —ya quedó con sus fechas nuevas y compara
+    // igual—, así que se suma aparte.
+    const ancla = tarea.grupoId
+      ? await primeroDelGrupo(clienteId, new Set(delGrupo), tx)
+      : tareaId;
+    return resecuenciar(clienteId, ancla, undefined, tx);
   });
 
   revalidar();
+  const propias = cambioLaEditada ? delGrupo : delGrupo.filter((id) => id !== tareaId);
   return {
-    recalculadas: [...(cambioLaEditada ? [tareaId] : []), ...dependientes],
+    recalculadas: [...propias, ...dependientes.filter((id) => !delGrupo.includes(id))],
+    enGrupo: tarea.grupoId ? delGrupo.length : undefined,
   };
+}
+
+// El rango que ocupa una tarea agrupada, validado.
+//
+// Un grupo entra en UNA semana: es la regla base del plan -una tarea, una
+// semana- y agrupar no la afloja, la comparte. Un rango que cruza semanas
+// pondría al grupo a caballo de dos slots y la tarea siguiente no sabría
+// dónde arrancar.
+function validarRangoDeGrupo(
+  inicioISO: string,
+  finISO: string,
+): { error: string } | { fechaInicio: Date; fechaFin: Date; duracionDias: number } {
+  const patron = /^\d{4}-\d{2}-\d{2}$/;
+  if (!patron.test(inicioISO) || !patron.test(finISO)) {
+    return { error: "Fecha inválida." };
+  }
+  const fechaInicio = fechaDesdeISO(inicioISO);
+  const fechaFin = fechaDesdeISO(finISO);
+  if (fechaFin < fechaInicio) {
+    return { error: "El fin no puede ser anterior al inicio." };
+  }
+  if (!esDiaHabil(fechaInicio) || !esDiaHabil(fechaFin)) {
+    return { error: "Las tareas solo pueden empezar y terminar en días hábiles." };
+  }
+  if (semanaDe(fechaInicio).getTime() !== semanaDe(fechaFin).getTime()) {
+    return {
+      error: "Un grupo entra en una sola semana: elegí un inicio y un fin de la misma.",
+    };
+  }
+  return {
+    fechaInicio,
+    fechaFin,
+    duracionDias: Math.max(1, diasHabilesEntre(fechaInicio, fechaFin)),
+  };
+}
+
+// El primer miembro del grupo en el orden del plan. Es el ancla del
+// reencadenado: lo anterior queda quieto y el grupo entero se replanifica
+// desde ahí.
+async function primeroDelGrupo(
+  clienteId: string,
+  ids: Set<string>,
+  db: DB = prisma,
+): Promise<string | undefined> {
+  const enOrden = await getTareasEnOrden(clienteId, db);
+  return enOrden.find((t) => ids.has(t.id))?.id;
 }
 
 // ── Agrupar ───────────────────────────────────────────────────────────────
@@ -547,13 +620,22 @@ export async function actualizarRangoTarea(
 // Agrupa las tareas elegidas: pasan a moverse como una unidad al recalcular la
 // secuencia, conservando la relación temporal que tengan en ese momento.
 //
-// No recalcula nada al agrupar. Agrupar declara cómo se van a mover de ahora en
-// más, no las mueve: si moviera, la acción de "juntarlas" les cambiaría las
-// fechas de entrada y nadie pidió eso.
+// Agrupar es ponerlas en la MISMA semana, con el mismo inicio y el mismo fin.
+//
+// Antes solo escribía el grupoId y no tocaba las fechas: declaraba cómo se iban
+// a mover pero las dejaba donde estaban. Con el plan en slots semanales eso no
+// juntaba nada -dos tareas consecutivas quedaban a una semana de distancia y el
+// grupo conservaba justamente esa distancia-, así que agrupar no se notaba
+// nunca. Ahora las fechas son parte de la decisión y se piden en el diálogo.
 export async function agruparTareas(
   ids: string[],
-): Promise<{ error?: string; agrupadas?: number }> {
+  inicioISO: string,
+  finISO: string,
+): Promise<{ error?: string; agrupadas?: number; recalculadas?: string[] }> {
   if (ids.length < 2) return { error: "Elegí al menos dos tareas para agrupar." };
+
+  const rango = validarRangoDeGrupo(inicioISO, finISO);
+  if ("error" in rango) return { error: rango.error };
 
   const { tareas, actor } = await tareasConAcceso(ids);
   if (!actor || tareas.length < 2) {
@@ -565,14 +647,39 @@ export async function agruparTareas(
   // agrandar el grupo, no armar uno nuevo que deje a las viejas afuera.
   const grupoExistente = tareas.find((t) => t.grupoId)?.grupoId;
   const grupoId = grupoExistente ?? randomUUID();
+  const clienteId = tareas[0].lista.clienteId;
 
-  await prisma.tareaRoadmap.updateMany({
-    where: { id: { in: tareas.map((t) => t.id) } },
-    data: { grupoId },
+  // Al grupo entran también los miembros viejos que no estaban seleccionados:
+  // el rango es del GRUPO, y dejar a la mitad en otra semana lo partiría.
+  const previos = grupoExistente
+    ? await prisma.tareaRoadmap.findMany({
+        where: { ...tareasVivas(), grupoId: grupoExistente },
+        select: { id: true },
+      })
+    : [];
+  const delGrupo = new Set([...tareas.map((t) => t.id), ...previos.map((t) => t.id)]);
+
+  const recalculadas = await enSecuencia(async (tx) => {
+    await tx.tareaRoadmap.updateMany({
+      where: { id: { in: [...delGrupo] } },
+      data: {
+        grupoId,
+        fechaInicio: rango.fechaInicio,
+        fechaFin: rango.fechaFin,
+        duracionDias: rango.duracionDias,
+      },
+    });
+    // Lo que viene después del grupo se corre: el grupo pasa a ocupar una sola
+    // semana, y esa semana puede no ser la que ocupaba antes.
+    const ancla = await primeroDelGrupo(clienteId, delGrupo, tx);
+    return resecuenciar(clienteId, ancla, undefined, tx);
   });
 
   revalidar();
-  return { agrupadas: tareas.length };
+  return {
+    agrupadas: delGrupo.size,
+    recalculadas: [...delGrupo, ...recalculadas.filter((id) => !delGrupo.has(id))],
+  };
 }
 
 // Saca del grupo a las tareas elegidas. Las fechas no se tocan y no se
@@ -676,7 +783,13 @@ function anclaDelCambio(antes: string[], despues: string[]): string | undefined 
 // Devuelve los ids de las tareas cuyas fechas cambiaron: la pantalla las
 // resalta un momento y avisa cuántas fueron. Sin ese dato, reprogramar veinte
 // tareas de golpe se ve igual que no hacer nada.
-export type Reprogramacion = { recalculadas: string[] };
+export type Reprogramacion = {
+  recalculadas: string[];
+  // Cuántas tareas del grupo se movieron juntas, si la edición cayó sobre una
+  // agrupada. El aviso lo dice con otras palabras y quien lo lee tiene que
+  // saber que se movió más de lo que tocó.
+  enGrupo?: number;
+};
 
 export async function reordenarListas(
   clienteId: string,

@@ -78,6 +78,18 @@ export function finDeSemanaHabil(lunes: Date): Date {
   return cur;
 }
 
+// A cuántos días del lunes cae esta fecha: lunes 0 … viernes 4. Un fin de
+// semana se recorta al viernes; una tarea no puede empezar ni terminar ahí.
+export function offsetEnLaSemana(fecha: Date): number {
+  return Math.min(4, Math.max(0, (fecha.getUTCDay() + 6) % 7));
+}
+
+export function sumarDias(desde: Date, dias: number): Date {
+  const cur = new Date(desde.getTime());
+  cur.setUTCDate(cur.getUTCDate() + dias);
+  return cur;
+}
+
 export function sumarSemanas(lunes: Date, semanas: number): Date {
   const cur = new Date(lunes.getTime());
   cur.setUTCDate(cur.getUTCDate() + semanas * 7);

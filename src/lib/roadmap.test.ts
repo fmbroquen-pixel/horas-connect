@@ -293,3 +293,62 @@ describe("planificar con grupos explícitos", () => {
     expect(iso(r[0].fechaInicio)).toBe("2026-07-20");
   });
 });
+
+// ── El rango de un grupo viaja con él ──────────────────────────────────────
+//
+// Agrupar es decidir que dos tareas van juntas Y cuándo: comparten un inicio y
+// un fin dentro de una misma semana. Ese tramo es una decisión de una persona,
+// así que el scheduler lo lleva consigo al desplazar el grupo en vez de
+// devolverlo a lunes-viernes.
+describe("planificar · el tramo de un grupo se conserva", () => {
+  const t = (inicio: string, fin: string, grupoId?: string) => ({
+    fechaInicio: d(inicio),
+    fechaFin: d(fin),
+    grupoId,
+  });
+
+  it("un grupo de martes a miércoles sigue siendo martes a miércoles al moverse", () => {
+    const tareas = [
+      t("2026-07-06", "2026-07-10"), // suelta, se recalcula a la semana del 06
+      t("2026-07-21", "2026-07-22", "g1"), // mar-mié de la semana del 20
+      t("2026-07-21", "2026-07-22", "g1"),
+    ];
+    const r = planificar(tareas, 0, d("2026-07-06"));
+    // El grupo baja a la semana del 13: martes 14 y miércoles 15.
+    expect(plan(r[1])).toEqual(["2026-07-14", "2026-07-15"]);
+    expect(plan(r[2])).toEqual(["2026-07-14", "2026-07-15"]);
+    expect(r[1].duracionDias).toBe(2);
+  });
+
+  it("una tarea SUELTA no conserva su tramo: vuelve a la semana entera", () => {
+    // La diferencia es el grupo. Sin él, la regla base manda.
+    const r = planificar([t("2026-07-21", "2026-07-22")], 0, d("2026-07-13"));
+    expect(plan(r[0])).toEqual(["2026-07-13", "2026-07-17"]);
+    expect(r[0].duracionDias).toBe(5);
+  });
+
+  it("el grupo ocupa UNA semana y la siguiente arranca la posterior", () => {
+    // Es lo que hace que agrupar sirva: dos tareas dejan de gastar dos semanas.
+    const tareas = [
+      t("2026-07-06", "2026-07-10"),
+      t("2026-07-20", "2026-07-24", "g1"),
+      t("2026-07-20", "2026-07-24", "g1"),
+      t("2026-08-10", "2026-08-14"),
+    ];
+    const r = planificar(tareas, 0, d("2026-07-06"));
+    expect(iso(r[1].fechaInicio)).toBe("2026-07-13");
+    expect(iso(r[2].fechaInicio)).toBe("2026-07-13");
+    expect(iso(r[3].fechaInicio)).toBe("2026-07-20"); // no el 27
+  });
+
+  it("un grupo de un solo día conserva el día dentro de la semana", () => {
+    const tareas = [
+      t("2026-07-06", "2026-07-10"),
+      t("2026-07-23", "2026-07-23", "g1"), // jueves
+      t("2026-07-23", "2026-07-23", "g1"),
+    ];
+    const r = planificar(tareas, 0, d("2026-07-06"));
+    expect(plan(r[1])).toEqual(["2026-07-16", "2026-07-16"]); // jueves de la semana del 13
+    expect(r[1].duracionDias).toBe(1);
+  });
+});

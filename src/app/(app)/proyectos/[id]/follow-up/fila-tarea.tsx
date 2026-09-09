@@ -89,7 +89,7 @@ export function FilaTareaRoadmap({
   onToggle: (id: string) => void;
   // Cuántas tareas quedaron reprogramadas al editar estas fechas. Sube hasta
   // el tablero, que es el que muestra el toast: hay uno solo para la pantalla.
-  onReprogramadas?: (cantidad: number) => void;
+  onReprogramadas?: (cantidad: number, enGrupo?: number) => void;
   // Props de arrastre para la celda del checkbox. Las pone la lista, que es
   // la que conoce el orden completo de sus tareas.
   agarre?: {
@@ -169,8 +169,10 @@ export function FilaTareaRoadmap({
   const guardarRango = async (r: { inicio: string; fin: string }) => {
     const res = await actualizarRangoTarea(tarea.id, r.inicio, r.fin);
     if (res.error) return res;
+    // La editada lleva el realce fuerte -es la causa- y el resto del grupo,
+    // junto con lo que se corrió detrás, el tenue.
     marcarReprogramacion([tarea.id], res.recalculadas);
-    onReprogramadas?.(res.recalculadas.length);
+    onReprogramadas?.(res.recalculadas.length, res.enGrupo);
     return res;
   };
 

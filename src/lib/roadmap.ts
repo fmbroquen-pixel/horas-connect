@@ -1,7 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import {
+  DIAS_SEMANA_HABIL,
   diasHabilesEntre,
   finDeSemanaHabil,
+  offsetEnLaSemana,
+  sumarDias,
   hoyUTC,
   semanaDe,
   semanasEntre,
@@ -207,12 +210,41 @@ export function planificar(
         : semanaDe(inicioDesde);
     }
 
-    const fin = finDeSemanaHabil(semana);
-    plan.push({ fechaInicio: semana, fechaFin: fin, duracionDias: 5 });
+    plan.push(enLaSemana(semana, t));
     recordarAncla(t, semana);
     ocupar(semana);
   }
   return plan;
+}
+
+// Dónde cae una tarea DENTRO de la semana que le tocó.
+//
+// Por defecto la ocupa entera, de lunes a viernes: es la regla base.
+//
+// Una tarea AGRUPADA es la excepción. Su tramo -martes a miércoles, pongamos-
+// lo eligió una persona en el diálogo de agrupar, y viaja con ella cuando el
+// grupo se desplaza. Sin esto, el primer recálculo devolvía al grupo a lunes-
+// viernes y el rango elegido no sobrevivía a que se moviera algo anterior.
+//
+// El fin nunca queda antes del inicio: agrupar valida que las dos fechas caigan
+// en la misma semana, pero esta función es la última línea y no se apoya en eso.
+function enLaSemana(lunes: Date, t: TareaPlanificable): Programada {
+  if (!t.grupoId || !t.fechaInicio || !t.fechaFin) {
+    return {
+      fechaInicio: lunes,
+      fechaFin: finDeSemanaHabil(lunes),
+      duracionDias: DIAS_SEMANA_HABIL,
+    };
+  }
+  const desdeOffset = offsetEnLaSemana(t.fechaInicio);
+  const hastaOffset = Math.max(desdeOffset, offsetEnLaSemana(t.fechaFin));
+  const fechaInicio = sumarDias(lunes, desdeOffset);
+  const fechaFin = sumarDias(lunes, hastaOffset);
+  return {
+    fechaInicio,
+    fechaFin,
+    duracionDias: diasHabilesEntre(fechaInicio, fechaFin),
+  };
 }
 
 // ── Persistencia ──────────────────────────────────────────────────────────

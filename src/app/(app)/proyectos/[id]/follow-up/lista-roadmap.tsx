@@ -51,7 +51,7 @@ export function ListaRoadmapCard({
   arrastrandoAlgo?: boolean;
   // Avisa cuántas tareas se reprogramaron, para que el tablero muestre el
   // toast: es uno solo para toda la pantalla.
-  onReprogramadas?: (cantidad: number) => void;
+  onReprogramadas?: (cantidad: number, enGrupo?: number) => void;
   // Se llegó a esta lista desde el Home: arranca desplegada, o la tarea
   // buscada quedaría escondida detrás del plegado.
   abrirPorDefecto?: boolean;
