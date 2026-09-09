@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { InfoButton } from "@/components/info-button";
+import { GrupoSegmentado } from "@/components/ui/grupo-segmentado";
 
 export type EtapaProxima = {
   id: string;
@@ -29,14 +30,10 @@ const FILTROS = [
 // pide nada: lo que se muestra con 1 ya está en pantalla, es un subconjunto.
 const DIAS_POR_SEMANA = 7;
 
-function IconoSemana() {
-  return (
-    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="4.5" width="18" height="16" rx="2" />
-      <path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
-    </svg>
-  );
-}
+const HORIZONTES = [
+  { valor: "1", contenido: "1 semana", etiqueta: "Próximos 7 días" },
+  { valor: "2", contenido: "2 semanas", etiqueta: "Próximos 14 días" },
+] as const;
 
 function IconoPersonas({ dos }: { dos: boolean }) {
   return (
@@ -77,10 +74,10 @@ export function EtapasProximas({
 }) {
   const [filtro, setFiltro] = useState("todas");
   // Dos semanas por defecto: es el panorama, y achicarlo es la excepción.
-  const [semanas, setSemanas] = useState(2);
+  const [semanas, setSemanas] = useState<"1" | "2">("2");
 
-  const dias = semanas * DIAS_POR_SEMANA;
-  const hasta = semanas === 1 ? cortes.unaSemana : cortes.dosSemanas;
+  const dias = Number(semanas) * DIAS_POR_SEMANA;
+  const hasta = semanas === "1" ? cortes.unaSemana : cortes.dosSemanas;
   const enHorizonte = etapas.filter((e) => e.diasRestantes <= dias);
   const visibles =
     filtro === "todas"
@@ -115,68 +112,47 @@ export function EtapasProximas({
           {activa && <span className="text-xs text-dc-muted">hasta {hasta}</span>}
           <InfoButton>
             Tareas sin iniciar que arrancan en los próximos {dias} días,
-            contados desde hoy. El botón del calendario cambia el horizonte
-            entre una y dos semanas. Por eso solo está activa en el mes actual:
+            contados desde hoy, y el control de semanas cambia ese horizonte.
+            Por eso solo está activa en el mes actual:
             en un mes anterior queda en standby. El filtro de proyectos sí la
             modifica.
           </InfoButton>
         </div>
 
-        <div className="flex items-center gap-2">
-        {/* Una semana o dos. Mismo gesto que el control de personas de Follow
-            Up: un botón que alterna de un clic, con el número al lado del
-            ícono para leerlo sin abrir nada. El cambio es instantáneo porque
-            no se pide nada -las dos semanas ya están en pantalla y una es un
-            subconjunto de la otra-. */}
-        <button
-          type="button"
-          onClick={() => setSemanas((s) => (s === 2 ? 1 : 2))}
-          disabled={!activa}
-          data-tooltip={
-            activa
-              ? `Mostrar ${semanas === 2 ? "1 semana" : "2 semanas"}`
-              : "Disponible en el mes actual"
-          }
-          aria-label={
-            activa
-              ? `Horizonte: ${semanas} ${semanas === 1 ? "semana" : "semanas"}. Mostrar ${semanas === 2 ? "1 semana" : "2 semanas"}.`
-              : `Horizonte: ${semanas} semanas. Disponible en el mes actual.`
-          }
-          className={`flex shrink-0 items-center gap-1 rounded-md px-1.5 py-1 text-xs tabular-nums transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dc-peri/40 disabled:cursor-not-allowed ${
-            activa ? "hover:bg-dc-peri/10" : ""
-          } ${semanas === 2 ? "text-dc-peri" : "text-dc-muted"}`}
-        >
-          <IconoSemana />
-          {semanas}
-        </button>
-
-        <div className="inline-flex items-center gap-0.5 rounded-lg border border-dc-line bg-dc-deeper p-0.5">
-          {FILTROS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              onClick={() => setFiltro(f.value)}
-              disabled={!activa}
-              aria-pressed={filtro === f.value}
-              data-tooltip={activa ? f.label : "Disponible en el mes actual"}
-              aria-label={f.label}
-              className={`flex items-center gap-1 rounded-md px-2 py-1 text-xs tabular-nums transition disabled:cursor-not-allowed ${
-                filtro === f.value
-                  ? "bg-dc-peri/20 text-dc-text"
-                  : `text-dc-muted ${activa ? "hover:text-dc-text" : ""}`
-              }`}
-            >
-              {f.personas === 0 ? (
-                "Todas"
-              ) : (
-                <>
-                  <IconoPersonas dos={f.personas === 2} />
-                  {f.personas}
-                </>
-              )}
-            </button>
-          ))}
-        </div>
+        {/* Los dos controles de la card, con la misma forma: qué ventana de
+            tiempo se mira y qué tareas de esa ventana. Antes el horizonte era
+            un botón que alternaba, y un botón así no dice cuáles son los
+            estados posibles ni en cuál está: el "2" se leía igual como "estoy
+            en dos semanas" que como "tocá para ir a dos". */}
+        <div className="flex flex-wrap items-center gap-2">
+          <GrupoSegmentado
+            ariaLabel="Horizonte"
+            valor={semanas}
+            opciones={HORIZONTES.map((h) => ({ ...h }))}
+            onCambiar={setSemanas}
+            deshabilitado={!activa}
+            tooltipDeshabilitado="Disponible en el mes actual"
+          />
+          <GrupoSegmentado
+            ariaLabel="Personas por tarea"
+            valor={filtro}
+            opciones={FILTROS.map((f) => ({
+              valor: f.value,
+              etiqueta: f.label,
+              contenido:
+                f.personas === 0 ? (
+                  "Todas"
+                ) : (
+                  <>
+                    <IconoPersonas dos={f.personas === 2} />
+                    {f.personas}
+                  </>
+                ),
+            }))}
+            onCambiar={setFiltro}
+            deshabilitado={!activa}
+            tooltipDeshabilitado="Disponible en el mes actual"
+          />
         </div>
       </div>
 
