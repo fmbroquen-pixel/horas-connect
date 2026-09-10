@@ -106,6 +106,23 @@ export function listasPorDefecto(duracionMeses: number | null): Plantilla[] {
   ];
 }
 
+// Cómo se nombra una etapa cuando se la muestra: "Q3 · Primera Mensual".
+//
+// Vive al lado de `listasPorDefecto` a propósito: es la misma función la que
+// PONE el prefijo "Tablero" al crear las listas, así que también tiene que ser
+// la que sepa sacarlo al mostrarlas. En el Home la etapa entra en una columna
+// angosta y "Tablero" se repite en todas las opciones del desplegable: ocupa
+// el ancho que necesita el nombre de la tarea sin distinguir nada.
+//
+// Es SOLO presentación. En la base la lista se sigue llamando "Tablero Q3", y
+// una lista que el usuario nombró a mano se muestra tal cual.
+export function etiquetaDeEtapa(lista: string, tarea: string): string {
+  const sinPrefijo = lista.replace(/^Tablero\s+/i, "").trim();
+  // Si al sacar el prefijo no queda nada -una lista llamada solo "Tablero"-
+  // se deja el nombre original: mejor repetido que vacío.
+  return `${sinPrefijo || lista} · ${tarea}`;
+}
+
 // ── Planificación secuencial ──────────────────────────────────────────────
 
 export type TareaPlanificable = {

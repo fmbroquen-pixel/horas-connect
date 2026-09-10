@@ -112,12 +112,23 @@ export function TagPopover({
             ? `inline-flex ${puntoGrande ? "h-8 w-8" : "h-7 w-7"} items-center justify-center rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
                 soloLectura ? "cursor-not-allowed opacity-50" : "hover:bg-dc-line/60"
               }`
-            : `inline-flex w-full items-center justify-center gap-1.5 truncate rounded-full px-2.5 py-1 text-xs outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
+            : // Con etiqueta el tag es un control, y tiene que verse como uno:
+              // borde propio, algo más de aire y un chevron. Sin eso se leía
+              // como un badge de estado y nadie descubría que se podía tocar.
+              // El ancho no cambia -sigue siendo w-full dentro de su columna-
+              // y el nombre trunca, así que nada se desborda.
+              `inline-flex w-full items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
                 soloLectura
-                  ? "cursor-not-allowed bg-dc-line/60 text-dc-muted opacity-60"
+                  ? "cursor-not-allowed border-dc-line bg-dc-line/60 text-dc-muted opacity-60"
                   : seleccionada
-                    ? "bg-dc-peri/15 text-dc-peri hover:bg-dc-peri/25"
-                    : "bg-dc-line text-dc-muted hover:bg-dc-line/70"
+                    ? `bg-dc-peri/15 text-dc-peri hover:border-dc-peri/70 hover:bg-dc-peri/25 ${
+                        open ? "border-dc-peri/70 bg-dc-peri/25" : "border-dc-peri/40"
+                      }`
+                    : // Sin etapa cargada el borde va punteado: dice que falta
+                      // algo, no que el control esté apagado.
+                      `border-dashed bg-dc-deeper text-dc-muted hover:border-dc-peri/50 hover:bg-dc-peri/10 hover:text-dc-peri ${
+                        open ? "border-dc-peri/50 text-dc-peri" : "border-dc-muted/40"
+                      }`
               }`
         }
       >
@@ -154,6 +165,22 @@ export function TagPopover({
               />
             )}
             <span className="truncate">{etiqueta}</span>
+            {!soloLectura && (
+              <svg
+                viewBox="0 0 24 24"
+                width="12"
+                height="12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
+              >
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            )}
           </>
         )}
       </button>
@@ -177,7 +204,7 @@ export function TagPopover({
                     }}
                     className={`flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition ${
                       activa
-                        ? "bg-dc-peri/20 text-white"
+                        ? "bg-dc-peri/15 text-white ring-1 ring-inset ring-dc-peri/40"
                         : "text-dc-muted hover:bg-dc-line/60 hover:text-dc-text"
                     }`}
                   >

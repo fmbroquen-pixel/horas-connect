@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { getEtapasPorProyecto } from "@/lib/etapa-actual";
+import { etiquetaDeEtapa } from "@/lib/roadmap";
 import { FilaProyectoEstado } from "./fila-proyecto-estado";
 
 // Semáforo de proyectos: lista ejecutiva dentro de una card (sin tabla, sin
@@ -62,7 +63,7 @@ export async function EstadoProyectos({ clienteIds }: { clienteIds: string[] }) 
                 etapaId={etapas[c.id]?.actual?.id ?? ""}
                 etapas={(etapas[c.id]?.opciones ?? []).map((t) => ({
                   value: t.id,
-                  label: `${t.lista} · ${t.nombre}`,
+                  label: etiquetaDeEtapa(t.lista, t.nombre),
                 }))}
               />
             ))}

@@ -5,8 +5,13 @@ import { describe, expect, it, vi } from "vitest";
 // reemplaza por un objeto vacío en vez de levantar una conexión.
 vi.mock("@/lib/prisma", () => ({ prisma: {} }));
 
-const { PLANTILLA_ONBOARDING, cantidadTrimestres, listasPorDefecto, planificar } =
-  await import("./roadmap");
+const {
+  PLANTILLA_ONBOARDING,
+  cantidadTrimestres,
+  etiquetaDeEtapa,
+  listasPorDefecto,
+  planificar,
+} = await import("./roadmap");
 const { fechaDesdeISO, isoDesdeFecha } = await import("./dias-habiles");
 
 const d = fechaDesdeISO;
@@ -167,6 +172,26 @@ describe("listasPorDefecto", () => {
     for (const lista of listasPorDefecto(10)) {
       expect(lista.tareas.length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("etiquetaDeEtapa", () => {
+  it("saca el prefijo Tablero que pone listasPorDefecto", () => {
+    expect(etiquetaDeEtapa("Tablero Q3", "Primera Mensual")).toBe(
+      "Q3 · Primera Mensual",
+    );
+  });
+
+  it("deja intacta una lista que no lo lleva", () => {
+    expect(etiquetaDeEtapa("Onboarding", "Kickoff")).toBe("Onboarding · Kickoff");
+  });
+
+  it("no toca un nombre que apenas contiene la palabra", () => {
+    expect(etiquetaDeEtapa("Pre Tablero", "Kickoff")).toBe("Pre Tablero · Kickoff");
+  });
+
+  it("conserva el nombre si sacarlo lo dejaría vacío", () => {
+    expect(etiquetaDeEtapa("Tablero", "Kickoff")).toBe("Tablero · Kickoff");
   });
 });
 
