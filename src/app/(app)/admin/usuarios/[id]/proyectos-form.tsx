@@ -9,7 +9,7 @@ import {
 } from "../constantes";
 import { avisarOk } from "@/components/ui/avisos";
 import { Modal } from "@/components/ui/modal";
-import { BTN_PRIMARY, BTN_SECONDARY } from "@/lib/ui";
+import { BTN_PRIMARY, BTN_SECONDARY, GLOW_PERI } from "@/lib/ui";
 import { BotonGuardarIcono } from "@/components/ui/acciones-fila";
 import { useSeccionGuardable } from "@/components/guardado-pagina";
 
@@ -265,7 +265,7 @@ export function ProyectosForm({
                   : deshabilitado
                   ? "cursor-not-allowed border-dc-line/60 text-dc-muted opacity-50"
                   : marcado
-                    ? "border-dc-peri bg-dc-peri/12 text-dc-text shadow-[0_0_0_1px_rgba(139,140,255,0.35),0_0_14px_rgba(139,140,255,0.18)]"
+                    ? `border-dc-peri bg-dc-peri/12 text-dc-text ${GLOW_PERI}`
                     : "border-dc-line text-dc-text hover:border-dc-peri/60 hover:bg-dc-line/25"
               }`}
             >

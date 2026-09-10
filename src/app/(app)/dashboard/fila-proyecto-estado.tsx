@@ -8,6 +8,7 @@ import { OPCIONES_SEMAFORO, COLOR_SEMAFORO } from "../proyectos/constantes";
 import { TagPopover, type OpcionTag } from "./tag-popover";
 import { CambioEtapaModal } from "./cambio-etapa-modal";
 import { MOTIVO_INACTIVO } from "@/lib/inactivo";
+import { LINK_FILA } from "@/lib/ui";
 
 const OPCIONES_SEMAFORO_TAG: OpcionTag[] = OPCIONES_SEMAFORO.map((o) => ({
   ...o,
@@ -87,29 +88,15 @@ export function FilaProyectoEstado({
 
   return (
     <div className="flex items-center gap-3 py-2.5">
-      {/* Columna 1/3: el proyecto se ve y se comporta como un acceso (fondo
-          al hover, acento y chevron), pero como inline-flex centrado no
-          ocupa más ancho que su contenido. */}
+      {/* Columna 1/3: el proyecto NAVEGA, así que usa el patrón de fila
+          navegable y no el de selector: texto limpio en reposo, y el área
+          -la columna entera- se revela al pasar o al llegar con el teclado. */}
       <div className="flex min-w-0 flex-1 justify-center">
         <Link
           href={`/proyectos/${id}`}
-          className="group inline-flex max-w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-dc-text transition hover:bg-dc-peri/10 hover:text-dc-peri"
+          className={`${LINK_FILA} flex w-full min-w-0 justify-center px-2 py-1.5 text-sm font-semibold text-dc-text hover:text-white`}
         >
           <span className="truncate">{nombre}</span>
-          <svg
-            viewBox="0 0 24 24"
-            width="14"
-            height="14"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-            className="shrink-0 text-dc-muted opacity-0 transition group-hover:translate-x-0.5 group-hover:text-dc-peri group-hover:opacity-100"
-          >
-            <path d="M9 18l6-6-6-6" />
-          </svg>
         </Link>
       </div>
       {/* Columna 2/3: el semáforo es solo el punto. Ya no necesita el ancho de
@@ -127,15 +114,17 @@ export function FilaProyectoEstado({
           motivoSoloLectura={MOTIVO_INACTIVO}
         />
       </div>
-      {/* Columna 3/3: etapa centrada con ancho de tag acotado. */}
+      {/* Columna 3/3: la etapa ELIGE, así que es una pastilla selector con
+          el ancho acotado de siempre. */}
       <div className="flex min-w-0 flex-1 justify-center">
         <div className="w-full max-w-[13rem]">
           <TagPopover
             valor={etapaId}
             opciones={etapas}
-            placeholder="-"
+            placeholder="Sin etapa"
             onElegir={elegirEtapa}
             ariaLabel={`Etapa de ${nombre}`}
+            tooltip="Cambiar etapa actual"
             anchoMenu="w-56"
             soloLectura={!activo}
             motivoSoloLectura={MOTIVO_INACTIVO}

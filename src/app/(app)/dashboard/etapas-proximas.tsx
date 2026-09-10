@@ -4,6 +4,7 @@ import Link from "next/link";
 import { InfoButton } from "@/components/info-button";
 import { BotonCiclico } from "@/components/ui/boton-ciclico";
 import { useCiclo } from "@/components/ui/usar-ciclo";
+import { LINK_FILA } from "@/lib/ui";
 
 export type EtapaProxima = {
   id: string;
@@ -194,7 +195,7 @@ export function EtapasProximas({
                   <li key={e.id}>
                     <Link
                       href={`/proyectos/${e.clienteId}/follow-up?lista=${e.listaId}&tarea=${e.id}`}
-                      className="flex items-center justify-between gap-3 rounded-lg px-1 py-2 text-sm transition hover:bg-dc-peri/10"
+                      className={`${LINK_FILA} flex items-center justify-between gap-3 px-1 py-2 text-sm`}
                     >
                       <span className="min-w-0">
                         <span className="block truncate text-dc-text">{e.tarea}</span>

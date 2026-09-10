@@ -3,6 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { POPOVER_FLOTANTE, usePopoverFlotante } from "@/components/ui/popover-flotante";
+import {
+  PILL_SELECTOR,
+  PILL_SELECTOR_ABIERTO,
+  PILL_SELECTOR_ON,
+  PILL_SELECTOR_SOLO_LECTURA,
+  PILL_SELECTOR_VACIO,
+} from "@/lib/ui";
 
 export type OpcionTag = { value: string; label: string; dot?: string };
 
@@ -112,23 +119,17 @@ export function TagPopover({
             ? `inline-flex ${puntoGrande ? "h-8 w-8" : "h-7 w-7"} items-center justify-center rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
                 soloLectura ? "cursor-not-allowed opacity-50" : "hover:bg-dc-line/60"
               }`
-            : // Con etiqueta el tag es un control, y tiene que verse como uno:
-              // borde propio, algo más de aire y un chevron. Sin eso se leía
-              // como un badge de estado y nadie descubría que se podía tocar.
-              // El ancho no cambia -sigue siendo w-full dentro de su columna-
-              // y el nombre trunca, así que nada se desborda.
-              `inline-flex w-full items-center justify-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
+            : // Con etiqueta el tag es un selector, y tiene que verse como
+              // uno aunque nadie lo esté tocando: es el patrón compartido de
+              // pastilla que elige (lib/ui), no un estilo propio.
+              `${PILL_SELECTOR} ${
                 soloLectura
-                  ? "cursor-not-allowed border-dc-line bg-dc-line/60 text-dc-muted opacity-60"
-                  : seleccionada
-                    ? `bg-dc-peri/15 text-dc-peri hover:border-dc-peri/70 hover:bg-dc-peri/25 ${
-                        open ? "border-dc-peri/70 bg-dc-peri/25" : "border-dc-peri/40"
-                      }`
-                    : // Sin etapa cargada el borde va punteado: dice que falta
-                      // algo, no que el control esté apagado.
-                      `border-dashed bg-dc-deeper text-dc-muted hover:border-dc-peri/50 hover:bg-dc-peri/10 hover:text-dc-peri ${
-                        open ? "border-dc-peri/50 text-dc-peri" : "border-dc-muted/40"
-                      }`
+                  ? PILL_SELECTOR_SOLO_LECTURA
+                  : open
+                    ? PILL_SELECTOR_ABIERTO
+                    : seleccionada
+                      ? PILL_SELECTOR_ON
+                      : PILL_SELECTOR_VACIO
               }`
         }
       >
@@ -164,23 +165,7 @@ export function TagPopover({
                 }}
               />
             )}
-            <span className="truncate">{etiqueta}</span>
-            {!soloLectura && (
-              <svg
-                viewBox="0 0 24 24"
-                width="12"
-                height="12"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
-              >
-                <path d="M6 9l6 6 6-6" />
-              </svg>
-            )}
+            <span className="min-w-0 truncate">{etiqueta}</span>
           </>
         )}
       </button>

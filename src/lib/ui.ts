@@ -48,6 +48,40 @@ export const BTN_DANGER_CONFIRM_SM = `${BASE} rounded-lg bg-dc-pink/20 px-2 py-1
 export const BTN_ICON_DANGER_SM = `${BASE} rounded-lg border border-dc-line p-1.5 text-dc-muted hover:border-dc-pink hover:bg-dc-pink/10 hover:text-dc-pink`;
 export const BTN_ICON_CONFIRM_SM = `${BASE} rounded-lg bg-dc-pink/20 p-1.5 text-dc-pink hover:bg-dc-pink/30`;
 
+// El brillo peri de lo elegido. Sale de la opción marcada en la asignación de
+// proyectos de un usuario, que fue la primera en usarlo: un anillo fino más
+// un halo corto, suficiente para destacar sobre el fondo oscuro sin neón.
+export const GLOW_PERI =
+  "shadow-[0_0_0_1px_rgba(139,140,255,0.35),0_0_14px_rgba(139,140,255,0.18)]";
+
+// Una fila -o una celda- que NAVEGA. Es texto, no un botón: en reposo no hay
+// caja, porque en una lista de veinte filas veinte pastillas son ruido. El
+// área clickeable se revela al pasar o al llegar con el teclado: fondo peri
+// suave y un anillo fino. Anillo y no borde porque el anillo no ocupa lugar, y
+// aparecer no puede correr el contenido.
+//
+// Solo lleva lo interactivo: el layout -ancho, padding, alineación- lo pone
+// cada lista, que no son todas iguales.
+export const LINK_FILA =
+  "rounded-lg outline-none ring-inset transition hover:bg-dc-peri/10 hover:ring-1 hover:ring-dc-peri/30 focus-visible:bg-dc-peri/10 focus-visible:ring-2 focus-visible:ring-dc-peri/40";
+
+// Una pastilla que ELIGE un valor y abre un desplegable. Lo contrario de
+// LINK_FILA: tiene que verse como control aunque nadie la esté tocando, así que
+// en reposo ya lleva borde y relleno, y al pasar se enciende con GLOW_PERI.
+// Sin chevron: la forma de pastilla con borde ya dice que se toca.
+//
+// Mide w-full: el ancho lo decide su columna, y el nombre trunca adentro.
+export const PILL_SELECTOR = `${BASE} w-full gap-1.5 truncate rounded-full border px-3 py-1.5 text-xs outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri/40`;
+// Con valor: texto claro sobre peri, más contraste que el peri sobre peri.
+export const PILL_SELECTOR_ON = `border-dc-peri/60 bg-dc-peri/15 text-white hover:border-dc-peri hover:bg-dc-peri/25 hover:shadow-[0_0_0_1px_rgba(139,140,255,0.35),0_0_14px_rgba(139,140,255,0.18)]`;
+// Abierto: queda encendida mientras el desplegable está a la vista.
+export const PILL_SELECTOR_ABIERTO = `border-dc-peri bg-dc-peri/25 text-white ${GLOW_PERI}`;
+// Sin valor: borde punteado. Dice que falta algo, no que esté apagada.
+export const PILL_SELECTOR_VACIO =
+  "border-dashed border-dc-muted/50 text-dc-muted hover:border-dc-peri hover:bg-dc-peri/10 hover:text-dc-text";
+export const PILL_SELECTOR_SOLO_LECTURA =
+  "cursor-not-allowed border-dc-line bg-dc-line/60 text-dc-muted opacity-60";
+
 // Pastilla informativa. Activo/Inactivo dejó de usarla -eso es un
 // interruptor, ver components/ui/switch-estado- y quedó para los estados que
 // solo se leen, como el tipo de tarifa de un usuario.
