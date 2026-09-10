@@ -10,7 +10,7 @@ import { getAccesoProyecto } from "@/lib/proyecto-acceso";
 import { asegurarRoadmap } from "@/lib/roadmap";
 import { Prisma } from "@/generated/prisma/client";
 import { ETIQUETA_PRODUCTO, ETIQUETA_ROL_EQUIPO } from "./constantes";
-import type { ResultadoEstado } from "@/components/boton-estado";
+import type { ResultadoEstado } from "@/components/ui/switch-estado";
 
 // El equipo del cliente se gestiona desde Settings (solo admin) y desde la
 // pestaña Equipo del proyecto (admin o mentor con ese cliente asignado).

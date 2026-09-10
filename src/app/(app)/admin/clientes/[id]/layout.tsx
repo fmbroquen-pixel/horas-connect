@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { alternarActivoCliente } from "../actions";
-import { BotonEstado } from "@/components/boton-estado";
+import { SwitchEstado } from "@/components/ui/switch-estado";
 import { TabsNav } from "../../../tabs-nav";
 
 // Cabecera común del detalle de cliente (Volver + nombre) con sub-solapas
@@ -39,13 +39,12 @@ export default async function ClienteDetalleLayout({
           <h1 className="font-display text-lg uppercase text-white">
             {cliente.nombre}
           </h1>
-          {/* Único lugar donde se cambia el estado: en la tabla es solo tag
-              informativo. */}
-          <BotonEstado
+          {/* El mismo interruptor que en la tabla, con la misma acción: los
+              dos lados quedan sincronizados porque comparten componente y
+              revalidación, no porque alguien se acuerde de tocar los dos. */}
+          <SwitchEstado
             activo={cliente.activo}
             entidad="Cliente"
-            etiquetaActivo="Activo"
-            etiquetaInactivo="Inactivo"
             alternar={alternarActivoCliente.bind(null, id)}
           />
         </div>

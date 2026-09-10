@@ -48,13 +48,9 @@ export const BTN_DANGER_CONFIRM_SM = `${BASE} rounded-lg bg-dc-pink/20 px-2 py-1
 export const BTN_ICON_DANGER_SM = `${BASE} rounded-lg border border-dc-line p-1.5 text-dc-muted hover:border-dc-pink hover:bg-dc-pink/10 hover:text-dc-pink`;
 export const BTN_ICON_CONFIRM_SM = `${BASE} rounded-lg bg-dc-pink/20 p-1.5 text-dc-pink hover:bg-dc-pink/30`;
 
-// Pastillas de estado clickeables (Activo/Inactivo, Bloqueado).
-export const BTN_PILL_ON = `${BASE} rounded-full bg-dc-peri/20 px-3 py-1 text-xs text-dc-peri hover:bg-dc-peri/35`;
-export const BTN_PILL_OFF = `${BASE} rounded-full bg-dc-line px-3 py-1 text-xs text-dc-muted hover:bg-dc-peri/20 hover:text-dc-text`;
-
-// Mismas pastillas, pero informativas (sin afordancias de botón): para
-// mostrar Activo/Inactivo en una tabla sin sugerir que se puede tocar ahí
-// mismo. El cambio de estado real vive en Editar.
+// Pastilla informativa. Activo/Inactivo dejó de usarla -eso es un
+// interruptor, ver components/ui/switch-estado- y quedó para los estados que
+// solo se leen, como el tipo de tarifa de un usuario.
 export const TAG_ON = "inline-flex items-center rounded-full bg-dc-peri/20 px-3 py-1 text-xs text-dc-peri";
 export const TAG_OFF = "inline-flex items-center rounded-full bg-dc-line px-3 py-1 text-xs text-dc-muted";
 

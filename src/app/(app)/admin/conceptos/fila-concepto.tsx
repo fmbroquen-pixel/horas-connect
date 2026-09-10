@@ -1,10 +1,9 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { actualizarConcepto } from "./actions";
+import { actualizarConcepto, alternarActivoConcepto } from "./actions";
 import type { ConceptoFila } from "./constantes";
-import { Dropdown } from "@/components/dropdown";
-import { TAG_ON, TAG_OFF } from "@/lib/ui";
+import { SwitchEstado } from "@/components/ui/switch-estado";
 import {
   BotonEditarIcono,
   BotonGuardarIcono,
@@ -37,9 +36,14 @@ export function FilaConcepto({ concepto }: { concepto: ConceptoFila }) {
       <td className="px-4 py-3 text-center tabular-nums text-dc-text">
         {concepto.orden}
       </td>
-      <td className="px-4 py-3 text-center">
-        <span className={concepto.activo ? TAG_ON : TAG_OFF}>
-          {concepto.activo ? "Activo" : "Inactivo"}
+      <td className="px-4 py-3">
+        <span className="flex justify-center">
+          <SwitchEstado
+            activo={concepto.activo}
+            entidad="Concepto"
+            alternar={alternarActivoConcepto.bind(null, concepto.id)}
+            conEtiqueta={false}
+          />
         </span>
       </td>
       <td className="px-4 py-3">
@@ -61,8 +65,6 @@ function FilaEdicion({
   concepto: ConceptoFila;
   onCerrar: () => void;
 }) {
-  const [activo, setActivo] = useState(concepto.activo ? "activo" : "inactivo");
-
   const accion = actualizarConcepto.bind(null, concepto.id);
   const [state, formAction, pending] = useActionState(
     async (prev: { error?: string } | undefined, formData: FormData) => {
@@ -108,19 +110,25 @@ function FilaEdicion({
         />
       </td>
       <td className="px-4 py-3">
-        {/* Sin `name`: el valor viaja en el input oculto de abajo, que sí
-            está asociado al formulario por id. */}
-        <Dropdown
-          value={activo}
-          onChange={setActivo}
-          options={[
-            { value: "activo", label: "Activo" },
-            { value: "inactivo", label: "Inactivo" },
-          ]}
-          className="w-full"
-          ariaLabel="Estado"
+        {/* El estado no se edita acá: se toca con el interruptor de la fila,
+            que guarda solo. Tenerlo también en el formulario eran dos caminos
+            para lo mismo, y el de acá exigía apretar Guardar para algo que del
+            otro lado era inmediato. El valor viaja igual, sin control visible,
+            para que guardar el nombre no lo pise. */}
+        <input
+          form={formId}
+          type="hidden"
+          name="activo"
+          value={concepto.activo ? "activo" : "inactivo"}
         />
-        <input form={formId} type="hidden" name="activo" value={activo} />
+        <span className="flex justify-center">
+          <SwitchEstado
+            activo={concepto.activo}
+            entidad="Concepto"
+            alternar={alternarActivoConcepto.bind(null, concepto.id)}
+            conEtiqueta={false}
+          />
+        </span>
       </td>
       <td className="px-4 py-3">
         <span className="flex justify-center gap-1">

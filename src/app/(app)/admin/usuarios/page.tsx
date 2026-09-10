@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { NuevoUsuarioBoton } from "./nuevo-usuario-form";
-import { TAG_ON, TAG_OFF } from "@/lib/ui";
+import { SwitchEstado } from "@/components/ui/switch-estado";
+import { alternarActivoUsuario } from "./actions";
+import { TAG_ON } from "@/lib/ui";
 import { InfoButton } from "@/components/info-button";
 import { FiltroEstado, parseEstadoFiltro } from "@/components/admin/filtro-estado";
 import { EditarLink } from "@/components/admin/editar-link";
@@ -96,9 +98,15 @@ export default async function UsuariosPage({
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-center">
-                  <span className={u.activo ? TAG_ON : TAG_OFF}>
-                    {u.activo ? "Activo" : "Bloqueado"}
+                <td className="px-4 py-3">
+                  <span className="flex justify-center">
+                    <SwitchEstado
+                      activo={u.activo}
+                      entidad="Usuario"
+                      etiquetaInactivo="Bloqueado"
+                      alternar={alternarActivoUsuario.bind(null, u.id)}
+                      conEtiqueta={false}
+                    />
                   </span>
                 </td>
                 <td className="px-4 py-3">

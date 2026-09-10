@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { actualizarUsuario, guardarTarifa, alternarActivoUsuario } from "../actions";
-import { BotonEstado } from "@/components/boton-estado";
+import { SwitchEstado } from "@/components/ui/switch-estado";
 import {
   GuardadoPaginaProvider,
   BotonGuardarPagina,
@@ -108,12 +108,11 @@ export default async function UsuarioDetallePage({
           </h1>
           {/* Único lugar donde se cambia el estado: en la tabla es solo tag
               informativo. */}
-          <BotonEstado
+          <SwitchEstado
             activo={usuario.activo}
             entidad="Usuario"
-            etiquetaActivo="Activo"
             etiquetaInactivo="Bloqueado"
-            alternar={alternarActivoUsuario.bind(null, usuario.id)}
+            alternar={alternarActivoUsuario.bind(null, id)}
           />
         </div>
       </div>

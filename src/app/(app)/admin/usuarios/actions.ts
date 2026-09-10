@@ -4,7 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { clienteInactivoDe, mensajeInactivo } from "@/lib/cliente-activo";
-import type { ResultadoEstado } from "@/components/boton-estado";
+import type { ResultadoEstado } from "@/components/ui/switch-estado";
 import { diaUtc, reconstruirVigencias } from "@/lib/vigencias";
 import { fechaDesdeISO } from "@/lib/dias-habiles";
 import { requireAdmin } from "@/lib/require-admin";

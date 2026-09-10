@@ -33,6 +33,25 @@ async function nombreRepetido(nombre: string, exceptoId?: string) {
     : null;
 }
 
+// Activa o inactiva un concepto desde la tabla.
+//
+// Devuelve un resultado en vez de no devolver nada: quien la llama necesita
+// saber si salió bien para avisarlo y para deshacer el interruptor si no.
+//
+// Un concepto inactivo deja de ofrecerse para cargas nuevas -Time Tracking
+// filtra por `activo` al listar y al guardar- pero no se borra: los registros
+// que ya lo usan lo siguen apuntando y su historia queda intacta. Es la misma
+// idea que inactivar un cliente.
+export async function alternarActivoConcepto(
+  id: string,
+  activo: boolean,
+): Promise<{ ok?: true; error?: string }> {
+  await requireAdmin();
+  await prisma.concepto.update({ where: { id }, data: { activo } });
+  revalidar();
+  return { ok: true };
+}
+
 export async function crearConcepto(
   _prev: unknown,
   formData: FormData,

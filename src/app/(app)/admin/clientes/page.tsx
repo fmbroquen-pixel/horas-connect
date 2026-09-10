@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/require-admin";
 import { ETIQUETA_PRODUCTO } from "./constantes";
 import { NuevoClienteBoton } from "./nuevo-cliente-boton";
-import { TAG_ON, TAG_OFF } from "@/lib/ui";
+import { SwitchEstado } from "@/components/ui/switch-estado";
+import { alternarActivoCliente } from "./actions";
 import { formatMonto } from "@/lib/formato";
 import { InfoButton } from "@/components/info-button";
 import { FiltroEstado, parseEstadoFiltro } from "@/components/admin/filtro-estado";
@@ -79,9 +80,17 @@ export default async function ClientesPage({
                     </span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-center">
-                  <span className={c.activo ? TAG_ON : TAG_OFF}>
-                    {c.activo ? "Activo" : "Inactivo"}
+                <td className="px-4 py-3">
+                  {/* El interruptor se toca acá mismo: entrar a la ficha para
+                      apagar un cliente eran tres pasos para un cambio de un
+                      bit. La ficha sigue teniendo el suyo, sincronizado. */}
+                  <span className="flex justify-center">
+                    <SwitchEstado
+                      activo={c.activo}
+                      entidad="Cliente"
+                      alternar={alternarActivoCliente.bind(null, c.id)}
+                      conEtiqueta={false}
+                    />
                   </span>
                 </td>
                 <td className="px-4 py-3">
