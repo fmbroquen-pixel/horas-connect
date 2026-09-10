@@ -28,11 +28,22 @@ type Accion = (
   formData: FormData,
 ) => Promise<{ error?: string } | undefined>;
 
+// El convenio de tarifa, editable o de solo lectura.
+//
+// Uno solo para las dos pantallas. Antes había un segundo componente aparte
+// para el mentor que miraba su propio perfil, con otra grilla, otro orden y
+// otros textos: el mismo dato se veía distinto según quién entrara, y arreglar
+// algo en uno no lo arreglaba en el otro.
+//
+// En solo lectura NO se esconde nada ni se cambia la estructura: los mismos
+// campos, en el mismo orden, deshabilitados. Lo que desaparece son las
+// acciones -guardar, editar la vigencia- porque no existen para quien mira.
 export function TarifaForm({
   tipoActual,
   valores,
   vigenteDesdeActual,
   action,
+  soloLectura = false,
 }: {
   tipoActual: "fija" | "variable" | null;
   valores: ValoresActuales;
@@ -40,7 +51,9 @@ export function TarifaForm({
   // porque además de mostrarse se compara: es lo que decide si el cambio es
   // retroactivo o a futuro.
   vigenteDesdeActual: string | null;
-  action: Accion;
+  // Sin acción no hay guardado: es el caso de solo lectura.
+  action?: Accion;
+  soloLectura?: boolean;
 }) {
   const [tipo, setTipo] = useState<"fija" | "variable">(tipoActual ?? "variable");
   // Arranca en hoy: el caso normal es "de acá en adelante vale esto". Se
@@ -50,6 +63,7 @@ export function TarifaForm({
   const [exito, setExito] = useState(0);
   const [state, formAction, pending] = useActionState(
     async (prev: { error?: string } | undefined, fd: FormData) => {
+      if (!action) return undefined;
       const r = await action(prev, fd);
       if (!r?.error) setExito((n) => n + 1);
       return r;
@@ -93,7 +107,8 @@ export function TarifaForm({
     "Convenio de tarifa",
     sucio,
     async () => {
-      if (!formRef.current) return;
+      // Sin acción no hay nada que coordinar: es la vista de solo lectura.
+      if (!formRef.current || !action) return;
       const r = await action(undefined, new FormData(formRef.current));
       if (r?.error) return { error: r.error };
       setSucio(false);
@@ -129,6 +144,7 @@ export function TarifaForm({
               value="fija"
               checked={tipo === "fija"}
               onChange={() => setTipo("fija")}
+              disabled={soloLectura}
               className="mr-2"
             />
             Fija
@@ -146,6 +162,7 @@ export function TarifaForm({
               value="variable"
               checked={tipo === "variable"}
               onChange={() => setTipo("variable")}
+              disabled={soloLectura}
               className="mr-2"
             />
             Variable
@@ -171,7 +188,13 @@ export function TarifaForm({
             nombre cuando se abre. */}
         <input type="hidden" name="vigenteDesde" value={desde} />
 
-        {editandoFecha ? (
+        {soloLectura ? (
+          <div className="flex h-[38px] items-center">
+            <span className="tabular-nums text-sm text-dc-text">
+              {mostrarFechaISO(vigenteDesdeActual ?? desde)}
+            </span>
+          </div>
+        ) : editandoFecha ? (
           <div className="w-40">
             <DatePicker
               value={desde}
@@ -217,6 +240,7 @@ export function TarifaForm({
             type="number"
             step="0.01"
             min="0.01"
+            disabled={soloLectura}
             defaultValue={valorFijaInicial}
             required
             className="w-40 rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
@@ -233,6 +257,7 @@ export function TarifaForm({
               type="number"
               step="0.01"
               min="0.01"
+              disabled={soloLectura}
               defaultValue={valores.presencialOwner ?? ""}
               required
               className="w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
@@ -247,6 +272,7 @@ export function TarifaForm({
               type="number"
               step="0.01"
               min="0.01"
+              disabled={soloLectura}
               defaultValue={valores.presencialBackup ?? ""}
               required
               className="w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
@@ -261,6 +287,7 @@ export function TarifaForm({
               type="number"
               step="0.01"
               min="0.01"
+              disabled={soloLectura}
               defaultValue={valores.virtualOwner ?? ""}
               required
               className="w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
@@ -275,6 +302,7 @@ export function TarifaForm({
               type="number"
               step="0.01"
               min="0.01"
+              disabled={soloLectura}
               defaultValue={valores.virtualBackup ?? ""}
               required
               className="w-full rounded-lg border border-dc-line bg-dc-deeper px-3 py-2 text-sm text-dc-text outline-none focus:border-dc-peri"
@@ -371,7 +399,7 @@ export function TarifaForm({
         </div>
       </Modal>
 
-      {!coordinado && (
+      {!coordinado && !soloLectura && (
         <div className="flex justify-end">
           <BotonGuardarIcono pending={pending} label="Guardar tarifa" exito={exito} />
         </div>

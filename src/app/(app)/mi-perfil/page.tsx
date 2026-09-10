@@ -1,59 +1,34 @@
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import { getSesionActual } from "@/lib/auth";
-import { TarifaReadOnly } from "@/components/perfil/tarifa-read-only";
+import { getPerfilUsuario, tieneTarifa, valorVigente } from "@/lib/perfil-usuario";
 import { HistorialTarifas } from "@/components/perfil/historial-tarifas";
 import { SeccionDatosUsuario } from "@/components/perfil/seccion-datos";
-import { IconoCandado, SoloLecturaBadge } from "@/components/ui/solo-lectura-badge";
+import { SeccionPerfil } from "@/components/perfil/seccion-perfil";
+import { TarifaForm } from "@/app/(app)/admin/usuarios/[id]/tarifa-form";
+import { ProyectosForm } from "@/app/(app)/admin/usuarios/[id]/proyectos-form";
+import { MAX_BACKUPS } from "@/app/(app)/admin/usuarios/constantes";
 
-// Perfil propio del guest (mentor): todo es de solo lectura. Sus datos,
-// tarifa y clientes asignados los gestiona un admin desde Settings.
+// El perfil propio, de solo lectura.
+//
+// Muestra EXACTAMENTE lo mismo que ve un admin en Settings → Usuarios, con los
+// mismos componentes y en el mismo orden: sus datos, su convenio de tarifa, sus
+// clientes asignados con el rol que tiene en cada uno, y el historial. Lo único
+// que cambia es que nada se puede tocar.
+//
+// Antes esta pantalla tenía su propia versión de cada bloque —otra grilla para
+// la tarifa, pastillas sueltas en vez de las cards de clientes— y el mentor
+// terminaba viendo menos información que la que un admin veía de él: no podía
+// saber en qué proyectos era Owner y en cuáles Backup.
 export default async function MiPerfilPage() {
   const sesion = await getSesionActual();
   if (sesion.estado !== "autorizado") redirect("/login");
   const usuario = sesion.usuario;
-  // El admin tiene Settings completo; el reader no gestiona su perfil.
+  // El admin gestiona todo desde Settings, y ahí ve su propio perfil editable.
+  // Guest y reader entran acá: los dos tienen clientes asignados que mirar.
   if (usuario.rol === "admin") redirect("/admin/usuarios");
-  if (usuario.rol !== "guest") redirect("/rentabilidad");
 
-  const [tarifas, asignados, admins] = await Promise.all([
-    prisma.tarifa.findMany({
-      where: { usuarioId: usuario.id },
-      orderBy: { vigenteDesde: "desc" },
-      include: { creadoPor: { select: { nombre: true } } },
-    }),
-    prisma.proyectoAsignado.findMany({
-      where: { usuarioId: usuario.id },
-      include: { cliente: { select: { nombre: true, activo: true } } },
-    }),
-    prisma.usuario.findMany({
-      where: { rol: "admin", activo: true },
-      select: { email: true },
-      orderBy: { email: "asc" },
-    }),
-  ]);
-
-  const vigentes = tarifas.filter((t) => t.vigenteHasta === null);
-  const historial = tarifas
-    .filter((t) => t.vigenteHasta !== null)
-    .map((t) => ({
-      id: t.id,
-      modalidad: t.modalidad,
-      ownership: t.ownership,
-      valorUsd: Number(t.valorUsd),
-      vigenteDesde: t.vigenteDesde,
-      vigenteHasta: t.vigenteHasta,
-      creadoPor: t.creadoPor?.nombre ?? null,
-    }));
-  const clientesAsignados = asignados
-    .filter((a) => a.cliente.activo)
-    .map((a) => a.cliente.nombre)
-    .sort((a, b) => a.localeCompare(b));
-
-  const buscarValor = (modalidad: string, ownership: string) => {
-    const t = vigentes.find((v) => v.modalidad === modalidad && v.ownership === ownership);
-    return t ? Number(t.valorUsd) : undefined;
-  };
+  const perfil = await getPerfilUsuario(usuario.id, usuario.rol);
+  const conTarifa = tieneTarifa(usuario.rol);
 
   return (
     <div className="space-y-8">
@@ -64,52 +39,60 @@ export default async function MiPerfilPage() {
 
       <SeccionDatosUsuario titulo="Mis datos" soloLectura usuario={usuario} />
 
-      <TarifaReadOnly
-        tipoActual={usuario.tipoTarifa}
-        valores={{
-          presencialOwner: buscarValor("presencial", "owner"),
-          presencialBackup: buscarValor("presencial", "backup"),
-          virtualOwner: buscarValor("virtual", "owner"),
-          virtualBackup: buscarValor("virtual", "backup"),
-        }}
-        adminsEmails={admins.map((a) => a.email)}
-      />
+      {conTarifa && (
+        <SeccionPerfil
+          titulo="Convenio de tarifa"
+          soloLectura
+          descripcion={
+            <>
+              Solo un administrador puede modificarlo
+              {perfil.adminsEmails.length > 0 && (
+                <>
+                  . Si necesitás un cambio, escribile a{" "}
+                  {perfil.adminsEmails.map((email, i) => (
+                    <span key={email}>
+                      {i > 0 && ", "}
+                      <a
+                        href={`mailto:${email}`}
+                        className="text-dc-peri underline-offset-2 hover:underline"
+                      >
+                        {email}
+                      </a>
+                    </span>
+                  ))}
+                </>
+              )}
+              .
+            </>
+          }
+        >
+          <TarifaForm
+            soloLectura
+            tipoActual={usuario.tipoTarifa}
+            valores={{
+              presencialOwner: valorVigente(perfil.vigentes, "presencial", "owner"),
+              presencialBackup: valorVigente(perfil.vigentes, "presencial", "backup"),
+              virtualOwner: valorVigente(perfil.vigentes, "virtual", "owner"),
+              virtualBackup: valorVigente(perfil.vigentes, "virtual", "backup"),
+            }}
+            vigenteDesdeActual={perfil.vigenteDesdeActual}
+          />
+        </SeccionPerfil>
+      )}
 
-      {/* Solo lectura: los clientes asignados los gestiona un admin. */}
-      <div className="rounded-2xl border border-dc-line bg-dc-card p-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-dc-peri">
-            <IconoCandado />
-          </span>
-          <h2 className="font-display text-sm uppercase text-white">
-            Clientes asignados
-          </h2>
-          <SoloLecturaBadge />
-        </div>
-        <p className="mt-1 text-xs text-dc-muted">
-          Son los clientes en los que podés cargar horas. Los gestiona un
-          administrador.
-        </p>
-        {clientesAsignados.length > 0 ? (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {clientesAsignados.map((nombre) => (
-              <span
-                key={nombre}
-                className="rounded-full bg-dc-line px-3 py-1 text-sm text-dc-text"
-              >
-                {nombre}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-4 text-sm text-dc-muted">
-            Todavía no tenés clientes asignados. Pedile a un administrador que
-            te asigne.
-          </p>
-        )}
-      </div>
+      <SeccionPerfil
+        titulo="Clientes asignados"
+        soloLectura
+        descripcion={
+          usuario.rol === "reader"
+            ? "Limitan qué clientes podés ver en el informe de rentabilidad. Los gestiona un administrador."
+            : `Limitan en qué clientes podés cargar horas y con qué rol. Cada proyecto tiene un único Mentor Owner y hasta ${MAX_BACKUPS} Backup. Los gestiona un administrador.`
+        }
+      >
+        <ProyectosForm soloLectura usuarioId={usuario.id} proyectos={perfil.proyectos} />
+      </SeccionPerfil>
 
-      <HistorialTarifas historial={historial} />
+      {conTarifa && <HistorialTarifas historial={perfil.historial} />}
     </div>
   );
 }

@@ -26,12 +26,19 @@ const SOLAPAS: { rol: RolAsignacion; label: string }[] = [
 // roles— se bloquean acá para que el problema se vea antes de guardar, y se
 // vuelven a validar en el servidor: deshabilitar un checkbox no impide que
 // alguien mande el dato igual.
+// En solo lectura se muestran las MISMAS cards, en las mismas solapas y con
+// el mismo check: lo que cambia es que no se pueden tocar. Antes el mentor que
+// miraba su propio perfil veía una lista de pastillas con los nombres, sin
+// roles y sin solapas —otro componente, otra información— así que no había
+// forma de saber en cuáles era Owner.
 export function ProyectosForm({
   usuarioId,
   proyectos,
+  soloLectura = false,
 }: {
   usuarioId: string;
   proyectos: ProyectoAsignable[];
+  soloLectura?: boolean;
 }) {
   const [solapa, setSolapa] = useState<RolAsignacion>("owner");
   const [roles, setRoles] = useState<Map<string, RolAsignacion>>(
@@ -221,7 +228,8 @@ export function ProyectosForm({
         <p className="mb-3 rounded-xl border border-dc-peri/40 bg-dc-peri/10 px-3 py-2 text-xs text-dc-text">
           {sinRol.length} proyecto(s) asignados antes de que existieran los
           roles: {sinRol.map((p) => p.nombre).join(", ")}. Conservan el permiso
-          de cargar horas; elegiles una solapa para completarlos.
+          de cargar horas
+          {soloLectura ? "." : "; elegiles una solapa para completarlos."}
         </p>
       )}
 
@@ -246,11 +254,15 @@ export function ProyectosForm({
               key={p.id}
               type="button"
               onClick={() => alClickear(p)}
-              disabled={deshabilitado}
+              disabled={deshabilitado || soloLectura}
               aria-pressed={marcado}
-              data-tooltip={motivo ?? undefined}
+              data-tooltip={soloLectura ? undefined : (motivo ?? undefined)}
               className={`relative w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
-                deshabilitado
+                soloLectura
+                  ? marcado
+                    ? "cursor-default border-dc-peri bg-dc-peri/12 text-dc-text"
+                    : "cursor-default border-dc-line text-dc-muted"
+                  : deshabilitado
                   ? "cursor-not-allowed border-dc-line/60 text-dc-muted opacity-50"
                   : marcado
                     ? "border-dc-peri bg-dc-peri/12 text-dc-text shadow-[0_0_0_1px_rgba(139,140,255,0.35),0_0_14px_rgba(139,140,255,0.18)]"
@@ -292,7 +304,7 @@ export function ProyectosForm({
         </p>
       )}
 
-      {!coordinado && (
+      {!coordinado && !soloLectura && (
         <div className="mt-4 flex justify-end">
           <BotonGuardarIcono
             pending={pending}
