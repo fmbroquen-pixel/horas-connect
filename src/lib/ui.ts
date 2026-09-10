@@ -82,6 +82,20 @@ export const PILL_SELECTOR_VACIO =
 export const PILL_SELECTOR_SOLO_LECTURA =
   "cursor-not-allowed border-dc-line bg-dc-line/60 text-dc-muted opacity-60";
 
+// Un selector que es SOLO un punto de color: el semáforo. Mismo idioma que
+// PILL_SELECTOR en versión redonda y sin texto. En reposo, un aro fino alrededor
+// del punto: lo mínimo para que se lea como botón sin sumarle caja a una lista.
+// Al pasar se enciende con GLOW_PERI y queda encendido mientras está abierto.
+//
+// El tamaño lo pone quien lo usa: en una fila es compacto, en una card es el
+// único contenido.
+export const DOT_SELECTOR =
+  "inline-flex shrink-0 items-center justify-center rounded-full outline-none ring-1 ring-inset transition focus-visible:ring-2 focus-visible:ring-dc-peri/40";
+export const DOT_SELECTOR_ON =
+  "ring-dc-line hover:bg-dc-peri/10 hover:ring-dc-peri/70 hover:shadow-[0_0_0_1px_rgba(139,140,255,0.35),0_0_14px_rgba(139,140,255,0.18)]";
+export const DOT_SELECTOR_ABIERTO = `bg-dc-peri/15 ring-dc-peri ${GLOW_PERI}`;
+export const DOT_SELECTOR_SOLO_LECTURA = "cursor-not-allowed opacity-50 ring-transparent";
+
 // Pastilla informativa. Activo/Inactivo dejó de usarla -eso es un
 // interruptor, ver components/ui/switch-estado- y quedó para los estados que
 // solo se leen, como el tipo de tarifa de un usuario.

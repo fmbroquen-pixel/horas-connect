@@ -2,27 +2,23 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { cambiarSemaforo, marcarEtapaActual } from "../proyectos/actions";
+import { marcarEtapaActual } from "../proyectos/actions";
 import type { CierreEtapa } from "../proyectos/actions";
-import { OPCIONES_SEMAFORO, COLOR_SEMAFORO } from "../proyectos/constantes";
 import { TagPopover, type OpcionTag } from "./tag-popover";
 import { CambioEtapaModal } from "./cambio-etapa-modal";
+import { SelectorSemaforo } from "../proyectos/selector-semaforo";
 import { MOTIVO_INACTIVO } from "@/lib/inactivo";
 import { LINK_FILA } from "@/lib/ui";
-
-const OPCIONES_SEMAFORO_TAG: OpcionTag[] = OPCIONES_SEMAFORO.map((o) => ({
-  ...o,
-  dot: COLOR_SEMAFORO[o.value],
-}));
 
 // Fila de la lista ejecutiva "Estado de Proyectos": tres columnas
 // equivalentes (1/3 cada una: min-w-0 flex-1, igual que el header en
 // estado-proyectos.tsx), con el contenido centrado dentro de cada una.
-// Semáforo y Etapa son tags que abren un popover propio (TagPopover).
+// El semáforo es el SelectorSemaforo compartido con el Home del proyecto; la
+// etapa, un TagPopover con su modal de cierre.
 export function FilaProyectoEstado({
   id,
   nombre,
-  semaforo: semaforoInicial,
+  semaforo,
   etapaId: etapaIdInicial,
   etapas,
   activo,
@@ -39,19 +35,10 @@ export function FilaProyectoEstado({
   activo: boolean;
 }) {
   const [guardando, start] = useTransition();
-  const [semaforo, setSemaforo] = useState(semaforoInicial);
   const [etapaId, setEtapaId] = useState(etapaIdInicial);
   // Etapa elegida esperando confirmación en el modal.
   const [porConfirmar, setPorConfirmar] = useState<OpcionTag | null>(null);
   const [errorEtapa, setErrorEtapa] = useState<string>();
-
-  const elegirSemaforo = (valor: string) => {
-    if (valor === semaforo) return;
-    setSemaforo(valor);
-    start(async () => {
-      await cambiarSemaforo(id, valor);
-    });
-  };
 
   // El estado local no se toca hasta que el servidor confirma: las dos
   // escrituras van en una transacción y, si falla, en la base no cambió nada.
@@ -102,16 +89,11 @@ export function FilaProyectoEstado({
       {/* Columna 2/3: el semáforo es solo el punto. Ya no necesita el ancho de
           una pastilla, así que se centra en la columna sin caja alrededor. */}
       <div className="flex min-w-0 flex-1 justify-center">
-        <TagPopover
-          valor={semaforo}
-          opciones={OPCIONES_SEMAFORO_TAG}
-          placeholder="Sin registrar"
-          onElegir={elegirSemaforo}
-          ariaLabel={`Semáforo de ${nombre}`}
-          anchoMenu="w-44"
-          soloPunto
-          soloLectura={!activo}
-          motivoSoloLectura={MOTIVO_INACTIVO}
+        <SelectorSemaforo
+          clienteId={id}
+          nombre={nombre}
+          semaforo={semaforo}
+          activo={activo}
         />
       </div>
       {/* Columna 3/3: la etapa ELIGE, así que es una pastilla selector con

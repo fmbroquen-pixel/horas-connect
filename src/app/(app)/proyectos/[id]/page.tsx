@@ -8,7 +8,7 @@ import { construirCurvaHoras } from "@/lib/curva-horas";
 import { InfoButton } from "@/components/info-button";
 import { KPI_ROTULO } from "@/components/ui/kpi-estilos";
 import { CurvaHoras } from "@/components/curva-horas";
-import { SemaforoKpi } from "./semaforo-kpi";
+import { SelectorSemaforo } from "../selector-semaforo";
 import { COLOR_SEMAFORO, ETIQUETA_SEMAFORO } from "../constantes";
 import { formatFecha, hoyISO } from "@/lib/formato";
 import {
@@ -116,8 +116,12 @@ export default async function ProyectoHomePage({
               unidad. El punto se queda en la fila de alto fijo de los valores,
               así que sigue sobre la misma línea óptica que las otras cinco. */}
           <p className={`${KPI_ROTULO} justify-center`}>Semáforo</p>
-          <p className="mt-1 flex h-8 items-center justify-center">
-            <SemaforoKpi
+          {/* div y no p: el selector abre un popover, y un <p> no puede
+              contener bloques. Con p el HTML era inválido y React avisaba
+              un error de hidratación. */}
+          <div className="mt-1 flex h-8 items-center justify-center">
+            <SelectorSemaforo
+              tamano="card"
               clienteId={id}
               nombre={acceso.cliente.nombre}
               semaforo={semaforo?.estado ?? ""}
@@ -128,7 +132,7 @@ export default async function ProyectoHomePage({
               }
               activo={acceso.cliente.activo}
             />
-          </p>
+          </div>
         </div>
 
         {/* Owner y Backup en una sola card. Eran dos, y eso gastaba dos

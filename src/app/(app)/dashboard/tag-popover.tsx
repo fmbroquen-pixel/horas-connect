@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { POPOVER_FLOTANTE, usePopoverFlotante } from "@/components/ui/popover-flotante";
 import {
+  DOT_SELECTOR,
+  DOT_SELECTOR_ABIERTO,
+  DOT_SELECTOR_ON,
+  DOT_SELECTOR_SOLO_LECTURA,
   PILL_SELECTOR,
   PILL_SELECTOR_ABIERTO,
   PILL_SELECTOR_ON,
@@ -116,8 +120,15 @@ export function TagPopover({
         }
         className={
           soloPunto
-            ? `inline-flex ${puntoGrande ? "h-8 w-8" : "h-7 w-7"} items-center justify-center rounded-full outline-none transition focus-visible:ring-2 focus-visible:ring-dc-peri ${
-                soloLectura ? "cursor-not-allowed opacity-50" : "hover:bg-dc-line/60"
+            ? // Solo el punto: el selector redondo compartido (lib/ui). El
+              // botón es el círculo entero, no el punto, así que el blanco
+              // para clickear es más grande que lo que se ve.
+              `${DOT_SELECTOR} ${puntoGrande ? "h-8 w-8" : "h-7 w-7"} ${
+                soloLectura
+                  ? DOT_SELECTOR_SOLO_LECTURA
+                  : open
+                    ? DOT_SELECTOR_ABIERTO
+                    : DOT_SELECTOR_ON
               }`
             : // Con etiqueta el tag es un selector, y tiene que verse como
               // uno aunque nadie lo esté tocando: es el patrón compartido de

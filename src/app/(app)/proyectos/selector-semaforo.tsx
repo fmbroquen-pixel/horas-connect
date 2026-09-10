@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { cambiarSemaforo } from "../actions";
-import { OPCIONES_SEMAFORO, COLOR_SEMAFORO } from "../constantes";
+import { cambiarSemaforo } from "./actions";
+import { OPCIONES_SEMAFORO, COLOR_SEMAFORO } from "./constantes";
 import { TagPopover, type OpcionTag } from "@/app/(app)/dashboard/tag-popover";
 import { MOTIVO_INACTIVO } from "@/lib/inactivo";
 
@@ -11,31 +11,34 @@ const OPCIONES: OpcionTag[] = OPCIONES_SEMAFORO.map((o) => ({
   dot: COLOR_SEMAFORO[o.value],
 }));
 
-// El semáforo del Home del proyecto.
+// EL selector de semáforo de CORE. Lo usan Home CORE -una fila por proyecto en
+// "Estado de Proyectos"- y el Home del proyecto -su propia card de KPI-, y es
+// el mismo en los dos: mismas opciones, misma acción de servidor, mismo modo de
+// solo lectura. Antes cada pantalla armaba su TagPopover con su copia de las
+// opciones y del guardado optimista; dos copias de una regla terminan siendo
+// dos reglas.
 //
-// Es el MISMO TagPopover que la lista "Estado de Proyectos" de Home CORE, con
-// las mismas opciones y la misma acción de servidor: solo el punto de color, un
-// clic para abrirlo, y el proyecto inactivo lo deja de solo lectura. No hay una
-// segunda implementación del semáforo; lo único propio de acá es que vive en
-// una card de KPI en vez de en una fila de tabla.
-//
-// Antes vivía en Follow Up como tres botones con etiqueta. Ese bloque se fue:
-// el semáforo es un indicador de estado del proyecto, y su lugar es el tablero
-// de control, no la pantalla del plan de trabajo.
-export function SemaforoKpi({
+// Lo único que cambia entre contextos entra por props: el tamaño -en una card
+// es el único contenido, en una fila convive con veinte más- y el tooltip con
+// el historial, que el Home del proyecto tiene y la lista no.
+export function SelectorSemaforo({
   clienteId,
   nombre,
   semaforo: inicial,
-  ultimoCambio,
   activo,
+  tamano = "fila",
+  ultimoCambio,
 }: {
   clienteId: string;
   nombre: string;
   semaforo: string;
-  // "Último cambio: Verde · 31/08/2026", o vacío si nunca se registró. Es el
-  // historial que ya mostraba Follow Up y que se conserva en el tooltip.
-  ultimoCambio: string;
+  // Un proyecto inactivo se sigue viendo, pero no se toca: cambiarle el
+  // semáforo escribiría un evento nuevo sobre un cliente que dejó de operar.
   activo: boolean;
+  tamano?: "fila" | "card";
+  // "Último cambio: Verde · 31/08/2026". Sin esto el tooltip dice el color,
+  // que es lo único que falta cuando se ve solo el punto.
+  ultimoCambio?: string;
 }) {
   const [semaforo, setSemaforo] = useState(inicial);
   const [, start] = useTransition();
@@ -60,10 +63,10 @@ export function SemaforoKpi({
       ariaLabel={`Semáforo de ${nombre}`}
       anchoMenu="w-44"
       soloPunto
-      puntoGrande
+      puntoGrande={tamano === "card"}
       soloLectura={!activo}
       motivoSoloLectura={MOTIVO_INACTIVO}
-      tooltip={ultimoCambio || undefined}
+      tooltip={ultimoCambio}
     />
   );
 }
