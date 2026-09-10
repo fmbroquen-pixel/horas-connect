@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { InfoButton } from "@/components/info-button";
-import { GrupoSegmentado } from "@/components/ui/grupo-segmentado";
+import { BotonCiclico } from "@/components/ui/boton-ciclico";
+import { useCiclo } from "@/components/ui/usar-ciclo";
 
 export type EtapaProxima = {
   id: string;
@@ -16,25 +16,44 @@ export type EtapaProxima = {
   personas: number;
 };
 
-// Filtro por cantidad de personas, con el mismo ícono que usa la tarea en
-// Follow Up: una silueta para 1, dos para 2. La cantidad se reconoce por la
-// forma, sin leer.
-const FILTROS = [
-  { value: "todas", label: "Todas", personas: 0 },
-  { value: "1", label: "1 persona", personas: 1 },
-  { value: "2", label: "2 personas", personas: 2 },
-];
-
 // El horizonte de la card, en semanas. La consulta del servidor trae SIEMPRE
 // las dos semanas -es el máximo- y acá se recorta a una. Por eso el cambio no
 // pide nada: lo que se muestra con 1 ya está en pantalla, es un subconjunto.
 const DIAS_POR_SEMANA = 7;
 
-const HORIZONTES = [
-  { valor: "1", contenido: "1 semana", etiqueta: "Próximos 7 días" },
-  { valor: "2", contenido: "2 semanas", etiqueta: "Próximos 14 días" },
-] as const;
+// Los dos ciclos de la card, en el orden en que rotan. Primero el estado, y
+// el rótulo al lado: el botón muestra siempre el que está puesto.
+const SEMANAS = ["1", "2"] as const;
+const ROTULO_SEMANAS: Record<string, string> = {
+  "1": "1 semana",
+  "2": "2 semanas",
+};
 
+// Todas → 2 personas → 1 persona → Todas. Las de dos van antes: son las que
+// necesitan coordinar agenda entre mentores, así que es lo que se busca
+// primero al revisar lo que viene.
+const PERSONAS = ["todas", "2", "1"] as const;
+const ROTULO_PERSONAS: Record<string, string> = {
+  todas: "Todas",
+  "2": "2 personas",
+  "1": "1 persona",
+};
+
+// La que viene después en el ciclo, para el tooltip.
+function proximo<T extends string>(ciclo: readonly T[], actual: T): T {
+  return ciclo[(ciclo.indexOf(actual) + 1) % ciclo.length];
+}
+
+function IconoSemana() {
+  return (
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0">
+      <rect x="3" y="4.5" width="18" height="16" rx="2" />
+      <path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
+    </svg>
+  );
+}
+
+// Una silueta para 1, dos para 2. La cantidad se reconoce por la forma.
 function IconoPersonas({ dos }: { dos: boolean }) {
   return (
     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -72,12 +91,14 @@ export function EtapasProximas({
   // después del mes que se está viendo. Ver el comentario de standby abajo.
   activa: boolean;
 }) {
-  const [filtro, setFiltro] = useState("todas");
-  // Dos semanas por defecto: es el panorama, y achicarlo es la excepción.
-  const [semanas, setSemanas] = useState<"1" | "2">("2");
+  const personas = useCiclo(PERSONAS);
+  // Una semana por defecto: lo que arranca en los próximos siete días es lo
+  // que todavía se puede mover. Dos es el panorama, a un clic.
+  const semanas = useCiclo(SEMANAS);
 
-  const dias = Number(semanas) * DIAS_POR_SEMANA;
-  const hasta = semanas === "1" ? cortes.unaSemana : cortes.dosSemanas;
+  const filtro = personas.valor;
+  const dias = Number(semanas.valor) * DIAS_POR_SEMANA;
+  const hasta = semanas.valor === "1" ? cortes.unaSemana : cortes.dosSemanas;
   const enHorizonte = etapas.filter((e) => e.diasRestantes <= dias);
   const visibles =
     filtro === "todas"
@@ -112,7 +133,7 @@ export function EtapasProximas({
           {activa && <span className="text-xs text-dc-muted">hasta {hasta}</span>}
           <InfoButton>
             Tareas sin iniciar que arrancan en los próximos {dias} días,
-            contados desde hoy, y el control de semanas cambia ese horizonte.
+            contados desde hoy, y el botón de semanas cambia ese horizonte.
             Por eso solo está activa en el mes actual:
             en un mes anterior queda en standby. El filtro de proyectos sí la
             modifica.
@@ -125,31 +146,29 @@ export function EtapasProximas({
             estados posibles ni en cuál está: el "2" se leía igual como "estoy
             en dos semanas" que como "tocá para ir a dos". */}
         <div className="flex flex-wrap items-center gap-2">
-          <GrupoSegmentado
-            ariaLabel="Horizonte"
-            valor={semanas}
-            opciones={HORIZONTES.map((h) => ({ ...h }))}
-            onCambiar={setSemanas}
+          <BotonCiclico
+            ariaLabel={`Horizonte: ${ROTULO_SEMANAS[semanas.valor]}`}
+            contenido={
+              <>
+                <IconoSemana />
+                {ROTULO_SEMANAS[semanas.valor]}
+              </>
+            }
+            proximo={ROTULO_SEMANAS[proximo(SEMANAS, semanas.valor)]}
+            onSiguiente={semanas.siguiente}
             deshabilitado={!activa}
             tooltipDeshabilitado="Disponible en el mes actual"
           />
-          <GrupoSegmentado
-            ariaLabel="Personas por tarea"
-            valor={filtro}
-            opciones={FILTROS.map((f) => ({
-              valor: f.value,
-              etiqueta: f.label,
-              contenido:
-                f.personas === 0 ? (
-                  "Todas"
-                ) : (
-                  <>
-                    <IconoPersonas dos={f.personas === 2} />
-                    {f.personas}
-                  </>
-                ),
-            }))}
-            onCambiar={setFiltro}
+          <BotonCiclico
+            ariaLabel={`Personas por tarea: ${ROTULO_PERSONAS[filtro]}`}
+            contenido={
+              <>
+                <IconoPersonas dos={filtro === "2"} />
+                {ROTULO_PERSONAS[filtro]}
+              </>
+            }
+            proximo={ROTULO_PERSONAS[proximo(PERSONAS, filtro)]}
+            onSiguiente={personas.siguiente}
             deshabilitado={!activa}
             tooltipDeshabilitado="Disponible en el mes actual"
           />
