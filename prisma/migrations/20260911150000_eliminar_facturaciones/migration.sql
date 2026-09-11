@@ -1,0 +1,11 @@
+-- Elimina la tabla de facturaciones.
+--
+-- Se creo para cargar a mano cuanto se le facturaba a cada cliente por mes,
+-- pero nunca tuvo pantalla de carga y Analytics paso a calcular lo cobrado con
+-- la cuota del cliente. Quedo vacia (0 filas al momento de borrarla) y sin
+-- lectores ni escritores en el codigo.
+--
+-- Nada depende de ella: ninguna vista ni clave foranea la referencia. Su
+-- unica FK es la propia hacia clientes, y se va con la tabla junto con sus
+-- indices.
+DROP TABLE "facturaciones";

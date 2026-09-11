@@ -18,10 +18,9 @@ export type RegistroDelMes = {
 
 // Lo que un cliente cobra en un mes.
 //
-// El ingreso es la CUOTA del cliente, no una factura cargada aparte. La tabla
-// de facturaciones existía para eso y quedó vacía: nadie cargó nunca un monto,
-// así que Analytics venía mostrando cero de ingreso y cero de margen en todos
-// los meses. El dato que sí está cargado, en los veinte clientes, es la cuota.
+// El ingreso es la CUOTA del cliente, no una factura cargada aparte. Hubo una
+// tabla de facturaciones para eso, pero nadie cargó nunca un monto -Analytics
+// mostraba cero de ingreso y cero de margen en todos los meses- y se eliminó. El dato que sí está cargado, en los veinte clientes, es la cuota.
 export type ClienteCobro = {
   clienteId: string;
   valorCuotaUsd: number | null;

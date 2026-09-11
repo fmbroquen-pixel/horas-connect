@@ -71,9 +71,9 @@ export async function calcularReporte(
       montoUsd: Number(r.montoUsd),
     })),
     // El ingreso sale de la CUOTA del cliente, no de una factura cargada
-    // aparte. La tabla de facturaciones existía para eso y quedó vacía: nadie
-    // cargó nunca un monto, así que el informe venía mostrando cero de ingreso
-    // y cero de margen en todos los meses.
+    // aparte. Hubo una tabla de facturaciones para eso, pero nadie cargó nunca
+    // un monto -el informe mostraba cero de ingreso y cero de margen en todos
+    // los meses- y se eliminó.
     clientes.map((c) => ({
       clienteId: c.id,
       valorCuotaUsd: c.valorCuotaUsd === null ? null : Number(c.valorCuotaUsd),
