@@ -8,7 +8,8 @@ import { DIA_MS } from "@/lib/dias-habiles";
 // existía y los registros quedaban para siempre con el contador en cero.
 //
 // Alcance: los tres tipos que la papelera muestra y permite restaurar (ver
-// papelera/actions.ts). Los viáticos habían quedado afuera mientras su módulo
+// papelera/actions.ts) y las tareas y listas de la papelera del Follow Up.
+// Los viáticos habían quedado afuera mientras su módulo
 // no estaba en la UI —purgar lo que nadie puede ver ni recuperar es destruir
 // datos a ciegas, no cumplir una política— y vuelven con él.
 //
@@ -31,10 +32,15 @@ export async function GET(request: NextRequest) {
   const corte = new Date(Date.now() - RETENCION_DIAS * DIA_MS);
   const vencidos = { eliminadoEn: { lt: corte } };
 
-  const [horas, viaticos, vacaciones] = await prisma.$transaction([
+  // Follow Up: tareas mandadas a la papelera una por una, y listas enteras.
+  // Borrar una lista se lleva sus tareas (cascada); las horas cargadas contra
+  // una tarea borrada se conservan y solo pierden el vínculo (SetNull).
+  const [horas, viaticos, vacaciones, tareas, listas] = await prisma.$transaction([
     prisma.registroHoras.deleteMany({ where: vencidos }),
     prisma.viatico.deleteMany({ where: vencidos }),
     prisma.vacacion.deleteMany({ where: vencidos }),
+    prisma.tareaRoadmap.deleteMany({ where: vencidos }),
+    prisma.listaRoadmap.deleteMany({ where: vencidos }),
   ]);
 
   return NextResponse.json({
@@ -44,6 +50,8 @@ export async function GET(request: NextRequest) {
       horas: horas.count,
       viaticos: viaticos.count,
       vacaciones: vacaciones.count,
+      tareasFollowUp: tareas.count,
+      listasFollowUp: listas.count,
     },
   });
 }
