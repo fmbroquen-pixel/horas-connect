@@ -3,82 +3,20 @@ import { redirect } from "next/navigation";
 import { getClientesProyectosInactivos } from "@/lib/proyecto-acceso";
 import { getSesionActual } from "@/lib/auth";
 import { logout } from "@/app/actions";
-import { SidebarDesktop, SidebarMobile, type ItemSidebar } from "./sidebar";
+import { SidebarDesktop, SidebarMobile } from "./sidebar";
+import { navParaRol } from "./nav-por-rol";
 import { PageTransition } from "./page-transition";
 import { Marca } from "@/components/marca";
 import { Avisos } from "@/components/ui/avisos";
 import { Tooltips } from "@/components/ui/tooltips";
 import { PerfilBoton } from "./perfil/perfil-boton";
 import { urlAvatar } from "@/lib/supabase/admin";
-import { MODULOS } from "@/lib/modulos";
 
 const ETIQUETA_ROL: Record<string, string> = {
   admin: "Admin",
   guest: "Mentor",
   reader: "Solo lectura",
 };
-
-// Navegación única y persistente en la sidebar. Orden: Home · Proyectos ·
-// Time Tracking · Expenses · Time Off · Analytics · Settings (desplegable).
-// Expenses y Time Off aparecen solo si su flag está habilitado (ver
-// lib/modulos): el ítem y la ruta se encienden y se apagan juntos.
-const ITEM_PROYECTOS: ItemSidebar = {
-  href: "/proyectos",
-  label: "Proyectos",
-  icono: "proyectos",
-  children: [
-    { href: "/proyectos", label: "Activos", icono: "proyectos" },
-    { href: "/proyectos/inactivos", label: "Inactivos", icono: "archivado" },
-  ],
-};
-
-const ITEMS_CARGA: ItemSidebar[] = [
-  { href: "/dashboard", label: "Home", icono: "home" },
-  ITEM_PROYECTOS,
-  { href: "/timetracker", label: "Time Tracking", icono: "reloj" },
-  ...(MODULOS.expenses
-    ? [{ href: "/viaticos", label: "Expenses", icono: "auto" }]
-    : []),
-  ...(MODULOS.timeOff
-    ? [{ href: "/vacaciones", label: "Time Off", icono: "sombrilla" }]
-    : []),
-];
-
-const ITEM_ANALYTICS: ItemSidebar = {
-  href: "/rentabilidad",
-  label: "Analytics",
-  icono: "analytics",
-};
-
-function navParaRol(rol: string): {
-  items: ItemSidebar[];
-  settings?: ItemSidebar;
-} {
-  if (rol === "guest") {
-    return {
-      items: ITEMS_CARGA,
-      settings: { href: "/mi-perfil", label: "Settings", icono: "settings" },
-    };
-  }
-  if (rol === "admin") {
-    return {
-      items: [...ITEMS_CARGA, ITEM_ANALYTICS],
-      settings: {
-        href: "/admin/usuarios",
-        label: "Settings",
-        icono: "settings",
-        match: "/admin",
-        children: [
-          { href: "/admin/usuarios", label: "Usuarios", icono: "usuarios" },
-          { href: "/admin/clientes", label: "Clientes", icono: "clientes" },
-          { href: "/admin/conceptos", label: "Conceptos", icono: "conceptos" },
-        ],
-      },
-    };
-  }
-  // reader: solo lectura de la rentabilidad de sus clientes asignados.
-  return { items: [ITEM_ANALYTICS] };
-}
 
 export default async function AppLayout({
   children,
