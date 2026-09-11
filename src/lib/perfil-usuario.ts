@@ -100,7 +100,6 @@ export async function getPerfilUsuario(
         id: c.id,
         nombre: c.nombre,
         rolPropio: propia?.rol ?? "",
-        sinRol: Boolean(propia) && !propia?.rol,
         ownerAjeno: ajenas.find((a) => a.rol === "owner")?.usuario.nombre ?? null,
         backupsAjenos: ajenas
           .filter((a) => a.rol === "backup")

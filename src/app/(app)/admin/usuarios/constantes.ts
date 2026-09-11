@@ -19,9 +19,6 @@ export type ProyectoAsignable = {
   nombre: string;
   // Rol del usuario que se edita en este proyecto ("" si no tiene ninguno).
   rolPropio: "" | RolAsignacion;
-  // Asignado sin rol declarado (anterior a esta función): conserva el
-  // permiso de carga y espera que el admin le elija una solapa.
-  sinRol: boolean;
   ownerAjeno: string | null;
   backupsAjenos: string[];
 };

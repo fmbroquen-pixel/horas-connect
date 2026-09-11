@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSesionActual } from "@/lib/auth";
+import { MarcoSettings } from "@/components/perfil/marco-settings";
 
 // La navegación entre secciones de Settings (Usuarios/Clientes/Conceptos) vive
 // en el submenú desplegable de la sidebar; acá solo queda el guard de admin
@@ -15,12 +16,5 @@ export default async function AdminLayout({
     redirect("/dashboard");
   }
 
-  return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      <p className="shrink-0 font-display text-xs tracking-[0.3em] text-dc-pink">
-        SETTINGS
-      </p>
-      <div className="mt-4 flex min-h-0 flex-1 flex-col">{children}</div>
-    </div>
-  );
+  return <MarcoSettings>{children}</MarcoSettings>;
 }

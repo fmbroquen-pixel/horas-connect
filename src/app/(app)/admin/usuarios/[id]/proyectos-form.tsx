@@ -181,7 +181,6 @@ export function ProyectosForm({
   const contar = (rol: RolAsignacion) =>
     [...roles.values()].filter((r) => r === rol).length;
 
-  const sinRol = proyectos.filter((p) => p.sinRol && !roles.has(p.id));
 
   return (
     <form action={formAction}>
@@ -223,15 +222,6 @@ export function ProyectosForm({
           );
         })}
       </div>
-
-      {sinRol.length > 0 && (
-        <p className="mb-3 rounded-xl border border-dc-peri/40 bg-dc-peri/10 px-3 py-2 text-xs text-dc-text">
-          {sinRol.length} proyecto(s) asignados antes de que existieran los
-          roles: {sinRol.map((p) => p.nombre).join(", ")}. Conservan el permiso
-          de cargar horas
-          {soloLectura ? "." : "; elegiles una solapa para completarlos."}
-        </p>
-      )}
 
       <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {proyectos.map((p) => {
